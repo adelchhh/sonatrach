@@ -7,18 +7,21 @@ const stats = [
     label: "Open activities",
     value: "5",
     sub: "Available to apply right now",
+    to: "/dashboard/catalog",
   },
   {
     icon: "⏳",
     label: "Pending requests",
     value: "3",
     sub: "Waiting for validation or draw",
+    to: "/dashboard/requests",
   },
   {
     icon: "✓",
     label: "Past participations",
     value: "8",
     sub: "Activities joined since 2023",
+    to: "/dashboard/history",
   },
   {
     icon: "📊",
@@ -26,6 +29,7 @@ const stats = [
     value: "68%",
     sub: "Complete your information and documents",
     progress: true,
+    to: "/dashboard/documents",
   },
 ];
 
@@ -80,15 +84,23 @@ export default function DashboardMain() {
               Explore available activities, track your requests, confirm your
               participation, and keep your documents ready in one clear space.
             </p>
+
+            <Link
+              to="/dashboard/catalog"
+              className="inline-block mt-5 px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
+            >
+              Explore Activities
+            </Link>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {stats.map((stat, i) => (
-            <div
+            <Link
               key={i}
-              className="rounded-[20px] bg-white p-5 border border-[#E5E2DC]"
+              to={stat.to}
+              className="rounded-[20px] bg-white p-5 border border-[#E5E2DC] hover:shadow-md transition-shadow block"
             >
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-sm font-semibold text-[#7A8088]">
@@ -110,7 +122,7 @@ export default function DashboardMain() {
 
                 <p className="text-xs text-[#7A8088] mt-1">{stat.sub}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
@@ -122,7 +134,7 @@ export default function DashboardMain() {
             </h2>
 
             <Link
-              to="/catalog"
+              to="/dashboard/catalog"
               className="text-[#ED8D31] text-sm font-semibold hover:opacity-80 transition-opacity"
             >
               View catalog
@@ -203,7 +215,7 @@ export default function DashboardMain() {
             <h2 className="text-lg font-bold text-[#2F343B]">My requests</h2>
 
             <Link
-              to="/dashboard"
+              to="/dashboard/requests"
               className="text-[#ED8D31] text-sm font-semibold hover:opacity-80 transition-opacity"
             >
               See all requests
@@ -212,8 +224,9 @@ export default function DashboardMain() {
 
           <div className="space-y-3">
             {requests.map((req, i) => (
-              <div
+              <Link
                 key={i}
+                to="/dashboard/requests"
                 className="rounded-[16px] bg-white p-4 border border-[#E5E2DC] flex items-center justify-between hover:shadow-sm transition-shadow"
               >
                 <div className="flex items-center gap-3 flex-1">
@@ -263,7 +276,7 @@ export default function DashboardMain() {
                     />
                   </svg>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -276,7 +289,7 @@ export default function DashboardMain() {
             </h2>
 
             <Link
-              to="/dashboard"
+              to="/dashboard/history"
               className="text-[#ED8D31] text-sm font-semibold hover:opacity-80 transition-opacity"
             >
               View archive
@@ -285,9 +298,10 @@ export default function DashboardMain() {
 
           <div className="space-y-3">
             {history.map((item, i) => (
-              <div
+              <Link
                 key={i}
-                className="rounded-[16px] bg-white p-4 border border-[#E5E2DC] flex items-center justify-between"
+                to="/dashboard/history"
+                className="rounded-[16px] bg-white p-4 border border-[#E5E2DC] flex items-center justify-between hover:shadow-sm transition-shadow"
               >
                 <div className="flex items-center gap-3">
                   <svg
@@ -318,7 +332,7 @@ export default function DashboardMain() {
                 <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#D4F4DD] text-[#2D7A4A]">
                   {item.status}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
