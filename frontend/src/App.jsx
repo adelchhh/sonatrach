@@ -25,6 +25,7 @@ import SessionDetails from "./pages/admin/SessionDetails";
 import EditSession from "./pages/admin/EditSession";
 import CreateSession from "./pages/admin/CreateSession";
 import SitesAndQuotas from "./pages/admin/SitesAndQuotas";
+import ManageDocuments from "./pages/admin/ManageDocuments";
 
 
 function App() {
@@ -47,7 +48,7 @@ function App() {
   path="/dashboard/admin/activities/:id/sessions/:sessionId/sites-quotas"
   element={<SitesAndQuotas />}
 />
-        <Route path="/dashboard/documents" element={<Documents />} />
+        <Route path="/dashboard/documents" element={<Documents />} />  
         <Route path="/dashboard/catalog" element={<ActivitiesCatalog />} />
         <Route
   path="/dashboard/admin/activities/create"
@@ -58,6 +59,10 @@ function App() {
   element={<ManageWithdrawals />}
 />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+  path="/dashboard/admin/documents"
+  element={<ManageDocuments />}
+/>
         <Route path="/dashboard/admin/draw" element={<LaunchDraw />} />
 
 <Route

@@ -51,6 +51,11 @@ const adminItems = [
     icon: "⚙️",
   },
   {
+    label: "Manage Documents",
+    path: "/dashboard/admin/documents",
+    icon: "📋",
+  },
+  {
     label: "Manage Site",
     path: "/dashboard/admin/site",
     icon: "🏢",

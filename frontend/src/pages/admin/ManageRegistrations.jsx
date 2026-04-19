@@ -510,13 +510,22 @@ export default function ManageRegistrations() {
                                 </button>
 
                                 {(row.status === "Selected" || row.status === "Accepted") && (
-                                  <button
-                                    onClick={() => openModal("confirm", row.id)}
-                                    className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm"
-                                  >
-                                    Mark Confirmed
-                                  </button>
-                                )}
+  row.documentsStatus === "Complete" ? (
+    <button
+      onClick={() => openModal("confirm", row.id)}
+      className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm"
+    >
+      Mark Confirmed
+    </button>
+  ) : (
+    <button
+      disabled
+      className="px-3 py-1.5 rounded-lg bg-[#ED8D31]/50 text-white text-sm cursor-not-allowed"
+    >
+      Docs Required
+    </button>
+  )
+)}
 
                                 {row.status !== "Cancelled" && (
                                   <button
