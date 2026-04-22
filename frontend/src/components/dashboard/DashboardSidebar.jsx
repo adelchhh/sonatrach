@@ -44,6 +44,29 @@ const employeeItems = [
   },
 ];
 
+const communicatorItems = [
+  {
+    label: "Manage Announcements",
+    path: "/dashboard/communicator/announcements",
+    icon: "📢",
+  },
+  {
+    label: "Manage Surveys",
+    path: "/dashboard/communicator/surveys",
+    icon: "📝",
+  },
+  {
+    label: "Idea Box Moderation",
+    path: "/dashboard/communicator/ideas",
+    icon: "💡",
+  },
+  {
+    label: "Manage Notifications",
+    path: "/dashboard/communicator/notifications",
+    icon: "🔔",
+  },
+];
+
 const adminItems = [
   {
     label: "Manage Activities",
@@ -160,6 +183,14 @@ export default function DashboardSidebar() {
           items={adminItems}
           location={location}
         />
+
+        <div className="my-3 border-t border-[#E5E2DC]" />
+
+        <NavSection
+          title="Communicator tools"
+          items={communicatorItems}
+          location={location}
+        />
       </nav>
 
       {/* Bottom role card */}
@@ -167,11 +198,12 @@ export default function DashboardSidebar() {
         <div className="rounded-[16px] bg-[#F5F4F1] p-3">
           <p className="text-xs text-[#7A8088] mb-2">Connected role</p>
           <p className="text-sm font-semibold text-[#2F343B] mb-2">
-            Employee + Functional Admin
+            Employee + Functional Admin + Communicator
           </p>
           <p className="text-xs text-[#7A8088] leading-[160%]">
             You keep access to your personal employee tools while managing
-            activities, quotas, registrations, draws, withdrawals, and reporting.
+            activities, registrations, draws, documents, communication content,
+            surveys, idea moderation, and notifications.
           </p>
         </div>
       </div>

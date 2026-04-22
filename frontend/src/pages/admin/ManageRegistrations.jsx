@@ -13,7 +13,6 @@ const initialRegistrations = [
     status: "Pending Draw",
     submittedOn: "Sep 18, 2024",
     documentsStatus: "Complete",
-    documents: ["ID Copy", "Medical Certificate"],
   },
   {
     id: 2,
@@ -25,7 +24,6 @@ const initialRegistrations = [
     status: "Accepted",
     submittedOn: "Sep 14, 2024",
     documentsStatus: "Complete",
-    documents: ["ID Copy", "Family Book"],
   },
   {
     id: 3,
@@ -37,7 +35,6 @@ const initialRegistrations = [
     status: "Waiting List",
     submittedOn: "Sep 10, 2024",
     documentsStatus: "Missing",
-    documents: ["ID Copy"],
   },
   {
     id: 4,
@@ -49,7 +46,6 @@ const initialRegistrations = [
     status: "Confirmed",
     submittedOn: "Sep 05, 2024",
     documentsStatus: "Complete",
-    documents: ["ID Copy", "Authorization"],
   },
   {
     id: 5,
@@ -61,7 +57,6 @@ const initialRegistrations = [
     status: "Selected",
     submittedOn: "Sep 22, 2024",
     documentsStatus: "Complete",
-    documents: ["Passport Copy", "Medical Certificate"],
   },
   {
     id: 6,
@@ -73,7 +68,6 @@ const initialRegistrations = [
     status: "Cancelled",
     submittedOn: "Aug 28, 2024",
     documentsStatus: "Complete",
-    documents: ["ID Copy", "Family Book"],
   },
   {
     id: 7,
@@ -85,7 +79,6 @@ const initialRegistrations = [
     status: "Pending Draw",
     submittedOn: "Sep 23, 2024",
     documentsStatus: "Complete",
-    documents: ["Passport Copy"],
   },
   {
     id: 8,
@@ -97,12 +90,11 @@ const initialRegistrations = [
     status: "Selected",
     submittedOn: "Sep 19, 2024",
     documentsStatus: "Missing",
-    documents: ["ID Copy"],
   },
 ];
 
 export default function ManageRegistrations() {
-  const [registrations, setRegistrations] = useState(initialRegistrations);
+  const [registrations] = useState(initialRegistrations);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedSingleId, setSelectedSingleId] = useState(
     initialRegistrations[0]?.id ?? null
@@ -120,7 +112,7 @@ export default function ManageRegistrations() {
 
   const [modal, setModal] = useState({
     open: false,
-    type: null, // details | documents | confirm | cancel | exceptionalApprove | exceptionalReject | export | bulkConfirm | bulkCancel
+    type: null, // details | export
     registrationId: null,
   });
 
@@ -180,9 +172,6 @@ export default function ManageRegistrations() {
       pendingDraw: registrations.filter((r) => r.status === "Pending Draw").length,
       confirmed: registrations.filter((r) => r.status === "Confirmed").length,
       waiting: registrations.filter((r) => r.status === "Waiting List").length,
-      selected: registrations.filter((r) => r.status === "Selected").length,
-      accepted: registrations.filter((r) => r.status === "Accepted").length,
-      cancelled: registrations.filter((r) => r.status === "Cancelled").length,
     };
   }, [registrations]);
 
@@ -204,23 +193,6 @@ export default function ManageRegistrations() {
       type,
       registrationId,
     });
-  };
-
-  const updateStatus = (id, status) => {
-    setRegistrations((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
-    closeModal();
-  };
-
-  const bulkUpdateStatus = (status) => {
-    setRegistrations((prev) =>
-      prev.map((r) =>
-        selectedIds.includes(r.id) ? { ...r, status } : r
-      )
-    );
-    setSelectedIds([]);
-    closeModal();
   };
 
   const toggleRowSelection = (id) => {
@@ -271,9 +243,9 @@ export default function ManageRegistrations() {
                     Manage Registrations
                   </h1>
                   <p className="text-sm text-[#7A8088] mt-1 max-w-[820px]">
-                    Monitor employee registrations per activity and session, review
-                    uploaded documents, follow automatic statuses, and handle
-                    exceptional cases when needed.
+                    Monitor employee registrations per activity and session,
+                    follow automatic statuses, apply filters, and export
+                    registration lists when needed.
                   </p>
                 </div>
 
@@ -375,20 +347,6 @@ export default function ManageRegistrations() {
                   </p>
 
                   <button
-                    onClick={() => openModal("bulkConfirm")}
-                    className="px-4 py-2 rounded-lg bg-[#ED8D31] text-white text-sm"
-                  >
-                    Mark Confirmed
-                  </button>
-
-                  <button
-                    onClick={() => openModal("bulkCancel")}
-                    className="px-4 py-2 rounded-lg border border-[#E5E2DC] text-sm text-[#C95454] bg-white"
-                  >
-                    Cancel Registrations
-                  </button>
-
-                  <button
                     onClick={() => openModal("export")}
                     className="px-4 py-2 rounded-lg border border-[#E5E2DC] text-sm bg-white"
                   >
@@ -407,7 +365,7 @@ export default function ManageRegistrations() {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1180px]">
+                    <table className="w-full min-w-[1040px]">
                       <thead className="bg-[#F9F8F6] text-xs text-[#7A8088]">
                         <tr>
                           <th className="px-6 py-3 text-left">
@@ -494,66 +452,12 @@ export default function ManageRegistrations() {
                             </td>
 
                             <td className="px-6 py-4">
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => openModal("details", row.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
-                                >
-                                  Details
-                                </button>
-
-                                <button
-                                  onClick={() => openModal("documents", row.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
-                                >
-                                  Documents
-                                </button>
-
-                                {(row.status === "Selected" || row.status === "Accepted") && (
-  row.documentsStatus === "Complete" ? (
-    <button
-      onClick={() => openModal("confirm", row.id)}
-      className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm"
-    >
-      Mark Confirmed
-    </button>
-  ) : (
-    <button
-      disabled
-      className="px-3 py-1.5 rounded-lg bg-[#ED8D31]/50 text-white text-sm cursor-not-allowed"
-    >
-      Docs Required
-    </button>
-  )
-)}
-
-                                {row.status !== "Cancelled" && (
-                                  <button
-                                    onClick={() => openModal("cancel", row.id)}
-                                    className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white text-[#C95454]"
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
-
-                                {(row.status === "Pending Draw" || row.status === "Waiting List") && (
-                                  <>
-                                    <button
-                                      onClick={() => openModal("exceptionalApprove", row.id)}
-                                      className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
-                                    >
-                                      Exceptional Approve
-                                    </button>
-
-                                    <button
-                                      onClick={() => openModal("exceptionalReject", row.id)}
-                                      className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
-                                    >
-                                      Exceptional Reject
-                                    </button>
-                                  </>
-                                )}
-                              </div>
+                              <button
+                                onClick={() => openModal("details", row.id)}
+                                className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
+                              >
+                                Details
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -580,11 +484,9 @@ export default function ManageRegistrations() {
                     </h3>
 
                     <SummaryItem label="Pending Draw" value={stats.pendingDraw} />
-                    <SummaryItem label="Selected" value={stats.selected} />
-                    <SummaryItem label="Accepted" value={stats.accepted} />
-                    <SummaryItem label="Waiting list" value={stats.waiting} />
                     <SummaryItem label="Confirmed" value={stats.confirmed} />
-                    <SummaryItem label="Cancelled" value={stats.cancelled} />
+                    <SummaryItem label="Waiting list" value={stats.waiting} />
+                    <SummaryItem label="Total" value={stats.total} />
                   </div>
 
                   <div className="bg-white border border-[#E5E2DC] rounded-[20px] p-4">
@@ -593,28 +495,8 @@ export default function ManageRegistrations() {
                     </h3>
 
                     <ActionItem
-                      title="View application details"
+                      title="View registration details"
                       onOpen={() => openModal("details")}
-                    />
-                    <ActionItem
-                      title="Check uploaded documents"
-                      onOpen={() => openModal("documents")}
-                    />
-                    <ActionItem
-                      title="Mark as confirmed"
-                      onOpen={() => openModal("confirm")}
-                    />
-                    <ActionItem
-                      title="Cancel registration"
-                      onOpen={() => openModal("cancel")}
-                    />
-                    <ActionItem
-                      title="Exceptional approve"
-                      onOpen={() => openModal("exceptionalApprove")}
-                    />
-                    <ActionItem
-                      title="Exceptional reject"
-                      onOpen={() => openModal("exceptionalReject")}
                     />
                     <ActionItem
                       title="Export registrations"
@@ -644,77 +526,16 @@ export default function ManageRegistrations() {
       </div>
 
       {modal.open && modal.type === "details" && selectedRegistration && (
-        <ModalShell title="Application Details" onClose={closeModal}>
+        <ModalShell title="Registration Details" onClose={closeModal}>
           <DetailRow label="Employee" value={selectedRegistration.name} />
           <DetailRow label="Employee ID" value={selectedRegistration.employeeId} />
           <DetailRow label="Activity" value={selectedRegistration.activity} />
           <DetailRow label="Session" value={selectedRegistration.session} />
           <DetailRow label="Registration Type" value={selectedRegistration.registrationType} />
           <DetailRow label="Submitted On" value={selectedRegistration.submittedOn} />
+          <DetailRow label="Documents Status" value={selectedRegistration.documentsStatus} />
           <DetailRow label="Status" value={selectedRegistration.status} />
         </ModalShell>
-      )}
-
-      {modal.open && modal.type === "documents" && selectedRegistration && (
-        <ModalShell title="Uploaded Documents" onClose={closeModal}>
-          <div className="space-y-3">
-            <DetailRow label="Employee" value={selectedRegistration.name} />
-            <DetailRow label="Documents Status" value={selectedRegistration.documentsStatus} />
-
-            <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
-              <p className="text-sm font-semibold text-[#2F343B] mb-2">
-                Documents
-              </p>
-              <div className="space-y-2">
-                {selectedRegistration.documents.map((doc, i) => (
-                  <p key={i} className="text-sm text-[#7A8088]">
-                    • {doc}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-        </ModalShell>
-      )}
-
-      {modal.open && modal.type === "confirm" && selectedRegistration && (
-        <ConfirmModal
-          title="Mark as Confirmed"
-          message={`Mark ${selectedRegistration.name} as confirmed for ${selectedRegistration.activity}?`}
-          confirmLabel="Confirm"
-          onCancel={closeModal}
-          onConfirm={() => updateStatus(selectedRegistration.id, "Confirmed")}
-        />
-      )}
-
-      {modal.open && modal.type === "cancel" && selectedRegistration && (
-        <ConfirmModal
-          title="Cancel Registration"
-          message={`Cancel ${selectedRegistration.name}'s registration for ${selectedRegistration.activity}?`}
-          confirmLabel="Cancel Registration"
-          onCancel={closeModal}
-          onConfirm={() => updateStatus(selectedRegistration.id, "Cancelled")}
-        />
-      )}
-
-      {modal.open && modal.type === "exceptionalApprove" && selectedRegistration && (
-        <ConfirmModal
-          title="Exceptional Approval"
-          message={`Apply exceptional approval for ${selectedRegistration.name}'s registration?`}
-          confirmLabel="Approve"
-          onCancel={closeModal}
-          onConfirm={() => updateStatus(selectedRegistration.id, "Accepted")}
-        />
-      )}
-
-      {modal.open && modal.type === "exceptionalReject" && selectedRegistration && (
-        <ConfirmModal
-          title="Exceptional Rejection"
-          message={`Apply exceptional rejection for ${selectedRegistration.name}'s registration?`}
-          confirmLabel="Reject"
-          onCancel={closeModal}
-          onConfirm={() => updateStatus(selectedRegistration.id, "Rejected")}
-        />
       )}
 
       {modal.open && modal.type === "export" && (
@@ -728,26 +549,6 @@ export default function ManageRegistrations() {
           confirmLabel="Export"
           onCancel={closeModal}
           onConfirm={closeModal}
-        />
-      )}
-
-      {modal.open && modal.type === "bulkConfirm" && (
-        <ConfirmModal
-          title="Bulk Confirm"
-          message={`Mark ${selectedIds.length} selected registration(s) as confirmed?`}
-          confirmLabel="Confirm All"
-          onCancel={closeModal}
-          onConfirm={() => bulkUpdateStatus("Confirmed")}
-        />
-      )}
-
-      {modal.open && modal.type === "bulkCancel" && (
-        <ConfirmModal
-          title="Bulk Cancel"
-          message={`Cancel ${selectedIds.length} selected registration(s)?`}
-          confirmLabel="Cancel All"
-          onCancel={closeModal}
-          onConfirm={() => bulkUpdateStatus("Cancelled")}
         />
       )}
     </>

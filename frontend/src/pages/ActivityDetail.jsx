@@ -1,17 +1,33 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import { activities } from "../data/activities";
 
 export default function ActivityDetail() {
   const { slug } = useParams();
+
+  const [modal, setModal] = useState({
+    open: false,
+  });
+
   const activity = activities.find((item) => item.slug === slug);
+
+  const handleConfirmRegistration = () => {
+    console.log("Registration submitted for:", activity.title);
+    setModal({ open: false });
+
+    // later:
+    // send registration to backend / API
+  };
 
   if (!activity) {
     return (
       <Layout>
         <div className="px-4 py-16">
           <div className="max-w-[1336px] mx-auto">
-            <h1 className="text-4xl font-bold text-[#2F343B] mb-4">Activity not found</h1>
+            <h1 className="text-4xl font-bold text-[#2F343B] mb-4">
+              Activity not found
+            </h1>
             <Link to="/catalog" className="text-[#ED8D31] font-medium">
               Back to catalog
             </Link>
@@ -26,9 +42,10 @@ export default function ActivityDetail() {
       <div className="px-4 py-10">
         <div className="w-full max-w-[1336px] mx-auto">
           <div className="text-sm text-[#7A8088] mb-5">
-            <Link to="/" className="hover:text-[#2F343B]">Home</Link> ·{" "}
-            <Link to="/catalog" className="hover:text-[#2F343B]">Activities</Link> ·{" "}
-            <span className="text-[#2F343B]">{activity.title}</span>
+            <Link to="/catalog" className="hover:text-[#2F343B]">
+              Activities
+            </Link>{" "}
+            · <span className="text-[#2F343B]">{activity.title}</span>
           </div>
 
           <div className="mb-8">
@@ -64,11 +81,15 @@ export default function ActivityDetail() {
               <div className="space-y-4 text-sm text-[#50565E] border-b border-[#E5E2DC] pb-5 mb-5">
                 <div className="flex justify-between">
                   <span>Registration date</span>
-                  <span className="font-semibold text-[#2F343B]">{activity.date}</span>
+                  <span className="font-semibold text-[#2F343B]">
+                    {activity.date}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Available places</span>
-                  <span className="font-semibold text-[#2F343B]">150 families</span>
+                  <span className="font-semibold text-[#2F343B]">
+                    150 families
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Demand level</span>
@@ -85,24 +106,29 @@ export default function ActivityDetail() {
                 ))}
               </select>
 
-              <button className="w-full py-4 rounded-[14px] bg-[#ED8D31] text-white font-semibold mb-3">
-                Register for this activity
-              </button>
-
-              <button className="w-full py-4 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] font-medium">
-                Save for later
-              </button>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => setModal({ open: true })}
+                  className="w-full py-4 rounded-[14px] bg-[#ED8D31] text-white font-semibold hover:bg-[#d97d26] transition-colors"
+                >
+                  Register
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
             <div>
-              <h2 className="text-[#2F343B] text-[36px] font-bold mb-4">Overview</h2>
+              <h2 className="text-[#2F343B] text-[36px] font-bold mb-4">
+                Overview
+              </h2>
               <p className="text-[#7A8088] text-base leading-[190%] mb-8">
                 {activity.overview}
               </p>
 
-              <h3 className="text-[#2F343B] text-[30px] font-bold mb-5">What&apos;s Included</h3>
+              <h3 className="text-[#2F343B] text-[30px] font-bold mb-5">
+                What&apos;s Included
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
                 {activity.included.map((item) => (
                   <div
@@ -111,7 +137,8 @@ export default function ActivityDetail() {
                   >
                     <h4 className="text-[#2F343B] font-bold mb-2">{item}</h4>
                     <p className="text-[#7A8088] text-sm leading-[170%]">
-                      Included as part of the activity experience for eligible employees.
+                      Included as part of the activity experience for eligible
+                      employees.
                     </p>
                   </div>
                 ))}
@@ -131,9 +158,12 @@ export default function ActivityDetail() {
                       {session.date}
                     </div>
                     <div>
-                      <h4 className="text-[#2F343B] font-bold mb-2">{session.title}</h4>
+                      <h4 className="text-[#2F343B] font-bold mb-2">
+                        {session.title}
+                      </h4>
                       <p className="text-[#7A8088] text-sm leading-[170%]">
-                        Scheduled session for this activity with participation details and timing.
+                        Scheduled session for this activity with participation
+                        details and timing.
                       </p>
                     </div>
                   </div>
@@ -145,6 +175,40 @@ export default function ActivityDetail() {
           </div>
         </div>
       </div>
+
+      {modal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
+            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
+              Confirm Registration
+            </h2>
+
+            <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">
+              Are you sure you want to submit your request for{" "}
+              <span className="font-semibold text-[#2F343B]">
+                {activity.title}
+              </span>
+              ?
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setModal({ open: false })}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleConfirmRegistration}
+                className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

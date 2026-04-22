@@ -27,10 +27,21 @@ import CreateSession from "./pages/admin/CreateSession";
 import SitesAndQuotas from "./pages/admin/SitesAndQuotas";
 import ManageDocuments from "./pages/admin/ManageDocuments";
 
+import ManageAnnouncements from "./pages/communicator/ManageAnnouncements";
+import ManageSurveys from "./pages/communicator/ManageSurveys";
+import IdeaBoxModeration from "./pages/communicator/IdeaBoxModeration";
+import ManageNotifications from "./pages/communicator/ManageNotifications";
+import CreateAnnouncement from "./pages/communicator/CreateAnnouncement";
+import AnnouncementsPage from "./pages/AnnouncementsPage";
+import ScrollToTop from "./components/ScrollToTop";
+import AnnouncementDetails from "./pages/AnnouncementDetails";
+import CreateSurveyNotice from "./pages/communicator/CreateSurveyNotice";
+
 
 function App() {
   return (
     <BrowserRouter>
+    <ScrollToTop />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/catalog" element={<Catalog />} />
@@ -69,6 +80,37 @@ function App() {
   path="/dashboard/admin/activities/:id/sessions"
   element={<ManageSessions />}
 />
+
+<Route
+  path="/dashboard/communicator/surveys"
+  element={<ManageSurveys />}
+/>
+<Route
+  path="/dashboard/communicator/ideas"
+  element={<IdeaBoxModeration />}
+/>
+<Route
+  path="/dashboard/communicator/announcements"
+  element={<ManageAnnouncements />}
+/>
+<Route
+  path="/dashboard/communicator/notifications"
+  element={<ManageNotifications />}
+/>
+<Route
+  path="/dashboard/communicator/announcements/create"
+  element={<CreateAnnouncement />}
+/>
+<Route path="/announcements" element={<AnnouncementsPage />} />
+<Route
+  path="/announcements/:slug"
+  element={<AnnouncementDetails />}
+/>
+<Route
+  path="/dashboard/communicator/surveys/create"
+  element={<CreateSurveyNotice />}
+/>
+
 
 <Route
   path="/dashboard/admin/activities/:id/sessions/create"

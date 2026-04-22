@@ -3,27 +3,15 @@ import { Link } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 
-const availableDocuments = [
-  "Copy of ID",
-  "Family Book",
-  "Medical Certificate",
-  "Passport Copy",
-];
-
 export default function CreateActivity() {
   const [form, setForm] = useState({
     title: "",
     description: "",
+    minimumSeniority: "",
+    requiresDraw: true,
+    numberOfSuppliants: 2,
     status: "Draft",
     printRunRequired: true,
-    participationRule: "",
-    minimumSeniority: "",
-    eligibilityScope: "",
-    confirmationDeadline: "",
-    documentDeadline: "",
-    transportation: "",
-    catering: "",
-    requiredDocuments: ["Copy of ID", "Family Book"],
   });
 
   const handleChange = (field, value) => {
@@ -31,19 +19,6 @@ export default function CreateActivity() {
       ...prev,
       [field]: value,
     }));
-  };
-
-  const toggleDocument = (doc) => {
-    setForm((prev) => {
-      const exists = prev.requiredDocuments.includes(doc);
-
-      return {
-        ...prev,
-        requiredDocuments: exists
-          ? prev.requiredDocuments.filter((d) => d !== doc)
-          : [...prev.requiredDocuments, doc],
-      };
-    });
   };
 
   const handleSave = () => {
@@ -67,7 +42,8 @@ export default function CreateActivity() {
                   Create New Activity
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Define the details, conditions, and logistics for a new employee activity.
+                  Define the main information of the activity before configuring
+                  sessions, sites, deadlines, and quotas.
                 </p>
               </div>
 
@@ -116,8 +92,10 @@ export default function CreateActivity() {
                     <Field label="Description">
                       <textarea
                         value={form.description}
-                        onChange={(e) => handleChange("description", e.target.value)}
-                        rows={4}
+                        onChange={(e) =>
+                          handleChange("description", e.target.value)
+                        }
+                        rows={5}
                         placeholder="Provide a detailed description of the activity..."
                         className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm resize-none"
                       />
@@ -133,7 +111,8 @@ export default function CreateActivity() {
                           ⬆
                         </div>
                         <p className="text-sm text-[#2F343B] font-medium">
-                          <span className="text-[#ED8D31]">Click to upload</span> or drag and drop
+                          <span className="text-[#ED8D31]">Click to upload</span>{" "}
+                          or drag and drop
                         </p>
                         <p className="text-xs text-[#7A8088] mt-1">
                           SVG, PNG, JPG or GIF (max. 800×400px)
@@ -143,41 +122,18 @@ export default function CreateActivity() {
                   </div>
                 </section>
 
-                {/* Conditions */}
+                {/* Activity rules */}
                 <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
                   <div className="px-5 py-4 border-b border-[#E5E2DC]">
                     <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Conditions & Deadlines
+                      Activity Rules
                     </h2>
                     <p className="text-sm text-[#7A8088] mt-1">
-                      Eligibility rules and important dates for participation.
+                      Define the activity-level rules before creating sessions.
                     </p>
                   </div>
 
                   <div className="p-5 space-y-5">
-                    <Field label="Conditions of Participation">
-                      <select
-                        value={form.participationRule}
-                        onChange={(e) =>
-                          handleChange("participationRule", e.target.value)
-                        }
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                      >
-                        <option value="">Select participation rule</option>
-                        <option>Open to all employees</option>
-                        <option>Minimum seniority required</option>
-                        <option>Employees with family only</option>
-                        <option>Medical file required</option>
-                      </select>
-                    </Field>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Tag text="Open to all employees" />
-                      <Tag text="Minimum seniority required" />
-                      <Tag text="Employees with family only" />
-                      <Tag text="Medical file required" />
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Field label="Minimum Seniority (Years)">
                         <select
@@ -188,124 +144,48 @@ export default function CreateActivity() {
                           className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
                         >
                           <option value="">Select option</option>
-                          <option>1 year</option>
-                          <option>3 years</option>
-                          <option>5 years</option>
-                          <option>10 years</option>
+                          <option value="1">1 year</option>
+                          <option value="3">3 years</option>
+                          <option value="5">5 years</option>
+                          <option value="10">10 years</option>
                         </select>
                       </Field>
 
-                      <Field label="Eligibility Scope">
+                      <Field label="Requires Draw">
                         <select
-                          value={form.eligibilityScope}
+                          value={form.requiresDraw ? "Yes" : "No"}
                           onChange={(e) =>
-                            handleChange("eligibilityScope", e.target.value)
+                            handleChange(
+                              "requiresDraw",
+                              e.target.value === "Yes"
+                            )
                           }
                           className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
                         >
-                          <option value="">Select option</option>
-                          <option>All employees</option>
-                          <option>Employees only</option>
-                          <option>Employees + families</option>
-                          <option>Regional employees only</option>
-                        </select>
-                      </Field>
-
-                      <Field label="Confirmation Deadline">
-                        <input
-                          type="text"
-                          value={form.confirmationDeadline}
-                          onChange={(e) =>
-                            handleChange("confirmationDeadline", e.target.value)
-                          }
-                          placeholder="Select date"
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                        />
-                      </Field>
-
-                      <Field label="Document Submission Deadline">
-                        <input
-                          type="text"
-                          value={form.documentDeadline}
-                          onChange={(e) =>
-                            handleChange("documentDeadline", e.target.value)
-                          }
-                          placeholder="Select date"
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                        />
-                      </Field>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Logistics */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Logistics & Requirements
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Transportation, catering, and necessary paperwork.
-                    </p>
-                  </div>
-
-                  <div className="p-5 space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Field label="Transportation Arrangements">
-                        <select
-                          value={form.transportation}
-                          onChange={(e) =>
-                            handleChange("transportation", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                        >
-                          <option value="">Select option...</option>
-                          <option>Bus transportation</option>
-                          <option>Flight included</option>
-                          <option>No transport included</option>
-                        </select>
-                      </Field>
-
-                      <Field label="Catering Arrangements">
-                        <select
-                          value={form.catering}
-                          onChange={(e) => handleChange("catering", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                        >
-                          <option value="">Select option...</option>
-                          <option>Full board</option>
-                          <option>Half board</option>
-                          <option>No catering</option>
+                          <option>Yes</option>
+                          <option>No</option>
                         </select>
                       </Field>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-[#2F343B] mb-3">
-                        Required Documents
-                      </label>
-
-                      <div className="rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] p-3 flex flex-wrap gap-2">
-                        {availableDocuments.map((doc) => {
-                          const selected = form.requiredDocuments.includes(doc);
-
-                          return (
-                            <button
-                              key={doc}
-                              type="button"
-                              onClick={() => toggleDocument(doc)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                selected
-                                  ? "bg-[#E5E2DC] text-[#2F343B]"
-                                  : "bg-white border border-[#E5E2DC] text-[#7A8088]"
-                              }`}
-                            >
-                              {doc}
-                            </button>
-                          );
-                        })}
+                    {form.requiresDraw && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Field label="Number of Suppliants">
+                          <input
+                            type="number"
+                            min="1"
+                            value={form.numberOfSuppliants}
+                            onChange={(e) =>
+                              handleChange(
+                                "numberOfSuppliants",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
+                          />
+                        </Field>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </section>
 
@@ -371,17 +251,23 @@ export default function CreateActivity() {
                           Print Run Required
                         </p>
                         <p className="text-xs text-[#7A8088] mt-1 leading-[160%]">
-                          Requires physical printed materials (badges, tickets, access passes, etc.)
+                          Requires physical printed materials such as badges,
+                          tickets, or access passes.
                         </p>
                       </div>
 
                       <button
                         type="button"
                         onClick={() =>
-                          handleChange("printRunRequired", !form.printRunRequired)
+                          handleChange(
+                            "printRunRequired",
+                            !form.printRunRequired
+                          )
                         }
                         className={`relative w-10 h-6 rounded-full transition-colors ${
-                          form.printRunRequired ? "bg-[#ED8D31]" : "bg-[#E5E2DC]"
+                          form.printRunRequired
+                            ? "bg-[#ED8D31]"
+                            : "bg-[#E5E2DC]"
                         }`}
                       >
                         <span
@@ -391,6 +277,40 @@ export default function CreateActivity() {
                         />
                       </button>
                     </div>
+                  </div>
+                </section>
+
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                    <h3 className="text-[24px] font-bold text-[#2F343B]">
+                      Preview Summary
+                    </h3>
+                    <p className="text-sm text-[#7A8088] mt-1">
+                      Quick overview of the activity configuration.
+                    </p>
+                  </div>
+
+                  <div className="p-5 space-y-3">
+                    <SummaryRow label="Title" value={form.title || "Not set"} />
+                    <SummaryRow
+                      label="Minimum Seniority"
+                      value={
+                        form.minimumSeniority
+                          ? `${form.minimumSeniority} year(s)`
+                          : "Not set"
+                      }
+                    />
+                    <SummaryRow
+                      label="Requires Draw"
+                      value={form.requiresDraw ? "Yes" : "No"}
+                    />
+                    {form.requiresDraw && (
+                      <SummaryRow
+                        label="Suppliants"
+                        value={String(form.numberOfSuppliants)}
+                      />
+                    )}
+                    <SummaryRow label="Status" value={form.status} />
                   </div>
                 </section>
               </div>
@@ -413,10 +333,13 @@ function Field({ label, children }) {
   );
 }
 
-function Tag({ text }) {
+function SummaryRow({ label, value }) {
   return (
-    <span className="px-3 py-1.5 rounded-full bg-[#F6EADB] text-[#6E5B44] text-xs font-medium">
-      {text}
-    </span>
+    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
+      <span className="text-sm text-[#7A8088]">{label}</span>
+      <span className="text-sm font-semibold text-[#2F343B] text-right">
+        {value}
+      </span>
+    </div>
   );
 }

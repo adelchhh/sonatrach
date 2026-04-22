@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { Link } from "react-router-dom";
 
 const announcements = [
   {
@@ -79,9 +80,9 @@ export default function AnnouncementsSection() {
             </p>
           </div>
 
-          <a href="#" className="text-[#ED8D31] text-sm font-semibold">
-            View All
-          </a>
+          <Link to="/announcements" className="text-[#ED8D31] text-sm font-semibold">
+  View All
+</Link>
         </div>
 
         {/* Controls */}
