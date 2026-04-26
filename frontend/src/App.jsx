@@ -108,111 +108,111 @@ function App() {
         {/* FUNCTIONAL ADMIN */}
         <Route
           path="/dashboard/admin/activities"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><ManageActivities /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><ManageActivities /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/activities/create"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><CreateActivity /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><CreateActivity /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/activities/:slug/edit"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><ModifyActivity /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><ModifyActivity /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/activities/:id/sessions"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><ManageSessions /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><ManageSessions /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/activities/:id/sessions/create"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><CreateSession /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><CreateSession /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/activities/:id/sessions/:sessionId"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><SessionDetails /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><SessionDetails /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/activities/:id/sessions/:sessionId/edit"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><EditSession /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><EditSession /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/activities/:id/sessions/:sessionId/sites-quotas"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><SitesAndQuotas /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><SitesAndQuotas /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/registrations"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><ManageRegistrations /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><ManageRegistrations /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/documents"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><ManageDocuments /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><ManageDocuments /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/draw"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><LaunchDraw /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><LaunchDraw /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/draw/run/:sessionId"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><RunDraw /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><RunDraw /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/withdrawals"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><ManageWithdrawals /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><ManageWithdrawals /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/reports"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><Reports /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><Reports /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/draw-history"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><DrawHistory /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><DrawHistory /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/admin/site"
-          element={<ProtectedRoute allowedRoles={["ADMIN_FONCTIONNEL"]}><ManageSite /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["FUNCTIONAL_ADMIN"]}><ManageSite /></ProtectedRoute>}
         />
 
         {/* COMMUNICATOR */}
         <Route
           path="/dashboard/communicator/announcements"
-          element={<ProtectedRoute allowedRoles={["COMMUNICATEUR"]}><ManageAnnouncements /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["COMMUNICATOR"]}><ManageAnnouncements /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/communicator/announcements/create"
-          element={<ProtectedRoute allowedRoles={["COMMUNICATEUR"]}><CreateAnnouncement /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["COMMUNICATOR"]}><CreateAnnouncement /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/communicator/surveys"
-          element={<ProtectedRoute allowedRoles={["COMMUNICATEUR"]}><ManageSurveys /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["COMMUNICATOR"]}><ManageSurveys /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/communicator/surveys/create"
-          element={<ProtectedRoute allowedRoles={["COMMUNICATEUR"]}><CreateSurveyNotice /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["COMMUNICATOR"]}><CreateSurveyNotice /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/communicator/ideas"
-          element={<ProtectedRoute allowedRoles={["COMMUNICATEUR"]}><IdeaBoxModeration /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["COMMUNICATOR"]}><IdeaBoxModeration /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/communicator/notifications"
-          element={<ProtectedRoute allowedRoles={["COMMUNICATEUR"]}><ManageNotifications /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["COMMUNICATOR"]}><ManageNotifications /></ProtectedRoute>}
         />
 
         {/* SYSTEM ADMIN */}
         <Route
           path="/dashboard/system/functional-admins"
-          element={<ProtectedRoute allowedRoles={["ADMIN_SYSTEME"]}><ManageFunctionalAdmins /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><ManageFunctionalAdmins /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/system/communicators"
-          element={<ProtectedRoute allowedRoles={["ADMIN_SYSTEME"]}><ManageCommunicators /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><ManageCommunicators /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/system/system-admins"
-          element={<ProtectedRoute allowedRoles={["ADMIN_SYSTEME"]}><ManageSystemAdmins /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><ManageSystemAdmins /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/system/audit-log"
-          element={<ProtectedRoute allowedRoles={["ADMIN_SYSTEME"]}><AuditLogPage /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}><AuditLogPage /></ProtectedRoute>}
         />
 
       </Routes>

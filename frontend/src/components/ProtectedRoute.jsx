@@ -9,11 +9,15 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   const roles = user.roles || [];
 
-  if (roles.includes("ADMIN_SYSTEME")) {
+  // System admin has access to everything
+  if (roles.includes("SYSTEM_ADMIN")) {
     return children;
   }
 
-  if (allowedRoles && !allowedRoles.some((role) => roles.includes(role))) {
+  if (
+    allowedRoles &&
+    !allowedRoles.some((role) => roles.includes(role))
+  ) {
     return <Navigate to="/dashboard" replace />;
   }
 
