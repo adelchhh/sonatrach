@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useT } from "../i18n/LanguageContext";
 import runningImg from "../assets/activities/running.jpg";
 import summerCampImg from "../assets/activities/summer-camp.jpg";
 import bungalowImg from "../assets/activities/bungalow-stay.jpg";
@@ -66,19 +67,21 @@ function ActivityCard({ image, tag, title, subtitle, tall = false }) {
 }
 
 export default function ActivitiesSection() {
+  const t = useT();
+
   return (
-    <div className="flex flex-col items-center px-4 py-8 gap-8">
+    <div className="flex flex-col items-center px-4 py-8 gap-8" id="activities">
       <div className="w-full max-w-[1336px]">
         <div className="flex justify-between items-end mb-[42px]">
           <div className="flex flex-col gap-[10px]">
             <span className="text-[#ED8D31] text-[13px] font-semibold">
-              Featured activities
+              {t("homeSections.featuredTag")}
             </span>
             <h2 className="text-[#2F343B] text-[42px] font-extrabold leading-[103%] tracking-[-2.1px]">
-              Explore activities on the platform
+              {t("homeSections.featuredTitle")}
             </h2>
             <p className="text-[#7A8088] text-base font-normal leading-[170%] max-w-[760px]">
-              Discover sports, travel, family and leisure experiences designed for employees.
+              {t("homeSections.featuredSubtitle")}
             </p>
           </div>
 
@@ -86,46 +89,46 @@ export default function ActivitiesSection() {
             to="/catalog"
             className="text-[#ED8D31] text-sm font-semibold leading-[21px] whitespace-nowrap"
           >
-            Browse Catalog
+            {t("hero.browseCatalog")}
           </Link>
         </div>
 
         <div className="grid grid-cols-3 gap-5">
           <ActivityCard
             image={runningImg}
-            tag="Sport"
-            title="Running"
-            subtitle="Community races and wellness activities"
+            tag={t("categories.SPORT")}
+            title={t("homeSections.activitiesData.running.title")}
+            subtitle={t("homeSections.activitiesData.running.subtitle")}
             tall
           />
 
           <div className="flex flex-col gap-5">
             <ActivityCard
               image={summerCampImg}
-              tag="Family"
-              title="Summer Camp"
-              subtitle="Fun and organized holiday experiences"
+              tag={t("categories.FAMILY")}
+              title={t("homeSections.activitiesData.summerCamp.title")}
+              subtitle={t("homeSections.activitiesData.summerCamp.subtitle")}
             />
             <ActivityCard
               image={bungalowImg}
-              tag="Stay"
-              title="Bungalow Stay"
-              subtitle="Relaxing family-friendly accommodation"
+              tag={t("categories.STAY")}
+              title={t("homeSections.activitiesData.bungalow.title")}
+              subtitle={t("homeSections.activitiesData.bungalow.subtitle")}
             />
           </div>
 
           <div className="flex flex-col gap-5">
             <ActivityCard
               image={campingImg}
-              tag="Nature"
-              title="Camping"
-              subtitle="Outdoor adventures and group stays"
+              tag={t("categories.NATURE")}
+              title={t("homeSections.activitiesData.camping.title")}
+              subtitle={t("homeSections.activitiesData.camping.subtitle")}
             />
             <ActivityCard
               image={omraImg}
-              tag="Spiritual"
-              title="Omra"
-              subtitle="Organized spiritual journeys"
+              tag={t("categories.SPIRITUAL")}
+              title={t("homeSections.activitiesData.omra.title")}
+              subtitle={t("homeSections.activitiesData.omra.subtitle")}
             />
           </div>
         </div>

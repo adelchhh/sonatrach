@@ -1,280 +1,229 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiGet, apiPostForm, getCurrentUserId, API_BASE_URL } from "../../api";
 
-const initialDocuments = [
-  {
-    id: 1,
-    activity: "Omra",
-    session: "Winter Session 2024",
-    document: "Passport Copy",
-    deadline: "Nov 05, 2024",
-    status: "Missing",
-    fileName: "",
-    note: "This document is required to validate your travel eligibility.",
-  },
-  {
-    id: 2,
-    activity: "Omra",
-    session: "Winter Session 2024",
-    document: "Medical Certificate",
-    deadline: "Nov 05, 2024",
-    status: "Uploaded",
-    fileName: "medical_certificate.pdf",
-    note: "Uploaded successfully and waiting for admin review.",
-  },
-  {
-    id: 3,
-    activity: "Summer Camp",
-    session: "Kids Session 2",
-    document: "Family Record Book",
-    deadline: "Sep 01, 2024",
-    status: "Validated",
-    fileName: "family_record_book.pdf",
-    note: "Document approved.",
-  },
-  {
-    id: 4,
-    activity: "Camping",
-    session: "Autumn Session",
-    document: "ID Copy",
-    deadline: "Oct 02, 2024",
-    status: "Rejected",
-    fileName: "id_copy_old.jpg",
-    note: "The uploaded file was not clear. Please upload a better version.",
-  },
-];
+const STATUS_LABEL = {
+  UPLOADED: "Pending review",
+  VALIDATED: "Validated ✅",
+  REJECTED: "Rejected ❌",
+};
+
+const STATUS_STYLES = {
+  UPLOADED: "bg-[#FFF4D6] text-[#B98900]",
+  VALIDATED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  REJECTED: "bg-[#FBE1E1] text-[#A93B3B]",
+};
+
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
 
 export default function Documents() {
-  const [documents, setDocuments] = useState(initialDocuments);
-  const [modal, setModal] = useState({
-    open: false,
-    type: null, // upload | details
-    documentId: null,
+  const [documents, setDocuments] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+
+  const [uploadForm, setUploadForm] = useState({
+    registration_id: "",
+    document_type: "",
+    file: null,
   });
-  const [selectedFile, setSelectedFile] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
-  const selectedDoc = documents.find((d) => d.id === modal.documentId);
+  const userId = getCurrentUserId();
 
-  const missing = documents.filter((d) => d.status === "Missing").length;
-  const uploaded = documents.filter((d) => d.status === "Uploaded").length;
-  const validated = documents.filter((d) => d.status === "Validated").length;
-  const rejected = documents.filter((d) => d.status === "Rejected").length;
-
-  const closeModal = () => {
-    setModal({
-      open: false,
-      type: null,
-      documentId: null,
-    });
-    setSelectedFile("");
+  const load = () => {
+    if (!userId) {
+      setLoading(false);
+      setPageError("Please log in.");
+      return;
+    }
+    setLoading(true);
+    setPageError(null);
+    Promise.all([
+      apiGet(`/me/documents?user_id=${userId}`),
+      apiGet(`/me/registrations?user_id=${userId}`),
+    ])
+      .then(([docs, regs]) => {
+        setDocuments(docs.data || []);
+        setRegistrations(regs.data || []);
+      })
+      .catch((err) => setPageError(err.message || "Could not load documents."))
+      .finally(() => setLoading(false));
   };
 
-  const handleUpload = () => {
-    if (!selectedFile || !selectedDoc) return;
+  useEffect(() => {
+    load();
+  }, [userId]);
 
-    setDocuments((prev) =>
-      prev.map((doc) =>
-        doc.id === modal.documentId
-          ? {
-              ...doc,
-              status: "Uploaded",
-              fileName: selectedFile,
-              note: "Uploaded successfully and waiting for admin review.",
-            }
-          : doc
-      )
-    );
+  const stats = useMemo(
+    () => ({
+      total: documents.length,
+      pending: documents.filter((d) => d.status === "UPLOADED").length,
+      validated: documents.filter((d) => d.status === "VALIDATED").length,
+      rejected: documents.filter((d) => d.status === "REJECTED").length,
+    }),
+    [documents]
+  );
 
-    closeModal();
+  const uploadableRegistrations = useMemo(
+    () =>
+      registrations.filter((r) =>
+        ["PENDING", "VALIDATED", "SELECTED", "CONFIRMED"].includes(r.status)
+      ),
+    [registrations]
+  );
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    setUploadError(null);
+
+    if (!uploadForm.registration_id || !uploadForm.file) {
+      setUploadError("Choose a registration and a file.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await apiPostForm(
+        `/registrations/${uploadForm.registration_id}/documents`,
+        {
+          file: uploadForm.file,
+          document_type: uploadForm.document_type || null,
+        }
+      );
+      setUploadForm({ registration_id: "", document_type: "", file: null });
+      // Reset the file input
+      const input = document.getElementById("doc-file-input");
+      if (input) input.value = "";
+      load();
+    } catch (err) {
+      setUploadError(err.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
-    <>
-      <div className="flex h-screen bg-[#F7F7F5]">
-        <DashboardSidebar />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardTopBar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
 
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Documents
-                </h1>
-                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Upload and track the required documents for your selected
-                  activities and sessions.
-                </p>
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                My Documents
+              </h1>
+              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                Upload supporting documents for your registrations and track
+                validation status.
+              </p>
+            </div>
+
+            {pageError && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {pageError}
               </div>
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard
-                  title="Missing"
-                  value={missing}
-                  subtitle="Documents still required"
-                />
-                <StatCard
-                  title="Uploaded"
-                  value={uploaded}
-                  subtitle="Waiting for admin review"
-                />
-                <StatCard
-                  title="Validated"
-                  value={validated}
-                  subtitle="Approved documents"
-                />
-                <StatCard
-                  title="Rejected"
-                  value={rejected}
-                  subtitle="Need re-upload"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <StatCard title="Uploaded" value={stats.total} />
+              <StatCard title="Pending review" value={stats.pending} />
+              <StatCard title="Validated" value={stats.validated} />
+              <StatCard title="Rejected" value={stats.rejected} />
+            </div>
 
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Required Documents
-                </h2>
-                <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                  Review your document requirements by activity and session.
-                </p>
-
-                <div className="flex flex-wrap gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search activity or document..."
-                    className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                  />
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All activities</option>
-                  </select>
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All status</option>
-                  </select>
-
-                  <button className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]">
-                    Reset
-                  </button>
-
-                  <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold">
-                    Apply filters
-                  </button>
-                </div>
-              </section>
-
+            <div className="grid grid-cols-1 xl:grid-cols-[2fr_340px] gap-6">
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                  <div>
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Documents List
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Keep track of uploads, deadlines, and validation results.
-                    </p>
-                  </div>
-
-                  <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
-                    {documents.length} documents
-                  </span>
+                <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                  <h2 className="text-[22px] font-bold text-[#2F343B]">
+                    My documents
+                  </h2>
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[950px]">
+                  <table className="w-full min-w-[860px]">
                     <thead className="bg-[#FBFAF8]">
                       <tr>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Activity
+                          File
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Session
+                          For activity
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Document
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Deadline
+                          Uploaded
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
                           Status
                         </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Actions
-                        </th>
                       </tr>
                     </thead>
-
                     <tbody>
-                      {documents.map((item) => (
+                      {loading && (
+                        <tr>
+                          <td
+                            colSpan="4"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            Loading...
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading && documents.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan="4"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            You haven't uploaded any documents yet.
+                          </td>
+                        </tr>
+                      )}
+
+                      {documents.map((d) => (
                         <tr
-                          key={item.id}
+                          key={d.id}
                           className="border-t border-[#E5E2DC] align-top"
                         >
-                          <td className="px-5 py-5 font-semibold text-[#2F343B] text-sm">
-                            {item.activity}
+                          <td className="px-5 py-4">
+                            <p className="font-semibold text-[#2F343B] text-sm break-all">
+                              {d.file_name}
+                            </p>
+                            <p className="text-xs text-[#7A8088] mt-1">
+                              {d.document_type || "—"}
+                            </p>
                           </td>
-
-                          <td className="px-5 py-5 text-sm text-[#7A8088]">
-                            {item.session}
+                          <td className="px-5 py-4 text-sm text-[#2F343B]">
+                            {d.activity_title}
+                            <p className="text-xs text-[#7A8088] mt-1">
+                              Session #{d.session_id}
+                            </p>
                           </td>
-
-                          <td className="px-5 py-5 text-sm text-[#2F343B]">
-                            {item.document}
+                          <td className="px-5 py-4 text-sm text-[#7A8088]">
+                            {formatDate(d.uploaded_at)}
                           </td>
-
-                          <td className="px-5 py-5 text-sm text-[#7A8088]">
-                            {item.deadline}
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <StatusBadge status={item.status} />
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <div className="flex flex-wrap gap-2">
-                              {(item.status === "Missing" ||
-                                item.status === "Rejected") && (
-                                <button
-                                  onClick={() =>
-                                    setModal({
-                                      open: true,
-                                      type: "upload",
-                                      documentId: item.id,
-                                    })
-                                  }
-                                  className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium"
-                                >
-                                  Upload
-                                </button>
-                              )}
-
-                              {item.status === "Uploaded" && (
-                                <span className="text-sm text-[#7A8088] flex items-center">
-                                  Awaiting review
-                                </span>
-                              )}
-
-                              {item.status === "Validated" && (
-                                <span className="text-sm text-[#2D7A4A] font-semibold flex items-center">
-                                  Approved
-                                </span>
-                              )}
-
-                              <button
-                                onClick={() =>
-                                  setModal({
-                                    open: true,
-                                    type: "details",
-                                    documentId: item.id,
-                                  })
-                                }
-                                className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                              >
-                                Details
-                              </button>
-                            </div>
+                          <td className="px-5 py-4">
+                            <StatusBadge status={d.status} />
+                            {d.validation_comment && (
+                              <p className="text-xs text-[#A93B3B] mt-1 max-w-[180px]">
+                                {d.validation_comment}
+                              </p>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -282,149 +231,122 @@ export default function Documents() {
                   </table>
                 </div>
               </section>
-            </div>
-          </main>
-        </div>
-      </div>
 
-      {modal.open && modal.type === "upload" && selectedDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-[20px] p-6 w-full max-w-[460px] shadow-lg">
-            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Upload Document
-            </h2>
-
-            <p className="text-sm text-[#7A8088] mb-4">
-              Upload your document for{" "}
-              <span className="font-semibold text-[#2F343B]">
-                {selectedDoc.document}
-              </span>
-              .
-            </p>
-
-            <div className="space-y-3 mb-6">
-              <DetailRow label="Activity" value={selectedDoc.activity} />
-              <DetailRow label="Session" value={selectedDoc.session} />
-              <DetailRow label="Deadline" value={selectedDoc.deadline} />
-            </div>
-
-            <div className="rounded-[16px] border border-dashed border-[#D9D5CE] bg-[#FBFAF8] p-5 mb-6">
-              <label className="block text-sm font-semibold text-[#2F343B] mb-3">
-                Choose file
-              </label>
-
-              <input
-                type="file"
-                onChange={(e) =>
-                  setSelectedFile(e.target.files?.[0]?.name || "")
-                }
-                className="w-full text-sm text-[#7A8088]"
-              />
-
-              {selectedFile && (
-                <p className="text-sm text-[#2F343B] mt-3">
-                  Selected file:{" "}
-                  <span className="font-semibold">{selectedFile}</span>
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5 h-fit">
+                <h2 className="text-[22px] font-bold text-[#2F343B] mb-2">
+                  Upload a document
+                </h2>
+                <p className="text-sm text-[#7A8088] mb-4">
+                  Pick the registration this document belongs to.
                 </p>
-              )}
-            </div>
 
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-              >
-                Cancel
-              </button>
+                {uploadableRegistrations.length === 0 ? (
+                  <p className="text-sm text-[#7A8088] italic">
+                    Register to an activity first.
+                  </p>
+                ) : (
+                  <form onSubmit={handleUpload} className="space-y-4">
+                    {uploadError && (
+                      <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">
+                        {uploadError}
+                      </div>
+                    )}
 
-              <button
-                onClick={handleUpload}
-                className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-              >
-                Upload
-              </button>
+                    <div>
+                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                        Registration *
+                      </label>
+                      <select
+                        value={uploadForm.registration_id}
+                        onChange={(e) =>
+                          setUploadForm((p) => ({
+                            ...p,
+                            registration_id: e.target.value,
+                          }))
+                        }
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                      >
+                        <option value="">Select...</option>
+                        {uploadableRegistrations.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.activity_title} — {formatDate(r.start_date)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                        Document type
+                      </label>
+                      <input
+                        type="text"
+                        value={uploadForm.document_type}
+                        onChange={(e) =>
+                          setUploadForm((p) => ({
+                            ...p,
+                            document_type: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., Passport, Medical certificate..."
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                        File *
+                      </label>
+                      <input
+                        id="doc-file-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={(e) =>
+                          setUploadForm((p) => ({
+                            ...p,
+                            file: e.target.files[0],
+                          }))
+                        }
+                        className="w-full text-sm"
+                      />
+                      <p className="text-xs text-[#7A8088] mt-1">
+                        PDF, JPG, PNG, DOC. Max 10MB.
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={uploading}
+                      className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold disabled:opacity-60"
+                    >
+                      {uploading ? "Uploading..." : "Upload"}
+                    </button>
+                  </form>
+                )}
+              </section>
             </div>
           </div>
-        </div>
-      )}
-
-      {modal.open && modal.type === "details" && selectedDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-[20px] p-6 w-full max-w-[500px] shadow-lg">
-            <h2 className="text-xl font-bold text-[#2F343B] mb-4">
-              Document Details
-            </h2>
-
-            <div className="space-y-3 mb-6">
-              <DetailRow label="Activity" value={selectedDoc.activity} />
-              <DetailRow label="Session" value={selectedDoc.session} />
-              <DetailRow label="Document" value={selectedDoc.document} />
-              <DetailRow label="Deadline" value={selectedDoc.deadline} />
-              <DetailRow label="Status" value={selectedDoc.status} />
-              <DetailRow
-                label="File"
-                value={selectedDoc.fileName || "No file uploaded yet"}
-              />
-            </div>
-
-            <div className="rounded-[16px] bg-[#F9F8F6] p-4 mb-6">
-              <p className="text-sm font-semibold text-[#2F343B] mb-2">
-                Note
-              </p>
-              <p className="text-sm text-[#7A8088] leading-[170%]">
-                {selectedDoc.note}
-              </p>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function StatCard({ title, value, subtitle }) {
-  return (
-    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
-      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
-      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-      <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>
+        </main>
+      </div>
     </div>
   );
 }
 
-function DetailRow({ label, value }) {
+function StatCard({ title, value }) {
   return (
-    <div className="flex justify-between bg-[#F9F8F6] px-4 py-3 rounded-[14px] gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value}
-      </span>
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
     </div>
   );
 }
 
 function StatusBadge({ status }) {
-  const styles = {
-    Missing: "bg-[#FFF4D6] text-[#B98900]",
-    Uploaded: "bg-[#F1F0EC] text-[#7A8088]",
-    Validated: "bg-[#D4F4DD] text-[#2D7A4A]",
-    Rejected: "bg-[#FFE4E4] text-[#C95454]",
-  };
-
+  const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
+  const label = STATUS_LABEL[status] || status;
   return (
-    <span
-      className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status]}`}
-    >
-      {status}
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
+      {label}
     </span>
   );
 }

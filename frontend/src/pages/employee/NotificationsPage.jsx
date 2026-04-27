@@ -1,63 +1,91 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiGet, apiPatch, getCurrentUserId } from "../../api";
 
-const initialNotifications = [
-  {
-    id: 1,
-    title: "Draw results are now available",
-    message:
-      "The draw results for Omra - Winter Session 2024 have been published.",
-    type: "Draw Result",
-    date: "Today · 09:30",
-    read: false,
-  },
-  {
-    id: 2,
-    title: "Confirm your participation",
-    message:
-      "You have been selected for Camping - Autumn Session. Please confirm your participation.",
-    type: "Confirmation",
-    date: "Yesterday · 14:10",
-    read: false,
-  },
-  {
-    id: 3,
-    title: "Missing documents reminder",
-    message:
-      "Please upload the required documents before the document deadline.",
-    type: "Documents",
-    date: "Oct 18, 2024",
-    read: true,
-  },
-  {
-    id: 4,
-    title: "New winter activities are open",
-    message:
-      "New winter activities are now available in the catalog.",
-    type: "Activity",
-    date: "Oct 15, 2024",
-    read: true,
-  },
-];
+const TYPE_STYLES = {
+  DRAW: "bg-[#DAE7FB] text-[#2A52BE]",
+  CONFIRMATION: "bg-[#D4F4DD] text-[#2D7A4A]",
+  DOCUMENT: "bg-[#FFF4D6] text-[#B98900]",
+  SURVEY: "bg-[#F7E6CC] text-[#A9651E]",
+  WITHDRAWAL: "bg-[#FBE1E1] text-[#A93B3B]",
+  REASSIGNMENT: "bg-[#E7E5FB] text-[#5240A1]",
+  GENERAL: "bg-[#F1F0EC] text-[#7A8088]",
+};
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+  const [filter, setFilter] = useState("all");
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const userId = getCurrentUserId();
 
-  const markAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, read: true } : item
+  const load = () => {
+    if (!userId) {
+      setLoading(false);
+      setPageError("Please log in.");
+      return;
+    }
+    setLoading(true);
+    setPageError(null);
+    apiGet(`/me/notifications?user_id=${userId}`)
+      .then((res) => setNotifications(res.data || []))
+      .catch((err) =>
+        setPageError(err.message || "Could not load notifications.")
       )
-    );
+      .finally(() => setLoading(false));
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((item) => ({ ...item, read: true }))
-    );
+  useEffect(() => {
+    load();
+  }, [userId]);
+
+  const filtered = useMemo(() => {
+    if (filter === "all") return notifications;
+    if (filter === "unread") return notifications.filter((n) => !n.is_read);
+    return notifications.filter((n) => n.type === filter);
+  }, [notifications, filter]);
+
+  const stats = useMemo(
+    () => ({
+      total: notifications.length,
+      unread: notifications.filter((n) => !n.is_read).length,
+    }),
+    [notifications]
+  );
+
+  const handleMarkRead = async (id) => {
+    try {
+      await apiPatch(`/notifications/${id}/read`);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n))
+      );
+    } catch (err) {
+      alert(err.message || "Could not mark as read.");
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await apiPatch(`/me/notifications/read-all?user_id=${userId}`);
+      load();
+    } catch (err) {
+      alert(err.message || "Could not mark all as read.");
+    }
   };
 
   return (
@@ -68,83 +96,154 @@ export default function NotificationsPage() {
         <DashboardTopBar />
 
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-[980px] space-y-6">
+          <div className="space-y-6 max-w-[900px]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
                   Notifications
                 </h1>
-                <p className="text-[#7A8088] text-sm mt-2">
-                  You have {unreadCount} unread notification(s).
+                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                  Updates about draws, confirmations, documents and surveys.
                 </p>
               </div>
 
-              <button
-                onClick={markAllAsRead}
-                className="px-4 py-2.5 rounded-[12px] bg-[#ED8D31] text-white text-sm font-semibold"
-              >
-                Mark all as read
-              </button>
+              {stats.unread > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] bg-white text-sm text-[#2F343B] font-medium"
+                >
+                  Mark all as read
+                </button>
+              )}
+            </div>
+
+            {pageError && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {pageError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <StatCard title="Total" value={stats.total} />
+              <StatCard title="Unread" value={stats.unread} />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <FilterChip
+                value="all"
+                label="All"
+                active={filter === "all"}
+                onClick={setFilter}
+              />
+              <FilterChip
+                value="unread"
+                label="Unread"
+                active={filter === "unread"}
+                onClick={setFilter}
+              />
+              {Object.keys(TYPE_STYLES).map((t) => (
+                <FilterChip
+                  key={t}
+                  value={t}
+                  label={t.charAt(0) + t.slice(1).toLowerCase()}
+                  active={filter === t}
+                  onClick={setFilter}
+                />
+              ))}
             </div>
 
             <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                <h2 className="text-[22px] font-bold text-[#2F343B]">
-                  Notification list
-                </h2>
+              {loading && (
+                <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                  Loading...
+                </p>
+              )}
 
-                <span className="text-xs font-semibold text-[#7A8088]">
-                  {notifications.length} total
-                </span>
-              </div>
+              {!loading && filtered.length === 0 && (
+                <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                  No notifications match this filter.
+                </p>
+              )}
 
               <div className="divide-y divide-[#E5E2DC]">
-                {notifications.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => markAsRead(item.id)}
-                    className={`w-full text-left px-5 py-4 flex gap-4 hover:bg-[#FBFAF8] transition-colors ${
-                      item.read ? "bg-white" : "bg-[#FFF9F2]"
+                {filtered.map((n) => (
+                  <div
+                    key={n.id}
+                    className={`px-5 py-4 ${
+                      !n.is_read ? "bg-[#FFFAF0]" : ""
                     }`}
                   >
-                    <div
-                      className={`mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                        item.read ? "bg-[#D8D5CF]" : "bg-[#ED8D31]"
-                      }`}
-                    />
-
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="text-sm font-bold text-[#2F343B]">
-                          {item.title}
-                        </p>
-
-                        <span className="text-xs text-[#7A8088] whitespace-nowrap">
-                          {item.date}
+                    <div className="flex justify-between items-start gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            TYPE_STYLES[n.type] || TYPE_STYLES.GENERAL
+                          }`}
+                        >
+                          {n.type}
                         </span>
+                        {!n.is_read && (
+                          <span className="w-2 h-2 rounded-full bg-[#ED8D31]" />
+                        )}
                       </div>
-
-                      <p className="text-sm text-[#7A8088] mt-1 leading-[160%]">
-                        {item.message}
-                      </p>
-
-                      <span className="inline-flex mt-3 px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
-                        {item.type}
+                      <span className="text-xs text-[#7A8088]">
+                        {formatDateTime(n.created_at)}
                       </span>
                     </div>
-                  </button>
-                ))}
 
-                {notifications.length === 0 && (
-                  <div className="p-8 text-center text-sm text-[#7A8088]">
-                    No notifications available.
+                    {n.title && (
+                      <p className="font-semibold text-[#2F343B] text-sm mb-1">
+                        {n.title}
+                      </p>
+                    )}
+                    <p className="text-sm text-[#2F343B] leading-[170%]">
+                      {n.message}
+                    </p>
+                    {n.activity_title && (
+                      <p className="text-xs text-[#7A8088] mt-2">
+                        About: {n.activity_title}
+                      </p>
+                    )}
+
+                    {!n.is_read && (
+                      <button
+                        onClick={() => handleMarkRead(n.id)}
+                        className="text-xs text-[#ED8D31] font-semibold mt-2"
+                      >
+                        Mark as read
+                      </button>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
             </section>
           </div>
         </main>
       </div>
     </div>
+  );
+}
+
+function StatCard({ title, value }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+    </div>
+  );
+}
+
+function FilterChip({ value, label, active, onClick }) {
+  return (
+    <button
+      onClick={() => onClick(value)}
+      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+        active
+          ? "bg-[#ED8D31] text-white border-[#ED8D31]"
+          : "bg-white text-[#2F343B] border-[#E5E2DC]"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

@@ -1,45 +1,56 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useT } from "../../i18n/LanguageContext";
+import { getCurrentUser } from "../../api";
 
-const employeeItems = [
-  { label: "Dashboard", path: "/dashboard", icon: "📊" },
-  { label: "Activities Catalog", path: "/dashboard/catalog", icon: "🏕" },
-  { label: "My Requests", path: "/dashboard/requests", icon: "📄", badge: "3" },
-  { label: "Draw Results", path: "/dashboard/draw", icon: "🎯" },
-  { label: "Documents", path: "/dashboard/documents", icon: "📁" },
-  { label: "Participation History", path: "/dashboard/history", icon: "🕒" },
-  { label: "Surveys", path: "/dashboard/surveys", icon: "📋" },
-  { label: "Idea Box", path: "/dashboard/ideas", icon: "💡" },
-];
+function buildEmployeeItems(t) {
+  return [
+    { labelKey: "dashboard.sidebar.dashboard", path: "/dashboard", icon: "📊" },
+    { labelKey: "dashboard.sidebar.catalog", path: "/dashboard/catalog", icon: "🏕" },
+    { labelKey: "dashboard.sidebar.myRequests", path: "/dashboard/requests", icon: "📄" },
+    { labelKey: "dashboard.sidebar.drawResults", path: "/dashboard/draw", icon: "🎯" },
+    { labelKey: "dashboard.sidebar.documents", path: "/dashboard/documents", icon: "📁" },
+    { labelKey: "dashboard.sidebar.history", path: "/dashboard/history", icon: "🕒" },
+    { labelKey: "dashboard.sidebar.surveys", path: "/dashboard/surveys", icon: "📋" },
+    { labelKey: "dashboard.sidebar.ideas", path: "/dashboard/ideas", icon: "💡" },
+    { labelKey: "dashboard.sidebar.notifications", path: "/dashboard/notifications", icon: "🔔" },
+  ];
+}
 
-const adminItems = [
-  { label: "Manage Activities", path: "/dashboard/admin/activities", icon: "⚙️" },
-  { label: "Manage Documents", path: "/dashboard/admin/documents", icon: "📋" },
-  { label: "Manage Site", path: "/dashboard/admin/site", icon: "🏢" },
-  { label: "Manage Registrations", path: "/dashboard/admin/registrations", icon: "📝" },
-  { label: "Launch Draw", path: "/dashboard/admin/draw", icon: "🎯" },
-  { label: "Withdrawals", path: "/dashboard/admin/withdrawals", icon: "↩️", badge: "4" },
-  { label: "Reports", path: "/dashboard/admin/reports", icon: "📊" },
-  { label: "Draw History", path: "/dashboard/admin/draw-history", icon: "🕘" },
-];
+function buildAdminItems() {
+  return [
+    { labelKey: "dashboard.sidebar.manageActivities", path: "/dashboard/admin/activities", icon: "⚙️" },
+    { labelKey: "dashboard.sidebar.manageDocuments", path: "/dashboard/admin/documents", icon: "📋" },
+    { labelKey: "dashboard.sidebar.manageSites", path: "/dashboard/admin/site", icon: "🏢" },
+    { labelKey: "dashboard.sidebar.manageRegistrations", path: "/dashboard/admin/registrations", icon: "📝" },
+    { labelKey: "dashboard.sidebar.launchDraw", path: "/dashboard/admin/draw", icon: "🎯" },
+    { labelKey: "dashboard.sidebar.manageWithdrawals", path: "/dashboard/admin/withdrawals", icon: "↩️" },
+    { labelKey: "dashboard.sidebar.reports", path: "/dashboard/admin/reports", icon: "📊" },
+    { labelKey: "dashboard.sidebar.drawHistory", path: "/dashboard/admin/draw-history", icon: "🕘" },
+  ];
+}
 
-const communicatorItems = [
-  { label: "Manage Announcements", path: "/dashboard/communicator/announcements", icon: "📢" },
-  { label: "Manage Surveys", path: "/dashboard/communicator/surveys", icon: "📝" },
-  { label: "Idea Box Moderation", path: "/dashboard/communicator/ideas", icon: "💡" },
-  { label: "Manage Notifications", path: "/dashboard/communicator/notifications", icon: "🔔" },
-];
+function buildCommunicatorItems() {
+  return [
+    { labelKey: "dashboard.sidebar.manageAnnouncements", path: "/dashboard/communicator/announcements", icon: "📢" },
+    { labelKey: "dashboard.sidebar.manageSurveys", path: "/dashboard/communicator/surveys", icon: "📝" },
+    { labelKey: "dashboard.sidebar.ideaModeration", path: "/dashboard/communicator/ideas", icon: "💡" },
+    { labelKey: "dashboard.sidebar.manageNotifications", path: "/dashboard/communicator/notifications", icon: "🔔" },
+  ];
+}
 
-const systemAdminItems = [
-  { label: "Manage Functional Admins", path: "/dashboard/system/functional-admins", icon: "🛡️" },
-  { label: "Manage Communicators", path: "/dashboard/system/communicators", icon: "📢" },
-  { label: "Manage System Admins", path: "/dashboard/system/system-admins", icon: "👑" },
-  { label: "Audit Log", path: "/dashboard/system/audit-log", icon: "📜" },
-];
+function buildSystemItems() {
+  return [
+    { labelKey: "dashboard.sidebar.manageFunctionalAdmins", path: "/dashboard/system/functional-admins", icon: "🛡️" },
+    { labelKey: "dashboard.sidebar.manageCommunicators", path: "/dashboard/system/communicators", icon: "📢" },
+    { labelKey: "dashboard.sidebar.manageSystemAdmins", path: "/dashboard/system/system-admins", icon: "👑" },
+    { labelKey: "dashboard.sidebar.auditLog", path: "/dashboard/system/audit-log", icon: "📜" },
+  ];
+}
 
-function NavSection({ title, items, location }) {
+function NavSection({ title, items, location, t }) {
   return (
     <div className="mb-4">
-      <p className="px-4 mb-2 text-xs font-semibold text-[#7A8088]">
+      <p className="px-4 mb-2 text-xs font-semibold text-[#7A8088] uppercase">
         {title}
       </p>
 
@@ -61,19 +72,7 @@ function NavSection({ title, items, location }) {
             }`}
           >
             <span className="w-5 text-center">{item.icon}</span>
-            <span className="flex-1 text-[13px]">{item.label}</span>
-
-            {item.badge && (
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  isActive
-                    ? "bg-white text-[#ED8D31]"
-                    : "bg-[#ED8D31] text-white"
-                }`}
-              >
-                {item.badge}
-              </span>
-            )}
+            <span className="flex-1 text-[13px]">{t(item.labelKey)}</span>
           </Link>
         );
       })}
@@ -84,8 +83,9 @@ function NavSection({ title, items, location }) {
 export default function DashboardSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const t = useT();
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = getCurrentUser();
 
   const roles = (user?.roles || []).map((role) => {
     if (typeof role === "string") return role;
@@ -116,15 +116,21 @@ export default function DashboardSidebar() {
 
       <nav className="flex-1 py-3 overflow-y-auto">
         <NavSection
-          title="Employee space"
-          items={employeeItems}
+          title={t("dashboard.title")}
+          items={buildEmployeeItems(t)}
           location={location}
+          t={t}
         />
 
         {(isFunctionalAdmin || isSystemAdmin) && (
           <>
             <div className="my-3 border-t border-[#E5E2DC]" />
-            <NavSection title="Admin tools" items={adminItems} location={location} />
+            <NavSection
+              title={t("dashboard.sidebar.adminTools")}
+              items={buildAdminItems()}
+              location={location}
+              t={t}
+            />
           </>
         )}
 
@@ -132,9 +138,10 @@ export default function DashboardSidebar() {
           <>
             <div className="my-3 border-t border-[#E5E2DC]" />
             <NavSection
-              title="Communicator tools"
-              items={communicatorItems}
+              title={t("dashboard.sidebar.communicatorTools")}
+              items={buildCommunicatorItems()}
               location={location}
+              t={t}
             />
           </>
         )}
@@ -143,9 +150,10 @@ export default function DashboardSidebar() {
           <>
             <div className="my-3 border-t border-[#E5E2DC]" />
             <NavSection
-              title="System Admin tools"
-              items={systemAdminItems}
+              title={t("dashboard.sidebar.systemTools")}
+              items={buildSystemItems()}
               location={location}
+              t={t}
             />
           </>
         )}
@@ -156,7 +164,7 @@ export default function DashboardSidebar() {
           onClick={handleLogout}
           className="w-full py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
         >
-          Logout
+          {t("common.logout")}
         </button>
       </div>
     </aside>

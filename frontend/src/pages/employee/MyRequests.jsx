@@ -1,120 +1,124 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiGet, apiPost, getCurrentUserId } from "../../api";
 
-const initialRequests = [
-  {
-    id: 1,
-    activity: "Omra",
-    category: "Spiritual",
-    session: "Winter Session 2024",
-    submittedOn: "Sep 20, 2024",
-    status: "Pending Draw",
-    details:
-      "Your request is submitted and waiting for the lottery draw. You will be notified once results are published.",
-  },
-  {
-    id: 2,
-    activity: "Bungalow Stay",
-    category: "Family Stay",
-    session: "Session A",
-    submittedOn: "Sep 12, 2024",
-    status: "Under Review",
-    details:
-      "Your application is under administrative review. Documents and eligibility checks are in progress.",
-  },
-  {
-    id: 3,
-    activity: "Camping",
-    category: "Nature",
-    session: "Autumn Session",
-    submittedOn: "Aug 30, 2024",
-    status: "Accepted",
-    details:
-      "Congratulations. Your request has been accepted and is awaiting your participation confirmation.",
-  },
-  {
-    id: 4,
-    activity: "Summer Camp",
-    category: "Family",
-    session: "Kids Session 2",
-    submittedOn: "Aug 15, 2024",
-    status: "Rejected",
-    details:
-      "Your request was not selected during the draw due to limited quota.",
-  },
-  {
-    id: 5,
-    activity: "Running",
-    category: "Sport",
-    session: "Community Run 2024",
-    submittedOn: "Jul 21, 2024",
-    status: "Confirmed",
-    details:
-      "Your participation is fully confirmed. No further action is required.",
-  },
-];
+const STATUS_LABEL = {
+  PENDING: "Pending validation",
+  VALIDATED: "Validated — awaiting draw",
+  REJECTED: "Rejected",
+  SELECTED: "Selected ✨",
+  WAITING_LIST: "Waiting list",
+  CONFIRMED: "Confirmed",
+  WITHDRAWN: "Withdrawn",
+  CANCELLED: "Cancelled",
+};
+
+const STATUS_STYLES = {
+  PENDING: "bg-[#FFF4D6] text-[#B98900]",
+  VALIDATED: "bg-[#E2F4D9] text-[#3D7B22]",
+  REJECTED: "bg-[#FBE1E1] text-[#A93B3B]",
+  SELECTED: "bg-[#DAE7FB] text-[#2A52BE]",
+  WAITING_LIST: "bg-[#F7E6CC] text-[#A9651E]",
+  CONFIRMED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  WITHDRAWN: "bg-[#F1F0EC] text-[#7A8088]",
+  CANCELLED: "bg-[#F1F0EC] text-[#7A8088]",
+};
+
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
 
 export default function MyRequests() {
-  const [requests, setRequests] = useState(initialRequests);
-  const [modal, setModal] = useState({
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+  const [actingOn, setActingOn] = useState(null);
+  const [withdrawModal, setWithdrawModal] = useState({
     open: false,
-    type: null, // details | confirm | withdraw
-    requestId: null,
+    registrationId: null,
   });
+  const [withdrawReason, setWithdrawReason] = useState("");
 
-  const selectedRequest = requests.find((r) => r.id === modal.requestId);
+  const userId = getCurrentUserId();
 
-  const pending = requests.filter((r) => r.status === "Pending Draw").length;
-  const accepted = requests.filter((r) => r.status === "Accepted").length;
-  const rejected = requests.filter((r) => r.status === "Rejected").length;
-  const confirmed = requests.filter((r) => r.status === "Confirmed").length;
-
-  const closeModal = () => {
-    setModal({
-      open: false,
-      type: null,
-      requestId: null,
-    });
+  const load = () => {
+    if (!userId) {
+      setLoading(false);
+      setPageError("Please log in to see your requests.");
+      return;
+    }
+    setLoading(true);
+    setPageError(null);
+    apiGet(`/me/registrations?user_id=${userId}`)
+      .then((res) => setRequests(res.data || []))
+      .catch((err) => setPageError(err.message || "Could not load requests."))
+      .finally(() => setLoading(false));
   };
 
-  const handleConfirmParticipation = () => {
-    setRequests((prev) =>
-      prev.map((request) =>
-        request.id === modal.requestId
-          ? {
-              ...request,
-              status: "Confirmed",
-              details:
-                "Your participation is fully confirmed. No further action is required.",
-            }
-          : request
-      )
-    );
-    closeModal();
+  useEffect(() => {
+    load();
+  }, [userId]);
+
+  const stats = useMemo(() => {
+    const total = requests.length;
+    const pending = requests.filter((r) =>
+      ["PENDING", "VALIDATED", "WAITING_LIST"].includes(r.status)
+    ).length;
+    const selected = requests.filter((r) =>
+      ["SELECTED", "CONFIRMED"].includes(r.status)
+    ).length;
+    const closed = requests.filter((r) =>
+      ["REJECTED", "WITHDRAWN", "CANCELLED"].includes(r.status)
+    ).length;
+    return { total, pending, selected, closed };
+  }, [requests]);
+
+  const handleCancel = async (registrationId) => {
+    if (!window.confirm("Cancel this registration? This cannot be undone.")) {
+      return;
+    }
+    setActingOn(registrationId);
+    try {
+      await apiPost(`/registrations/${registrationId}/cancel`, {
+        user_id: userId,
+      });
+      load();
+    } catch (err) {
+      alert(err.message || "Could not cancel.");
+    } finally {
+      setActingOn(null);
+    }
   };
 
-  const handleWithdrawRequest = () => {
-    setRequests((prev) =>
-      prev.map((request) =>
-        request.id === modal.requestId
-          ? {
-              ...request,
-              status: "Withdrawn",
-              details:
-                "You have withdrawn this request. It is no longer active.",
-            }
-          : request
-      )
-    );
-    closeModal();
+  const submitWithdraw = async () => {
+    if (!withdrawReason.trim()) {
+      alert("Please provide a reason.");
+      return;
+    }
+    setActingOn(withdrawModal.registrationId);
+    try {
+      await apiPost(`/withdrawals`, {
+        registration_id: withdrawModal.registrationId,
+        reason: withdrawReason.trim(),
+      });
+      setWithdrawModal({ open: false, registrationId: null });
+      setWithdrawReason("");
+      load();
+    } catch (err) {
+      alert(err.message || "Could not submit withdrawal.");
+    } finally {
+      setActingOn(null);
+    }
   };
-
-  const canWithdraw = (status) =>
-    status === "Pending Draw" ||
-    status === "Under Review" ||
-    status === "Accepted" ||
-    status === "Confirmed";
 
   return (
     <>
@@ -131,105 +135,55 @@ export default function MyRequests() {
                   My Requests
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Track all your activity applications, follow their status, and
-                  manage confirmation or withdrawal when action is required.
+                  Track all your activity registrations, see draw outcomes and
+                  withdraw if needed.
                 </p>
               </div>
+
+              {pageError && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {pageError}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard
-                  title="Pending Draw"
-                  value={pending}
-                  subtitle="Requests waiting for the lottery"
-                />
-                <StatCard
-                  title="Accepted"
-                  value={accepted}
-                  subtitle="Selected requests awaiting confirmation"
-                />
-                <StatCard
-                  title="Rejected"
-                  value={rejected}
-                  subtitle="Requests not selected"
-                />
-                <StatCard
-                  title="Confirmed"
-                  value={confirmed}
-                  subtitle="Participation fully confirmed"
-                />
+                <StatCard title="Total requests" value={stats.total} />
+                <StatCard title="In progress" value={stats.pending} />
+                <StatCard title="Selected / Confirmed" value={stats.selected} />
+                <StatCard title="Closed" value={stats.closed} />
               </div>
-
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Request History
-                </h2>
-                <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                  Search and filter your requests by activity, session, or status.
-                </p>
-
-                <div className="flex flex-wrap gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search activity..."
-                    className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                  />
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All activities</option>
-                  </select>
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All sessions</option>
-                  </select>
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All status</option>
-                  </select>
-
-                  <button className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]">
-                    Reset
-                  </button>
-
-                  <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold">
-                    Apply filters
-                  </button>
-                </div>
-              </section>
 
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
                 <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                  <div>
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Requests List
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Overview of your submitted requests and their current state.
-                    </p>
-                  </div>
-
-                  <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
-                    {requests.length} requests
-                  </span>
+                  <h2 className="text-[24px] font-bold text-[#2F343B]">
+                    All my registrations
+                  </h2>
+                  <Link
+                    to="/dashboard/catalog"
+                    className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-semibold"
+                  >
+                    + Register to a new activity
+                  </Link>
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[900px]">
+                  <table className="w-full min-w-[1100px]">
                     <thead className="bg-[#FBFAF8]">
                       <tr>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Activity
+                          Activity / Session
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Category
+                          Submitted
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Session
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Submitted On
+                          My choices
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
                           Status
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Reference
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
                           Actions
@@ -238,71 +192,108 @@ export default function MyRequests() {
                     </thead>
 
                     <tbody>
-                      {requests.map((request) => (
+                      {loading && (
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            Loading your requests...
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading && requests.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            You haven't registered for any activity yet.{" "}
+                            <Link
+                              to="/dashboard/catalog"
+                              className="text-[#ED8D31] font-semibold"
+                            >
+                              Browse the catalog
+                            </Link>
+                            .
+                          </td>
+                        </tr>
+                      )}
+
+                      {requests.map((r) => (
                         <tr
-                          key={request.id}
+                          key={r.id}
                           className="border-t border-[#E5E2DC] align-top"
                         >
-                          <td className="px-5 py-5 font-semibold text-[#2F343B] text-sm">
-                            {request.activity}
+                          <td className="px-5 py-5">
+                            <p className="font-semibold text-[#2F343B] text-sm">
+                              {r.activity_title}
+                            </p>
+                            <p className="text-xs text-[#7A8088] mt-1">
+                              {formatDate(r.start_date)} →{" "}
+                              {formatDate(r.end_date)}
+                            </p>
                           </td>
 
                           <td className="px-5 py-5 text-sm text-[#7A8088]">
-                            {request.category}
+                            {formatDate(r.registered_at)}
                           </td>
 
-                          <td className="px-5 py-5 text-sm text-[#7A8088]">
-                            {request.session}
-                          </td>
-
-                          <td className="px-5 py-5 text-sm text-[#7A8088]">
-                            {request.submittedOn}
+                          <td className="px-5 py-5 text-sm text-[#2F343B]">
+                            {r.choices && r.choices.length > 0 ? (
+                              <ul className="space-y-1">
+                                {r.choices.map((c) => (
+                                  <li key={c.session_site_id}>
+                                    #{c.choice_order} {c.site_name}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <span className="text-[#7A8088] italic">
+                                No site selected
+                              </span>
+                            )}
                           </td>
 
                           <td className="px-5 py-5">
-                            <StatusBadge status={request.status} />
+                            <StatusBadge status={r.status} />
+                            {r.rejection_reason && (
+                              <p
+                                className="text-xs text-red-600 mt-1 max-w-[180px]"
+                                title={r.rejection_reason}
+                              >
+                                {r.rejection_reason}
+                              </p>
+                            )}
+                          </td>
+
+                          <td className="px-5 py-5 text-xs text-[#7A8088]">
+                            {r.reference_number || "—"}
                           </td>
 
                           <td className="px-5 py-5">
                             <div className="flex flex-wrap gap-2">
-                              <button
-                                onClick={() =>
-                                  setModal({
-                                    open: true,
-                                    type: "details",
-                                    requestId: request.id,
-                                  })
-                                }
-                                className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                              >
-                                View details
-                              </button>
-
-                              {request.status === "Accepted" && (
+                              {["PENDING", "VALIDATED"].includes(r.status) && (
                                 <button
-                                  onClick={() =>
-                                    setModal({
-                                      open: true,
-                                      type: "confirm",
-                                      requestId: request.id,
-                                    })
-                                  }
-                                  className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium"
+                                  onClick={() => handleCancel(r.id)}
+                                  disabled={actingOn === r.id}
+                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-sm text-[#A93B3B] disabled:opacity-60"
                                 >
-                                  Confirm participation
+                                  Cancel
                                 </button>
                               )}
 
-                              {canWithdraw(request.status) && (
+                              {["SELECTED", "CONFIRMED"].includes(r.status) && (
                                 <button
                                   onClick={() =>
-                                    setModal({
+                                    setWithdrawModal({
                                       open: true,
-                                      type: "withdraw",
-                                      requestId: request.id,
+                                      registrationId: r.id,
                                     })
                                   }
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
+                                  disabled={actingOn === r.id}
+                                  className="px-3 py-1.5 rounded-lg bg-[#A93B3B] text-white text-sm disabled:opacity-60"
                                 >
                                   Withdraw
                                 </button>
@@ -314,120 +305,56 @@ export default function MyRequests() {
                     </tbody>
                   </table>
                 </div>
-
-                <div className="px-5 py-4 border-t border-[#E5E2DC] flex items-center justify-between">
-                  <p className="text-sm text-[#7A8088]">
-                    Showing 1-{requests.length} of {requests.length} requests
-                  </p>
-
-                  <div className="flex gap-2">
-                    <button className="w-8 h-8 rounded-lg bg-[#ED8D31] text-white text-sm">
-                      1
-                    </button>
-                  </div>
-                </div>
               </section>
             </div>
           </main>
         </div>
       </div>
 
-      {modal.open && modal.type === "details" && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-[20px] p-6 w-full max-w-[500px] shadow-lg">
-            <h2 className="text-xl font-bold text-[#2F343B] mb-4">
-              Request Details
-            </h2>
-
-            <div className="space-y-3 mb-6">
-              <DetailRow label="Activity" value={selectedRequest.activity} />
-              <DetailRow label="Category" value={selectedRequest.category} />
-              <DetailRow label="Session" value={selectedRequest.session} />
-              <DetailRow label="Submitted On" value={selectedRequest.submittedOn} />
-              <DetailRow label="Status" value={selectedRequest.status} />
-            </div>
-
-            <div className="rounded-[16px] bg-[#F9F8F6] p-4 mb-6">
-              <p className="text-sm font-semibold text-[#2F343B] mb-2">Latest Update</p>
-              <p className="text-sm text-[#7A8088] leading-[170%]">
-                {selectedRequest.details}
-              </p>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modal.open && modal.type === "confirm" && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
+      {withdrawModal.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() =>
+            setWithdrawModal({ open: false, registrationId: null })
+          }
+        >
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Confirm Participation
+              Request Withdrawal
             </h2>
 
-            <p className="text-sm text-[#7A8088] mb-6">
-              Are you sure you want to confirm your participation in{" "}
-              <span className="font-semibold text-[#2F343B]">
-                {selectedRequest.activity}
-              </span>
-              ?
+            <p className="text-sm text-[#7A8088] mb-4">
+              Your withdrawal request will be reviewed by an admin. Provide a
+              reason.
             </p>
 
-            <div className="flex justify-end gap-3">
+            <textarea
+              value={withdrawReason}
+              onChange={(e) => setWithdrawReason(e.target.value)}
+              rows={4}
+              placeholder="e.g., Family emergency, work conflict..."
+              className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+            />
+
+            <div className="flex justify-end gap-3 mt-5">
               <button
-                onClick={closeModal}
+                onClick={() =>
+                  setWithdrawModal({ open: false, registrationId: null })
+                }
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
               >
                 Cancel
               </button>
 
               <button
-                onClick={handleConfirmParticipation}
-                className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
+                onClick={submitWithdraw}
+                disabled={actingOn === withdrawModal.registrationId}
+                className="px-4 py-2 rounded-[12px] bg-[#A93B3B] text-white text-sm disabled:opacity-60"
               >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modal.open && modal.type === "withdraw" && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
-            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Withdraw Request
-            </h2>
-
-            <p className="text-sm text-[#7A8088] mb-6">
-              Are you sure you want to withdraw your request for{" "}
-              <span className="font-semibold text-[#2F343B]">
-                {selectedRequest.activity}
-              </span>
-              ?
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleWithdrawRequest}
-                className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-              >
-                Confirm
+                Submit withdrawal
               </button>
             </div>
           </div>
@@ -437,38 +364,21 @@ export default function MyRequests() {
   );
 }
 
-function StatCard({ title, value, subtitle }) {
+function StatCard({ title, value }) {
   return (
     <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
       <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
       <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-      <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B]">{value}</span>
     </div>
   );
 }
 
 function StatusBadge({ status }) {
-  const styles = {
-    "Pending Draw": "bg-[#FFF4D6] text-[#B98900]",
-    "Under Review": "bg-[#F1F0EC] text-[#7A8088]",
-    Accepted: "bg-[#D4F4DD] text-[#2D7A4A]",
-    Rejected: "bg-[#FFE4E4] text-[#C95454]",
-    Confirmed: "bg-[#E8F4FF] text-[#2B6CB0]",
-    Withdrawn: "bg-[#F1F0EC] text-[#7A8088]",
-  };
-
+  const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
+  const label = STATUS_LABEL[status] || status;
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
-      {status}
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
+      {label}
     </span>
   );
 }

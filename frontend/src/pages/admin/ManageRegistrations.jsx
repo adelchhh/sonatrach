@@ -1,230 +1,192 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiGet, apiPost, apiPatch } from "../../api";
 
-const initialRegistrations = [
-  {
-    id: 1,
-    name: "Yacine Bensaïd",
-    employeeId: "EMP-2041",
-    activity: "Excursion à Djanet",
-    session: "Session A",
-    registrationType: "Draw",
-    status: "Pending Draw",
-    submittedOn: "Sep 18, 2024",
-    documentsStatus: "Complete",
-  },
-  {
-    id: 2,
-    name: "Nadia Meziane",
-    employeeId: "EMP-1987",
-    activity: "Vacances nature",
-    session: "Session A",
-    registrationType: "Direct",
-    status: "Accepted",
-    submittedOn: "Sep 14, 2024",
-    documentsStatus: "Complete",
-  },
-  {
-    id: 3,
-    name: "Karim Touati",
-    employeeId: "EMP-1763",
-    activity: "Thermal stay",
-    session: "Session B",
-    registrationType: "Draw",
-    status: "Waiting List",
-    submittedOn: "Sep 10, 2024",
-    documentsStatus: "Missing",
-  },
-  {
-    id: 4,
-    name: "Samira Ghezali",
-    employeeId: "EMP-2210",
-    activity: "Corporate Retreat",
-    session: "Session A",
-    registrationType: "Direct",
-    status: "Confirmed",
-    submittedOn: "Sep 05, 2024",
-    documentsStatus: "Complete",
-  },
-  {
-    id: 5,
-    name: "Rania Belkacem",
-    employeeId: "EMP-2334",
-    activity: "Omra",
-    session: "Winter Session 2024",
-    registrationType: "Draw",
-    status: "Selected",
-    submittedOn: "Sep 22, 2024",
-    documentsStatus: "Complete",
-  },
-  {
-    id: 6,
-    name: "Walid Merabet",
-    employeeId: "EMP-2450",
-    activity: "Summer Camp",
-    session: "Kids Session 2",
-    registrationType: "Direct",
-    status: "Cancelled",
-    submittedOn: "Aug 28, 2024",
-    documentsStatus: "Complete",
-  },
-  {
-    id: 7,
-    name: "Lina Derradji",
-    employeeId: "EMP-2502",
-    activity: "Omra",
-    session: "Winter Session 2024",
-    registrationType: "Draw",
-    status: "Pending Draw",
-    submittedOn: "Sep 23, 2024",
-    documentsStatus: "Complete",
-  },
-  {
-    id: 8,
-    name: "Sofiane Rahmani",
-    employeeId: "EMP-2391",
-    activity: "Excursion à Djanet",
-    session: "Session A",
-    registrationType: "Draw",
-    status: "Selected",
-    submittedOn: "Sep 19, 2024",
-    documentsStatus: "Missing",
-  },
-];
+const STATUS_LABEL = {
+  PENDING: "Pending",
+  VALIDATED: "Validated",
+  REJECTED: "Rejected",
+  SELECTED: "Selected",
+  WAITING_LIST: "Waiting list",
+  CONFIRMED: "Confirmed",
+  WITHDRAWN: "Withdrawn",
+  CANCELLED: "Cancelled",
+};
+
+const STATUS_STYLES = {
+  PENDING: "bg-[#FFF4D6] text-[#B98900]",
+  VALIDATED: "bg-[#E2F4D9] text-[#3D7B22]",
+  REJECTED: "bg-[#FBE1E1] text-[#A93B3B]",
+  SELECTED: "bg-[#DAE7FB] text-[#2A52BE]",
+  WAITING_LIST: "bg-[#F7E6CC] text-[#A9651E]",
+  CONFIRMED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  WITHDRAWN: "bg-[#F1F0EC] text-[#7A8088]",
+  CANCELLED: "bg-[#F1F0EC] text-[#7A8088]",
+};
+
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
 
 export default function ManageRegistrations() {
-  const [registrations] = useState(initialRegistrations);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedSingleId, setSelectedSingleId] = useState(
-    initialRegistrations[0]?.id ?? null
-  );
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+  const [actingOn, setActingOn] = useState(null);
 
   const [filters, setFilters] = useState({
     search: "",
-    activity: "All activities",
-    session: "All sessions",
-    status: "All status",
-    documentsStatus: "All documents",
+    activity: "all",
+    session: "all",
+    status: "all",
   });
 
-  const [appliedFilters, setAppliedFilters] = useState(filters);
+  const [modal, setModal] = useState({ open: false, type: null, id: null });
+  const [details, setDetails] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
 
-  const [modal, setModal] = useState({
-    open: false,
-    type: null, // details | export
-    registrationId: null,
-  });
+  const load = () => {
+    setLoading(true);
+    setPageError(null);
+    apiGet("/registrations")
+      .then((res) => setRegistrations(res.data || []))
+      .catch((err) =>
+        setPageError(err.message || "Could not load registrations.")
+      )
+      .finally(() => setLoading(false));
+  };
 
-  const activities = ["All activities", ...new Set(registrations.map((r) => r.activity))];
-  const sessions = ["All sessions", ...new Set(registrations.map((r) => r.session))];
-  const statuses = [
-    "All status",
-    "Pending Draw",
-    "Selected",
-    "Accepted",
-    "Waiting List",
-    "Confirmed",
-    "Rejected",
-    "Cancelled",
-  ];
-  const documentStatuses = ["All documents", "Complete", "Missing"];
+  useEffect(() => {
+    load();
+  }, []);
 
-  const filteredRegistrations = useMemo(() => {
-    return registrations.filter((r) => {
-      const matchesSearch =
-        !appliedFilters.search.trim() ||
-        r.name.toLowerCase().includes(appliedFilters.search.toLowerCase()) ||
-        r.employeeId.toLowerCase().includes(appliedFilters.search.toLowerCase());
-
-      const matchesActivity =
-        appliedFilters.activity === "All activities" ||
-        r.activity === appliedFilters.activity;
-
-      const matchesSession =
-        appliedFilters.session === "All sessions" ||
-        r.session === appliedFilters.session;
-
-      const matchesStatus =
-        appliedFilters.status === "All status" ||
-        r.status === appliedFilters.status;
-
-      const matchesDocuments =
-        appliedFilters.documentsStatus === "All documents" ||
-        r.documentsStatus === appliedFilters.documentsStatus;
-
-      return (
-        matchesSearch &&
-        matchesActivity &&
-        matchesSession &&
-        matchesStatus &&
-        matchesDocuments
-      );
+  const activities = useMemo(() => {
+    const set = new Map();
+    registrations.forEach((r) => {
+      if (r.activity_id) {
+        set.set(r.activity_id, r.activity_title);
+      }
     });
-  }, [registrations, appliedFilters]);
-
-  const selectedRegistration =
-    registrations.find((r) => r.id === (modal.registrationId ?? selectedSingleId)) || null;
-
-  const stats = useMemo(() => {
-    return {
-      total: registrations.length,
-      pendingDraw: registrations.filter((r) => r.status === "Pending Draw").length,
-      confirmed: registrations.filter((r) => r.status === "Confirmed").length,
-      waiting: registrations.filter((r) => r.status === "Waiting List").length,
-    };
+    return Array.from(set.entries());
   }, [registrations]);
 
-  const allVisibleIds = filteredRegistrations.map((r) => r.id);
-  const allVisibleSelected =
-    allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
-
-  const closeModal = () => {
-    setModal({
-      open: false,
-      type: null,
-      registrationId: null,
+  const sessions = useMemo(() => {
+    const set = new Map();
+    registrations.forEach((r) => {
+      if (r.session_id) {
+        const label = `#${r.session_id} (${r.activity_title})`;
+        set.set(r.session_id, label);
+      }
     });
-  };
+    return Array.from(set.entries());
+  }, [registrations]);
 
-  const openModal = (type, registrationId = selectedSingleId) => {
-    setModal({
-      open: true,
-      type,
-      registrationId,
+  const filtered = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    return registrations.filter((r) => {
+      if (filters.activity !== "all" && r.activity_id !== Number(filters.activity)) return false;
+      if (filters.session !== "all" && r.session_id !== Number(filters.session)) return false;
+      if (filters.status !== "all" && r.status !== filters.status) return false;
+      if (q) {
+        const haystack = [
+          r.employee_number,
+          r.user_first_name,
+          r.user_last_name,
+          r.user_email,
+          r.reference_number,
+          r.activity_title,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
     });
-  };
+  }, [registrations, filters]);
 
-  const toggleRowSelection = (id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
+  const stats = useMemo(() => {
+    const total = registrations.length;
+    const pending = registrations.filter((r) => r.status === "PENDING").length;
+    const validated = registrations.filter(
+      (r) => r.status === "VALIDATED" || r.status === "SELECTED" || r.status === "CONFIRMED"
+    ).length;
+    const rejected = registrations.filter(
+      (r) => r.status === "REJECTED" || r.status === "CANCELLED"
+    ).length;
+    return { total, pending, validated, rejected };
+  }, [registrations]);
 
-  const toggleSelectAllVisible = () => {
-    if (allVisibleSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !allVisibleIds.includes(id)));
-    } else {
-      setSelectedIds((prev) => [...new Set([...prev, ...allVisibleIds])]);
+  const openDetails = async (id) => {
+    setModal({ open: true, type: "details", id });
+    setDetails(null);
+    try {
+      const res = await apiGet(`/registrations/${id}`);
+      setDetails(res.data);
+    } catch (err) {
+      setDetails({ error: err.message || "Could not load details." });
     }
   };
 
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
-    setSelectedIds([]);
+  const openReject = (id) => {
+    setRejectReason("");
+    setModal({ open: true, type: "reject", id });
   };
 
-  const handleResetFilters = () => {
-    const reset = {
-      search: "",
-      activity: "All activities",
-      session: "All sessions",
-      status: "All status",
-      documentsStatus: "All documents",
-    };
-    setFilters(reset);
-    setAppliedFilters(reset);
-    setSelectedIds([]);
+  const closeModal = () => {
+    setModal({ open: false, type: null, id: null });
+    setDetails(null);
+  };
+
+  const handleValidate = async (id) => {
+    setActingOn(id);
+    try {
+      await apiPost(`/registrations/${id}/validate`);
+      load();
+    } catch (err) {
+      alert(err.message || "Could not validate registration.");
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  const submitReject = async () => {
+    if (!rejectReason.trim()) {
+      alert("Please provide a rejection reason.");
+      return;
+    }
+    setActingOn(modal.id);
+    try {
+      await apiPost(`/registrations/${modal.id}/reject`, {
+        reason: rejectReason.trim(),
+      });
+      closeModal();
+      load();
+    } catch (err) {
+      alert(err.message || "Could not reject registration.");
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  const handleStatusChange = async (id, status) => {
+    setActingOn(id);
+    try {
+      await apiPatch(`/registrations/${id}/status`, { status });
+      load();
+    } catch (err) {
+      alert(err.message || "Could not change status.");
+    } finally {
+      setActingOn(null);
+    }
   };
 
   return (
@@ -237,430 +199,430 @@ export default function ManageRegistrations() {
 
           <main className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
-              <div className="flex justify-between items-start gap-4">
-                <div>
-                  <h1 className="text-[28px] font-bold text-[#2F343B]">
-                    Manage Registrations
-                  </h1>
-                  <p className="text-sm text-[#7A8088] mt-1 max-w-[820px]">
-                    Monitor employee registrations per activity and session,
-                    follow automatic statuses, apply filters, and export
-                    registration lists when needed.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => openModal("export")}
-                  className="px-4 py-2 rounded-xl bg-[#ED8D31] text-white text-sm font-semibold"
-                >
-                  Export Registrations
-                </button>
+              <div>
+                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                  Manage Registrations
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                  Review employee registrations, validate eligibility, reject
+                  with a reason, or change registration status.
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Stat title="Total Registrations" value={stats.total} />
-                <Stat title="Pending Draw" value={stats.pendingDraw} />
-                <Stat title="Confirmed" value={stats.confirmed} />
-                <Stat title="Waiting List" value={stats.waiting} />
-              </div>
-
-              <div className="bg-white border border-[#E5E2DC] rounded-[20px] p-4 flex flex-wrap gap-3 items-center">
-                <input
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, search: e.target.value }))
-                  }
-                  placeholder="Search by employee name or ID"
-                  className="px-3 py-2 rounded-lg border border-[#E5E2DC] text-sm w-[240px]"
-                />
-
-                <select
-                  value={filters.activity}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, activity: e.target.value }))
-                  }
-                  className="px-3 py-2 rounded-lg border border-[#E5E2DC] text-sm"
-                >
-                  {activities.map((activity) => (
-                    <option key={activity}>{activity}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.session}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, session: e.target.value }))
-                  }
-                  className="px-3 py-2 rounded-lg border border-[#E5E2DC] text-sm"
-                >
-                  {sessions.map((session) => (
-                    <option key={session}>{session}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.status}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, status: e.target.value }))
-                  }
-                  className="px-3 py-2 rounded-lg border border-[#E5E2DC] text-sm"
-                >
-                  {statuses.map((status) => (
-                    <option key={status}>{status}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.documentsStatus}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      documentsStatus: e.target.value,
-                    }))
-                  }
-                  className="px-3 py-2 rounded-lg border border-[#E5E2DC] text-sm"
-                >
-                  {documentStatuses.map((status) => (
-                    <option key={status}>{status}</option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={handleResetFilters}
-                  className="ml-auto px-4 py-2 text-sm rounded-lg border border-[#E5E2DC]"
-                >
-                  Reset
-                </button>
-
-                <button
-                  onClick={handleApplyFilters}
-                  className="px-4 py-2 bg-[#ED8D31] text-white text-sm rounded-lg"
-                >
-                  Apply filters
-                </button>
-              </div>
-
-              {selectedIds.length > 0 && (
-                <div className="bg-white border border-[#E5E2DC] rounded-[20px] p-4 flex flex-wrap gap-3 items-center">
-                  <p className="text-sm font-semibold text-[#2F343B]">
-                    {selectedIds.length} registration(s) selected
-                  </p>
-
-                  <button
-                    onClick={() => openModal("export")}
-                    className="px-4 py-2 rounded-lg border border-[#E5E2DC] text-sm bg-white"
-                  >
-                    Export Selected
-                  </button>
+              {pageError && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {pageError}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
-                <div className="bg-white border border-[#E5E2DC] rounded-[20px] overflow-hidden">
-                  <div className="px-6 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                    <h2 className="font-bold text-[#2F343B]">Applications</h2>
-                    <span className="text-xs px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] font-semibold">
-                      {filteredRegistrations.length} visible
-                    </span>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard title="Total" value={stats.total} />
+                <StatCard title="Pending" value={stats.pending} />
+                <StatCard title="Validated / Selected" value={stats.validated} />
+                <StatCard title="Rejected / Cancelled" value={stats.rejected} />
+              </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1040px]">
-                      <thead className="bg-[#F9F8F6] text-xs text-[#7A8088]">
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                <div className="flex flex-wrap gap-3">
+                  <input
+                    type="text"
+                    value={filters.search}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, search: e.target.value }))
+                    }
+                    placeholder="Search name, matricule, email, ref..."
+                    className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  />
+
+                  <select
+                    value={filters.activity}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, activity: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">All activities</option>
+                    {activities.map(([id, title]) => (
+                      <option key={id} value={id}>
+                        {title}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.session}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, session: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">All sessions</option>
+                    {sessions.map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.status}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, status: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">All status</option>
+                    {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() =>
+                      setFilters({
+                        search: "",
+                        activity: "all",
+                        session: "all",
+                        status: "all",
+                      })
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </section>
+
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1100px]">
+                    <thead className="bg-[#FBFAF8]">
+                      <tr>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Employee
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Activity / Session
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Submitted
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Documents
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Status
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {loading && (
                         <tr>
-                          <th className="px-6 py-3 text-left">
-                            <input
-                              type="checkbox"
-                              checked={allVisibleSelected}
-                              onChange={toggleSelectAllVisible}
-                            />
-                          </th>
-                          <th className="px-6 py-3 text-left">Employee</th>
-                          <th className="px-6 py-3 text-left">Activity</th>
-                          <th className="px-6 py-3 text-left">Session</th>
-                          <th className="px-6 py-3 text-left">Type</th>
-                          <th className="px-6 py-3 text-left">Documents</th>
-                          <th className="px-6 py-3 text-left">Status</th>
-                          <th className="px-6 py-3 text-left">Actions</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {filteredRegistrations.map((row) => (
-                          <tr
-                            key={row.id}
-                            className={`border-t border-[#E5E2DC] ${
-                              selectedSingleId === row.id ? "bg-[#FCFBF9]" : ""
-                            }`}
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            <td className="px-6 py-4">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(row.id)}
-                                onChange={() => toggleRowSelection(row.id)}
-                              />
+                            Loading registrations...
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading && filtered.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            No registrations match the filters.
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading &&
+                        filtered.map((r) => (
+                          <tr
+                            key={r.id}
+                            className="border-t border-[#E5E2DC] align-top"
+                          >
+                            <td className="px-5 py-5">
+                              <p className="font-semibold text-[#2F343B] text-sm">
+                                {r.user_first_name} {r.user_last_name}
+                              </p>
+                              <p className="text-xs text-[#7A8088] mt-1">
+                                Matricule {r.employee_number}
+                              </p>
                             </td>
 
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => setSelectedSingleId(row.id)}
-                                className="text-left"
-                              >
-                                <p className="text-sm font-medium text-[#2F343B]">
-                                  {row.name}
+                            <td className="px-5 py-5">
+                              <p className="text-sm font-medium text-[#2F343B]">
+                                {r.activity_title}
+                              </p>
+                              <p className="text-xs text-[#7A8088] mt-1">
+                                Session #{r.session_id} ·{" "}
+                                {formatDate(r.start_date)} →{" "}
+                                {formatDate(r.end_date)}
+                              </p>
+                            </td>
+
+                            <td className="px-5 py-5 text-sm text-[#7A8088]">
+                              {formatDate(r.registered_at)}
+                            </td>
+
+                            <td className="px-5 py-5 text-sm text-[#2F343B]">
+                              {r.documents_validated_count} /{" "}
+                              {r.documents_count} validated
+                            </td>
+
+                            <td className="px-5 py-5">
+                              <StatusBadge status={r.status} />
+                              {r.rejection_reason && (
+                                <p
+                                  className="text-xs text-red-600 mt-1 max-w-[180px]"
+                                  title={r.rejection_reason}
+                                >
+                                  {r.rejection_reason}
                                 </p>
-                                <p className="text-xs text-[#7A8088] mt-1">
-                                  {row.employeeId}
-                                </p>
-                              </button>
+                              )}
                             </td>
 
-                            <td className="px-6 py-4 text-sm text-[#7A8088]">
-                              {row.activity}
-                            </td>
+                            <td className="px-5 py-5">
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => openDetails(r.id)}
+                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
+                                >
+                                  View
+                                </button>
 
-                            <td className="px-6 py-4 text-sm text-[#7A8088]">
-                              {row.session}
-                            </td>
+                                {r.status === "PENDING" && (
+                                  <>
+                                    <button
+                                      onClick={() => handleValidate(r.id)}
+                                      disabled={actingOn === r.id}
+                                      className="px-3 py-1.5 rounded-lg bg-[#2D7A4A] text-white text-sm font-medium disabled:opacity-60"
+                                    >
+                                      Validate
+                                    </button>
+                                    <button
+                                      onClick={() => openReject(r.id)}
+                                      disabled={actingOn === r.id}
+                                      className="px-3 py-1.5 rounded-lg bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
 
-                            <td className="px-6 py-4">
-                              <span
-                                className={`text-xs px-3 py-1 rounded-full ${
-                                  row.registrationType === "Draw"
-                                    ? "bg-[#FFF4D6] text-[#B98900]"
-                                    : "bg-[#E8F4FF] text-[#2B6CB0]"
-                                }`}
-                              >
-                                {row.registrationType}
-                              </span>
-                            </td>
-
-                            <td className="px-6 py-4">
-                              <span
-                                className={`text-xs px-3 py-1 rounded-full ${
-                                  row.documentsStatus === "Complete"
-                                    ? "bg-[#D4F4DD] text-[#2D7A4A]"
-                                    : "bg-[#FFF4D6] text-[#B98900]"
-                                }`}
-                              >
-                                {row.documentsStatus}
-                              </span>
-                            </td>
-
-                            <td className="px-6 py-4">
-                              <StatusBadge status={row.status} />
-                            </td>
-
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => openModal("details", row.id)}
-                                className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
-                              >
-                                Details
-                              </button>
+                                {r.status === "SELECTED" && (
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(r.id, "CONFIRMED")
+                                    }
+                                    disabled={actingOn === r.id}
+                                    className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium disabled:opacity-60"
+                                  >
+                                    Mark confirmed
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
-
-                        {filteredRegistrations.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan="8"
-                              className="px-6 py-10 text-center text-sm text-[#7A8088]"
-                            >
-                              No registrations found for the selected filters.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                    </tbody>
+                  </table>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="bg-white border border-[#E5E2DC] rounded-[20px] p-4">
-                    <h3 className="font-semibold mb-3 text-[#2F343B]">
-                      Status summary
-                    </h3>
-
-                    <SummaryItem label="Pending Draw" value={stats.pendingDraw} />
-                    <SummaryItem label="Confirmed" value={stats.confirmed} />
-                    <SummaryItem label="Waiting list" value={stats.waiting} />
-                    <SummaryItem label="Total" value={stats.total} />
-                  </div>
-
-                  <div className="bg-white border border-[#E5E2DC] rounded-[20px] p-4">
-                    <h3 className="font-semibold mb-3 text-[#2F343B]">
-                      Admin actions
-                    </h3>
-
-                    <ActionItem
-                      title="View registration details"
-                      onOpen={() => openModal("details")}
-                    />
-                    <ActionItem
-                      title="Export registrations"
-                      onOpen={() => openModal("export")}
-                    />
-                  </div>
-
-                  {selectedRegistration && (
-                    <div className="bg-white border border-[#E5E2DC] rounded-[20px] p-4">
-                      <h3 className="font-semibold mb-3 text-[#2F343B]">
-                        Selected application
-                      </h3>
-
-                      <SummaryItem label="Employee" value={selectedRegistration.name} />
-                      <SummaryItem label="ID" value={selectedRegistration.employeeId} />
-                      <SummaryItem label="Activity" value={selectedRegistration.activity} />
-                      <SummaryItem label="Session" value={selectedRegistration.session} />
-                      <SummaryItem label="Type" value={selectedRegistration.registrationType} />
-                      <SummaryItem label="Status" value={selectedRegistration.status} />
-                    </div>
-                  )}
-                </div>
-              </div>
+              </section>
             </div>
           </main>
         </div>
       </div>
 
-      {modal.open && modal.type === "details" && selectedRegistration && (
-        <ModalShell title="Registration Details" onClose={closeModal}>
-          <DetailRow label="Employee" value={selectedRegistration.name} />
-          <DetailRow label="Employee ID" value={selectedRegistration.employeeId} />
-          <DetailRow label="Activity" value={selectedRegistration.activity} />
-          <DetailRow label="Session" value={selectedRegistration.session} />
-          <DetailRow label="Registration Type" value={selectedRegistration.registrationType} />
-          <DetailRow label="Submitted On" value={selectedRegistration.submittedOn} />
-          <DetailRow label="Documents Status" value={selectedRegistration.documentsStatus} />
-          <DetailRow label="Status" value={selectedRegistration.status} />
-        </ModalShell>
+      {modal.open && modal.type === "details" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[640px] shadow-lg max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-[#2F343B] mb-4">
+              Registration Details
+            </h2>
+
+            {!details && (
+              <p className="text-sm text-[#7A8088]">Loading...</p>
+            )}
+
+            {details?.error && (
+              <p className="text-sm text-red-600">{details.error}</p>
+            )}
+
+            {details?.registration && (
+              <div className="space-y-4 text-sm">
+                <DetailRow
+                  label="Employee"
+                  value={`${details.registration.user_first_name} ${details.registration.user_last_name} (${details.registration.employee_number})`}
+                />
+                <DetailRow
+                  label="Email"
+                  value={details.registration.user_email}
+                />
+                <DetailRow
+                  label="Activity"
+                  value={`${details.registration.activity_title} (${details.registration.activity_category})`}
+                />
+                <DetailRow
+                  label="Session"
+                  value={`${formatDate(details.registration.start_date)} → ${formatDate(details.registration.end_date)}`}
+                />
+                <DetailRow
+                  label="Status"
+                  value={STATUS_LABEL[details.registration.status]}
+                />
+                <DetailRow
+                  label="Eligible"
+                  value={details.registration.is_eligible ? "Yes" : "No"}
+                />
+                <DetailRow
+                  label="Submitted"
+                  value={formatDate(details.registration.registered_at)}
+                />
+                {details.registration.rejection_reason && (
+                  <DetailRow
+                    label="Rejection reason"
+                    value={details.registration.rejection_reason}
+                  />
+                )}
+
+                <div>
+                  <p className="text-xs text-[#7A8088] uppercase font-semibold mb-2">
+                    Site choices ({details.choices.length})
+                  </p>
+                  {details.choices.length === 0 ? (
+                    <p className="text-[#7A8088]">No site choices recorded.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {details.choices.map((c) => (
+                        <li key={c.id} className="text-[#2F343B]">
+                          #{c.choice_order} — {c.site_name} (quota {c.quota})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs text-[#7A8088] uppercase font-semibold mb-2">
+                    Documents ({details.documents.length})
+                  </p>
+                  {details.documents.length === 0 ? (
+                    <p className="text-[#7A8088]">No documents uploaded.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {details.documents.map((d) => (
+                        <li key={d.document_id} className="text-[#2F343B]">
+                          {d.file_name} —{" "}
+                          <span className="text-[#7A8088]">{d.status}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
-      {modal.open && modal.type === "export" && (
-        <ConfirmModal
-          title="Export Registrations"
-          message={
-            selectedIds.length > 0
-              ? `Do you want to export ${selectedIds.length} selected registration(s)?`
-              : "Do you want to export the current registrations list?"
-          }
-          confirmLabel="Export"
-          onCancel={closeModal}
-          onConfirm={closeModal}
-        />
+      {modal.open && modal.type === "reject" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
+              Reject Registration
+            </h2>
+
+            <p className="text-sm text-[#7A8088] mb-4">
+              Provide a reason. This will be visible to the employee.
+            </p>
+
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+              placeholder="e.g., Documents are missing or incomplete..."
+              className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+            />
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={closeModal}
+                disabled={actingOn === modal.id}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm disabled:opacity-60"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={submitReject}
+                disabled={actingOn === modal.id}
+                className="px-4 py-2 rounded-[12px] bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
+              >
+                {actingOn === modal.id ? "Rejecting..." : "Confirm rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
 }
 
-function Stat({ title, value }) {
+function StatCard({ title, value }) {
   return (
-    <div className="bg-white border border-[#E5E2DC] rounded-[16px] p-4">
-      <p className="text-xs text-[#7A8088]">{title}</p>
-      <p className="text-xl font-bold text-[#2F343B] mt-2">{value}</p>
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
     </div>
   );
 }
 
 function StatusBadge({ status }) {
-  const styles = {
-    "Pending Draw": "bg-[#FFF4D6] text-[#B98900]",
-    Selected: "bg-[#D4F4DD] text-[#2D7A4A]",
-    Accepted: "bg-[#E8F4FF] text-[#2B6CB0]",
-    Confirmed: "bg-[#DDF5E5] text-[#2D7A4A]",
-    "Waiting List": "bg-[#F1F0EC] text-[#7A8088]",
-    Rejected: "bg-[#FFE4E4] text-[#C95454]",
-    Cancelled: "bg-[#F1F0EC] text-[#7A8088]",
-  };
-
+  const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
+  const label = STATUS_LABEL[status] || status;
   return (
-    <span className={`text-xs px-3 py-1 rounded-full ${styles[status] || "bg-[#F5F4F1]"}`}>
-      {status}
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
+      {label}
     </span>
-  );
-}
-
-function SummaryItem({ label, value }) {
-  return (
-    <div className="flex justify-between py-2 text-sm">
-      <span className="text-[#7A8088]">{label}</span>
-      <span className="font-semibold text-[#2F343B]">{value}</span>
-    </div>
-  );
-}
-
-function ActionItem({ title, onOpen }) {
-  return (
-    <div className="flex justify-between items-center py-2 text-sm border-t border-[#F0EEEA]">
-      <span className="text-[#2F343B]">{title}</span>
-      <button onClick={onOpen} className="text-xs px-3 py-1 border rounded-lg">
-        Open
-      </button>
-    </div>
-  );
-}
-
-function ModalShell({ title, children, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[520px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-4">{title}</h2>
-        <div className="space-y-3 mb-6">{children}</div>
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-3">{title}</h2>
-        <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">{message}</p>
-
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
 function DetailRow({ label, value }) {
   return (
-    <div className="flex justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value}
-      </span>
+    <div className="flex flex-wrap gap-2">
+      <span className="text-[#7A8088] min-w-[140px]">{label}:</span>
+      <span className="text-[#2F343B] font-medium break-words">{value}</span>
     </div>
   );
 }

@@ -11,12 +11,38 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
+        $request->validate([
+            'employee_number' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ]);
+
         $user = User::where('employee_number', $request->employee_number)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Invalid credentials'
-            ], 401);
+        if (!$user) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        $stored = $user->password;
+        $provided = $request->password;
+
+        // Accept either bcrypt-hashed or plaintext (seeded data uses plaintext).
+        $isBcrypt = is_string($stored) && str_starts_with($stored, '$2y$');
+        $passwordOk = $isBcrypt
+            ? Hash::check($provided, $stored)
+            : hash_equals($stored, $provided);
+
+        if (!$passwordOk) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        // Auto-upgrade plaintext passwords to bcrypt on successful login.
+        if (!$isBcrypt) {
+            $user->password = Hash::make($provided);
+            $user->save();
+        }
+
+        if (!$user->active) {
+            return response()->json(['message' => 'Account is disabled'], 403);
         }
 
         $roles = DB::table('user_roles')
@@ -34,8 +60,8 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'employee_number' => $user->employee_number,
                 'roles' => $roles,
-                'active' => $user->active,
-            ]
+                'active' => (bool) $user->active,
+            ],
         ]);
     }
 }

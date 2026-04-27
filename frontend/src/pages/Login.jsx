@@ -1,54 +1,46 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import loginBg from "../assets/login/login-bg.jpg";
+import { apiPost } from "../api";
+import { useT } from "../i18n/LanguageContext";
 
 export default function Login() {
+  const t = useT();
   const [showPassword, setShowPassword] = useState(false);
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+    setError(null);
+    setSubmitting(true);
+
     try {
-      const res = await fetch("http://127.0.0.1:8001/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          employee_number: employeeId,
-          password: password,
-        }),
+      const data = await apiPost("/login", {
+        employee_number: employeeId,
+        password: password,
       });
-  
-      const data = await res.json();
-  
-      if (res.ok) {
-        console.log("Login success:", data);
-  
-        // ✅ save user
-        localStorage.setItem("user", JSON.stringify(data.user));
-  
-        // 🚀 redirect by role
-        if (data.user.role === "ADMIN_SYSTEME") {
-          window.location.href = "/dashboard/system";
-        } else if (data.user.role === "ADMIN_FONCTIONNEL") {
-          window.location.href = "/dashboard/admin";
-        } else if (data.user.role === "COMMUNICATEUR") {
-          window.location.href = "/dashboard/communicator";
-        } else {
-          window.location.href = "/dashboard";
-        }
-  
+
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      const roles = data.user.roles || [];
+      if (roles.includes("SYSTEM_ADMIN")) {
+        window.location.href = "/dashboard/system/system-admins";
+      } else if (roles.includes("FUNCTIONAL_ADMIN")) {
+        window.location.href = "/dashboard/admin/activities";
+      } else if (roles.includes("COMMUNICATOR")) {
+        window.location.href = "/dashboard/communicator/announcements";
       } else {
-        alert(data.message);
+        window.location.href = "/dashboard";
       }
-  
-    } catch (error) {
-      console.error("Login error:", error);
-      alert("Server error. Try again.");
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(err.message || "Server error. Try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -81,12 +73,10 @@ export default function Login() {
         <div className="relative z-10 p-10 pb-12">
           <h1 className="text-white font-bold leading-[1.06] tracking-[-1.5px] mb-4"
               style={{ fontSize: "clamp(36px, 4vw, 52px)" }}>
-            Welcome to<br />your Sonatrach space
+            {t("login.panelTitle")}
           </h1>
           <p className="text-[rgba(255,255,255,0.82)] text-base font-normal leading-[170%] max-w-[420px]">
-            Securely sign in to access activities, announcements
-            and community updates in one clear and connected
-            experience.
+            {t("login.panelSubtitle")}
           </p>
         </div>
       </div>
@@ -108,7 +98,7 @@ export default function Login() {
                 strokeLinejoin="round"
               />
             </svg>
-            Back to home
+            {t("login.back")}
           </Link>
         </div>
 
@@ -129,20 +119,24 @@ export default function Login() {
           {/* Heading */}
           <div className="mb-7">
             <h2 className="text-[#2F343B] font-bold text-[36px] leading-[112%] tracking-[-1px] mb-2">
-              Welcome back
+              {t("login.welcome")}
             </h2>
             <p className="text-[#7A8088] text-[15px] font-normal leading-[170%]">
-              Enter your employee credentials to access your
-              personal dashboard.
+              {t("login.subtitle")}
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {error && (
+              <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {error}
+              </div>
+            )}
             {/* Employee ID */}
             <div className="flex flex-col gap-2">
               <label className="text-[#2F343B] text-sm font-semibold leading-[21px]">
-                Employee ID
+                {t("login.employeeId")}
               </label>
               <div className="flex items-center gap-3 px-4 py-[13px] rounded-[14px] border border-[#E5E2DC] bg-white focus-within:border-[#ED8D31] focus-within:ring-2 focus-within:ring-[rgba(237,141,49,0.12)] transition-all">
                 <svg
@@ -171,7 +165,7 @@ export default function Login() {
                   type="text"
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
-                  placeholder="Enter your ID (e.g. 123456)"
+                  placeholder={t("login.employeeIdPlaceholder")}
                   className="flex-1 bg-transparent text-[#2F343B] text-sm font-normal placeholder-[#B0B5BB] outline-none"
                 />
               </div>
@@ -180,7 +174,7 @@ export default function Login() {
             {/* Password */}
             <div className="flex flex-col gap-2">
               <label className="text-[#2F343B] text-sm font-semibold leading-[21px]">
-                Password
+                {t("login.password")}
               </label>
               <div className="flex items-center gap-3 px-4 py-[13px] rounded-[14px] border border-[#E5E2DC] bg-white focus-within:border-[#ED8D31] focus-within:ring-2 focus-within:ring-[rgba(237,141,49,0.12)] transition-all">
                 <svg
@@ -268,23 +262,24 @@ export default function Login() {
                   )}
                 </div>
                 <span className="text-[#50565E] text-sm font-normal">
-                  Remember me
+                  {t("login.rememberMe")}
                 </span>
               </label>
               <a
                 href="#"
                 className="text-[#ED8D31] text-sm font-semibold hover:opacity-80 transition-opacity"
               >
-                Forgot password?
+                {t("login.forgotPassword")}
               </a>
             </div>
 
             {/* Sign In Button */}
             <button
               type="submit"
-              className="flex items-center justify-center gap-2 w-full py-[14px] rounded-[14px] bg-[#ED8D31] text-white text-base font-semibold hover:bg-[#d47d29] active:bg-[#c06e22] transition-colors mt-1 shadow-[0_4px_14px_0_rgba(237,141,49,0.28)]"
+              disabled={submitting}
+              className="flex items-center justify-center gap-2 w-full py-[14px] rounded-[14px] bg-[#ED8D31] text-white text-base font-semibold hover:bg-[#d47d29] active:bg-[#c06e22] transition-colors mt-1 shadow-[0_4px_14px_0_rgba(237,141,49,0.28)] disabled:opacity-60"
             >
-              Sign In
+              {submitting ? t("login.signingIn") : t("login.signIn")}
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M3.33301 7.99992H12.6663M7.99967 3.33325L12.6663 7.99992L7.99967 12.6666"
