@@ -4,8 +4,10 @@ import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import SessionForm from "../../components/admin/SessionForm";
 import { apiGet, apiPut } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
 
 export default function EditSession() {
+  const t = useT();
   const { id, sessionId } = useParams();
   const navigate = useNavigate();
 
@@ -55,20 +57,20 @@ export default function EditSession() {
                 to={`/dashboard/admin/activities/${id}/sessions`}
                 className="text-[#ED8D31] font-medium"
               >
-                Sessions
+                {t("admin.createSession.backToSessions")}
               </Link>
               <span className="mx-2">›</span>
               <span className="text-[#2F343B] font-medium">
-                Edit Session #{sessionId}
+                {t("admin.createSession.breadcrumbEdit", { id: sessionId })}
               </span>
             </div>
 
             <div>
               <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                Edit Session
+                {t("admin.createSession.editTitle")}
               </h1>
               <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                Update the session schedule, draw, deadlines and logistics.
+                {t("admin.createSession.editSubtitle")}
               </p>
             </div>
 
@@ -80,7 +82,7 @@ export default function EditSession() {
 
             {loading ? (
               <div className="rounded-[14px] border border-[#E5E2DC] bg-white px-4 py-6 text-sm text-[#7A8088]">
-                Loading session...
+                {t("admin.createSession.loadingSession")}
               </div>
             ) : session ? (
               <SessionForm
@@ -92,7 +94,7 @@ export default function EditSession() {
                   navigate(`/dashboard/admin/activities/${id}/sessions`)
                 }
                 onSubmit={handleSave}
-                submitLabel="Save Changes"
+                submitLabel={t("admin.createSession.saveChanges")}
               />
             ) : null}
           </div>

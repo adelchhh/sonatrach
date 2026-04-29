@@ -52,7 +52,9 @@ export default function ActivityDetail() {
         setSessions(sessList);
         if (sessList.length > 0) setSelectedSessionId(sessList[0].id);
       })
-      .catch((err) => setPageError(err.message || "Could not load activity."))
+      .catch((err) =>
+        setPageError(err.message || t("activityDetail.couldNotLoad"))
+      )
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -80,7 +82,7 @@ export default function ActivityDetail() {
       return;
     }
     if (!selectedSessionId) {
-      setSubmitError("Please choose a session.");
+      setSubmitError(t("activityDetail.selectSession"));
       return;
     }
     setSubmitting(true);
@@ -90,7 +92,7 @@ export default function ActivityDetail() {
         user_id: userId,
         site_choices: siteChoices,
       });
-      setSuccessMessage(res.message || "Registration submitted!");
+      setSuccessMessage(res.message || t("activityDetail.registrationSuccess"));
       setModal({ open: false });
       setSiteChoices([]);
     } catch (err) {
@@ -105,9 +107,9 @@ export default function ActivityDetail() {
       <Layout>
         <div className="px-4 py-16">
           <div className="max-w-[1336px] mx-auto">
-            <p className="text-[#7A8088]">Loading activity...</p>
+            <p className="text-[#7A8088]">{t("common.loading")}</p>
             <Link to="/catalog" className="text-[#ED8D31] font-medium">
-              Back to catalog
+              {t("activityDetail.breadcrumbActivities")}
             </Link>
           </div>
         </div>
@@ -121,16 +123,25 @@ export default function ActivityDetail() {
         <div className="px-4 py-16">
           <div className="max-w-[1336px] mx-auto">
             <p className="text-red-600">
-              {pageError || "Activity not found."}
+              {pageError || t("activityDetail.activityNotFound")}
             </p>
             <Link to="/catalog" className="text-[#ED8D31] font-medium">
-              Back to catalog
+              {t("activityDetail.breadcrumbActivities")}
             </Link>
           </div>
         </div>
       </Layout>
     );
   }
+
+  const categoryLabel =
+    t(`categories.${activity.category}`) === `categories.${activity.category}`
+      ? activity.category
+      : t(`categories.${activity.category}`);
+  const statusLabel =
+    t(`statuses.${activity.status}`) === `statuses.${activity.status}`
+      ? activity.status
+      : t(`statuses.${activity.status}`);
 
   const image = activity.image_url || activity.image || defaultImage;
 
@@ -140,14 +151,14 @@ export default function ActivityDetail() {
         <div className="w-full max-w-[1336px] mx-auto">
           <div className="text-sm text-[#7A8088] mb-5">
             <Link to="/catalog" className="hover:text-[#2F343B]">
-              Activities
+              {t("activityDetail.breadcrumbActivities")}
             </Link>{" "}
             · <span className="text-[#2F343B]">{activity.title}</span>
           </div>
 
           <div className="mb-8">
             <span className="inline-flex px-4 py-2 rounded-full bg-white border border-[#E5E2DC] text-sm text-[#50565E] mb-4">
-              {activity.category}
+              {categoryLabel}
             </span>
 
             <h1 className="text-[#2F343B] text-[56px] font-extrabold leading-[100%] tracking-[-2px] mb-4">
@@ -166,7 +177,7 @@ export default function ActivityDetail() {
                 to="/dashboard/requests"
                 className="font-semibold underline ml-2"
               >
-                See my requests
+                {t("activityDetail.seeMyRequests")}
               </Link>
             </div>
           )}
@@ -182,44 +193,44 @@ export default function ActivityDetail() {
 
             <div className="rounded-[28px] border border-[#E5E2DC] bg-white p-7 h-fit">
               <span className="inline-flex px-4 py-2 rounded-full bg-[#E9F7EF] text-[#2F8C57] text-sm font-semibold mb-5">
-                {activity.status}
+                {statusLabel}
               </span>
 
               <h2 className="text-[#2F343B] text-[22px] font-bold mb-4">
-                Register for a session
+                {t("activityDetail.registerForSession")}
               </h2>
 
               <div className="space-y-3 text-sm text-[#50565E] border-b border-[#E5E2DC] pb-5 mb-5">
                 <div className="flex justify-between">
-                  <span>Minimum seniority</span>
+                  <span>{t("activityDetail.minimumSeniority")}</span>
                   <span className="font-semibold text-[#2F343B]">
-                    {activity.minimum_seniority} year(s)
+                    {activity.minimum_seniority} {t("activityDetail.yearsShort")}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span>Demand level</span>
+                  <span>{t("activityDetail.demandLevel")}</span>
                   <span className="font-semibold text-[#2F343B]">
-                    {activity.demand_level || "N/A"}
+                    {activity.demand_level || "—"}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span>Random draw</span>
+                  <span>{t("activityDetail.randomDraw")}</span>
                   <span className="font-semibold text-[#2F343B]">
-                    {activity.draw_enabled ? "Yes" : "No"}
+                    {activity.draw_enabled ? t("common.yes") : t("common.no")}
                   </span>
                 </div>
               </div>
 
               {sessions.length === 0 ? (
                 <p className="text-sm text-[#7A8088] italic">
-                  No sessions are currently open for this activity.
+                  {t("activityDetail.noOpenSessions")}
                 </p>
               ) : (
                 <>
                   <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                    Select Session
+                    {t("activityDetail.selectSession")}
                   </label>
 
                   <select
@@ -233,7 +244,7 @@ export default function ActivityDetail() {
                     {sessions.map((s) => (
                       <option key={s.id} value={s.id}>
                         {formatDate(s.start_date)} → {formatDate(s.end_date)} (
-                        {s.total_quota} places)
+                        {s.total_quota} {t("activityDetail.places")})
                       </option>
                     ))}
                   </select>
@@ -241,17 +252,16 @@ export default function ActivityDetail() {
                   {selectedSession && selectedSession.sites?.length > 0 && (
                     <div className="mb-5">
                       <p className="text-sm font-semibold text-[#2F343B] mb-2">
-                        Site preferences (optional)
+                        {t("activityDetail.sitePreferences")}
                       </p>
                       <p className="text-xs text-[#7A8088] mb-3">
-                        Pick up to 3 sites in order of preference. The draw will
-                        try your 1st choice first.
+                        {t("activityDetail.sitePrefHint")}
                       </p>
 
                       <div className="space-y-2 mb-3">
                         {siteChoices.length === 0 ? (
                           <p className="text-xs text-[#7A8088] italic">
-                            No site selected yet.
+                            {t("activityDetail.noSiteSelected")}
                           </p>
                         ) : (
                           siteChoices.map((id, idx) => {
@@ -323,7 +333,7 @@ export default function ActivityDetail() {
                     }}
                     className="w-full py-4 rounded-[14px] bg-[#ED8D31] text-white font-semibold hover:bg-[#d97d26] transition-colors"
                   >
-                    Register
+                    {t("activityDetail.register")}
                   </button>
                 </>
               )}
@@ -332,19 +342,19 @@ export default function ActivityDetail() {
 
           <div>
             <h2 className="text-[#2F343B] text-[36px] font-bold mb-4">
-              Overview
+              {t("activityDetail.overview")}
             </h2>
             <p className="text-[#7A8088] text-base leading-[190%] mb-8">
               {activity.description}
             </p>
 
             <h3 className="text-[#2F343B] text-[30px] font-bold mb-5">
-              Available sessions
+              {t("activityDetail.availableSessions")}
             </h3>
 
             {sessions.length === 0 ? (
               <div className="rounded-[20px] border border-[#E5E2DC] bg-white p-5 text-[#7A8088]">
-                No sessions available yet.
+                {t("activityDetail.noSessions")}
               </div>
             ) : (
               <div className="space-y-4">
@@ -365,10 +375,11 @@ export default function ActivityDetail() {
                         Session #{s.id}
                       </h4>
                       <p className="text-[#7A8088] text-sm leading-[170%]">
-                        Registration deadline:{" "}
+                        {t("activityDetail.registrationDeadline")}:{" "}
                         <strong>{formatDate(s.registration_deadline)}</strong> ·{" "}
-                        Quota: <strong>{s.total_quota}</strong> places ·{" "}
-                        Transport: {s.transport_included ? "✅" : "—"}
+                        {t("activityDetail.quota")}: <strong>{s.total_quota}</strong>{" "}
+                        {t("activityDetail.places")} · {t("activityDetail.transport")}:{" "}
+                        {s.transport_included ? "✅" : "—"}
                       </p>
                     </div>
                   </div>
@@ -389,14 +400,11 @@ export default function ActivityDetail() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Confirm Registration
+              {t("activityDetail.confirmRegistration")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-3 leading-[170%]">
-              Submit your request for{" "}
-              <span className="font-semibold text-[#2F343B]">
-                {activity.title}
-              </span>
+              {t("activityDetail.confirmRegistrationText", { title: activity.title })}{" "}
               {selectedSession && (
                 <>
                   {" "}— session {formatDate(selectedSession.start_date)} →{" "}
@@ -407,7 +415,7 @@ export default function ActivityDetail() {
 
             {siteChoices.length > 0 && (
               <p className="text-xs text-[#7A8088] mb-4">
-                Site preferences: {siteChoices.length} selected.
+                {t("activityDetail.sitesSelected", { count: siteChoices.length })}
               </p>
             )}
 
@@ -423,7 +431,7 @@ export default function ActivityDetail() {
                 disabled={submitting}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] disabled:opacity-60"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
@@ -431,7 +439,7 @@ export default function ActivityDetail() {
                 disabled={submitting}
                 className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white disabled:opacity-60"
               >
-                {submitting ? "Submitting..." : "Confirm"}
+                {submitting ? t("common.submitting") : t("common.confirm")}
               </button>
             </div>
           </div>

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, apiDelete } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
 
 export default function ManageSite() {
+  const t = useT();
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -103,14 +105,13 @@ export default function ManageSite() {
             <div className="space-y-6">
               <div>
                 <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                  Admin tools
+                  {t("admin.site.adminTools")}
                 </p>
                 <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Manage Sites
+                  {t("admin.site.title")}
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 max-w-[720px] leading-[170%]">
-                  Manage the available sites used to organize activities and sessions.
-                  Add new sites, review activity distribution, and remove unused ones.
+                  {t("admin.site.subtitle")}
                 </p>
               </div>
 
@@ -122,10 +123,10 @@ export default function ManageSite() {
 
               {/* Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard label="Total sites" value={totalSites} />
-                <StatCard label="Sites in use" value={sitesInUse} />
-                <StatCard label="Activities linked" value={totalActivities} />
-                <StatCard label="Sessions linked" value={totalSessions} />
+                <StatCard label={t("admin.site.statTotal")} value={totalSites} />
+                <StatCard label={t("admin.site.statInUse")} value={sitesInUse} />
+                <StatCard label={t("admin.site.statActivities")} value={totalActivities} />
+                <StatCard label={t("admin.site.statSessions")} value={totalSessions} />
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
@@ -133,10 +134,10 @@ export default function ManageSite() {
                 <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
                   <div className="px-6 py-5 border-b border-[#E5E2DC]">
                     <h2 className="text-[22px] font-bold text-[#2F343B]">
-                      Existing Sites
+                      {t("admin.site.existing")}
                     </h2>
                     <p className="text-sm text-[#7A8088] mt-1">
-                      Review current sites and their linked activity volume.
+                      {t("admin.site.existingHint")}
                     </p>
                   </div>
 
@@ -145,19 +146,19 @@ export default function ManageSite() {
                       <thead>
                         <tr className="text-left bg-[#F9F8F6]">
                           <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            Site
+                            {t("admin.site.col.site")}
                           </th>
                           <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            Address
+                            {t("admin.site.col.address")}
                           </th>
                           <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            Activities
+                            {t("admin.site.col.activities")}
                           </th>
                           <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            Sessions
+                            {t("admin.site.col.sessions")}
                           </th>
                           <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            Action
+                            {t("admin.site.col.action")}
                           </th>
                         </tr>
                       </thead>
@@ -169,7 +170,7 @@ export default function ManageSite() {
                               colSpan="5"
                               className="px-6 py-10 text-center text-sm text-[#7A8088]"
                             >
-                              Loading sites...
+                              {t("admin.site.loading")}
                             </td>
                           </tr>
                         )}
@@ -180,7 +181,7 @@ export default function ManageSite() {
                               colSpan="5"
                               className="px-6 py-10 text-center text-sm text-[#7A8088]"
                             >
-                              No sites available yet.
+                              {t("admin.site.empty")}
                             </td>
                           </tr>
                         )}
@@ -219,7 +220,7 @@ export default function ManageSite() {
                                   }
                                   className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm font-medium text-[#C95454] hover:bg-[#FFF5F5] transition-colors"
                                 >
-                                  Delete
+                                  {t("common.delete")}
                                 </button>
                               </td>
                             </tr>
@@ -232,11 +233,10 @@ export default function ManageSite() {
                 {/* Add site form */}
                 <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6 h-fit">
                   <h2 className="text-[22px] font-bold text-[#2F343B] mb-2">
-                    Add New Site
+                    {t("admin.site.addNew")}
                   </h2>
                   <p className="text-sm text-[#7A8088] mb-5 leading-[170%]">
-                    Create a new site that can later be linked to activities, sessions,
-                    and registration quotas.
+                    {t("admin.site.addNewHint")}
                   </p>
 
                   <form onSubmit={handleAddSite} className="space-y-4">
@@ -248,7 +248,7 @@ export default function ManageSite() {
 
                     <div>
                       <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                        Site name <span className="text-red-500">*</span>
+                        {t("admin.site.siteName")} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -256,14 +256,14 @@ export default function ManageSite() {
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, name: e.target.value }))
                         }
-                        placeholder="Ex: Algiers Center"
+                        placeholder={t("admin.site.siteNamePlaceholder")}
                         className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm text-[#2F343B] placeholder:text-[#7A8088] outline-none"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                        Address
+                        {t("admin.site.address")}
                       </label>
                       <input
                         type="text"
@@ -271,7 +271,7 @@ export default function ManageSite() {
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, address: e.target.value }))
                         }
-                        placeholder="Ex: Oran"
+                        placeholder={t("admin.site.addressPlaceholder")}
                         className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm text-[#2F343B] placeholder:text-[#7A8088] outline-none"
                       />
                     </div>
@@ -281,7 +281,7 @@ export default function ManageSite() {
                       disabled={submitting}
                       className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white font-semibold text-sm hover:bg-[#d97d26] transition-colors disabled:opacity-60"
                     >
-                      {submitting ? "Adding..." : "Add Site"}
+                      {submitting ? t("admin.site.adding") : t("admin.site.addBtn")}
                     </button>
                   </form>
                 </section>
@@ -296,21 +296,16 @@ export default function ManageSite() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Delete Site
+              {t("admin.site.deleteTitle")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-[#2F343B]">
-                {selectedSite.name}
-              </span>
-              ? This action cannot be undone.
+              {t("admin.site.deleteText", { name: selectedSite.name })}
               {Number(selectedSite.sessions_count) > 0 && (
                 <>
                   <br />
                   <span className="text-red-600 font-medium">
-                    Warning: this site is used by {selectedSite.sessions_count}{" "}
-                    session(s) and cannot be deleted while in use.
+                    {t("admin.site.deleteWarn", { count: selectedSite.sessions_count })}
                   </span>
                 </>
               )}
@@ -321,14 +316,14 @@ export default function ManageSite() {
                 onClick={closeModal}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
                 onClick={handleDeleteSite}
                 className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
               >
-                Confirm
+                {t("common.confirm")}
               </button>
             </div>
           </div>

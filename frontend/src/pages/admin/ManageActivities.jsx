@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { API_BASE_URL, apiGet, apiPatch, apiDelete } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
 
 const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=600&auto=format&fit=crop";
@@ -21,6 +22,7 @@ function imageOf(activity) {
 }
 
 export default function ManageActivities() {
+  const t = useT();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -118,11 +120,10 @@ export default function ManageActivities() {
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                    Manage Activities
+                    {t("admin.activities.title")}
                   </h1>
                   <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                    Keep track of active and inactive activities, search quickly,
-                    and manage each activity with direct admin actions.
+                    {t("admin.activities.subtitle")}
                   </p>
                 </div>
 
@@ -130,7 +131,7 @@ export default function ManageActivities() {
                   to="/dashboard/admin/activities/create"
                   className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors inline-block"
                 >
-                  + Create New Activity
+                  {t("admin.activities.createNew")}
                 </Link>
               </div>
 
@@ -142,39 +143,35 @@ export default function ManageActivities() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <StatCard
-                  title="Total Activities"
+                  title={t("admin.reports.statActivities")}
                   value={stats.total}
-                  subtitle="Across all categories and statuses"
                 />
                 <StatCard
-                  title="Published"
+                  title={t("statuses.PUBLISHED")}
                   value={stats.published}
-                  subtitle="Visible in the public catalog"
                 />
                 <StatCard
-                  title="Drafts"
+                  title={t("statuses.DRAFT")}
                   value={stats.drafts}
-                  subtitle="Not yet published"
                 />
                 <StatCard
-                  title="Archived / Cancelled"
+                  title={`${t("statuses.ARCHIVED")} / ${t("statuses.CANCELLED")}`}
                   value={stats.archived + stats.cancelled}
-                  subtitle="Closed or cancelled"
                 />
               </div>
 
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                 <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Activities Directory
+                  {t("admin.activities.directory")}
                 </h2>
                 <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                  Search by activity name and narrow results by category or status.
+                  {t("admin.activities.directoryHint")}
                 </p>
 
                 <div className="flex flex-wrap gap-3">
                   <input
                     type="text"
-                    placeholder="Search activities..."
+                    placeholder={t("admin.activities.searchPlaceholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
@@ -187,7 +184,11 @@ export default function ManageActivities() {
                   >
                     {categories.map((c) => (
                       <option key={c} value={c}>
-                        {c === "ALL" ? "All Categories" : c}
+                        {c === "ALL"
+                          ? t("common.allCategories")
+                          : t(`categories.${c}`) === `categories.${c}`
+                          ? c
+                          : t(`categories.${c}`)}
                       </option>
                     ))}
                   </select>
@@ -197,95 +198,97 @@ export default function ManageActivities() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   >
-                    <option value="ALL">All Status</option>
-                    <option value="PUBLISHED">Published</option>
-                    <option value="DRAFT">Draft</option>
-                    <option value="ARCHIVED">Archived</option>
-                    <option value="CANCELLED">Cancelled</option>
+                    <option value="ALL">{t("common.allStatuses")}</option>
+                    <option value="PUBLISHED">{t("statuses.PUBLISHED")}</option>
+                    <option value="DRAFT">{t("statuses.DRAFT")}</option>
+                    <option value="ARCHIVED">{t("statuses.ARCHIVED")}</option>
+                    <option value="CANCELLED">{t("statuses.CANCELLED")}</option>
                   </select>
 
                   <button
                     onClick={resetFilters}
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
                   >
-                    Reset filters
+                    {t("common.reset")}
                   </button>
                 </div>
               </section>
 
               {loading ? (
-                <div className="text-center py-10 text-[#7A8088]">Loading...</div>
+                <div className="text-center py-10 text-[#7A8088]">{t("common.loading")}</div>
               ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
                   <div className="space-y-6">
                     <ActivityTable
-                      title="Active Activities"
-                      subtitle="Activities currently published and visible in the catalog."
-                      badge={`${active.length} Active`}
+                      title={t("admin.activities.active")}
+                      subtitle={t("admin.activities.activeHint")}
+                      badge={`${active.length}`}
                       badgeClass="bg-[#D4F4DD] text-[#2D7A4A]"
                       items={active}
                       onArchive={(a) => setModal({ open: true, type: "archive", activity: a })}
                       onDeactivate={(a) => setModal({ open: true, type: "deactivate", activity: a })}
                       onDelete={(a) => setModal({ open: true, type: "delete", activity: a })}
                       showActivate={false}
+                      t={t}
                     />
 
                     <ActivityTable
-                      title="Inactive Activities"
-                      subtitle="Drafts, archived and cancelled activities."
-                      badge={`${inactive.length} Inactive`}
+                      title={t("admin.activities.inactive")}
+                      subtitle={t("admin.activities.inactiveHint")}
+                      badge={`${inactive.length}`}
                       badgeClass="bg-[#F1F0EC] text-[#7A8088]"
                       items={inactive}
                       onArchive={(a) => setModal({ open: true, type: "archive", activity: a })}
                       onActivate={(a) => setModal({ open: true, type: "activate", activity: a })}
                       onDelete={(a) => setModal({ open: true, type: "delete", activity: a })}
                       showActivate
+                      t={t}
                     />
                   </div>
 
                   <div className="space-y-5">
                     <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                       <h3 className="text-[24px] font-bold text-[#2F343B]">
-                        Activity summary
+                        {t("admin.activities.summary.title")}
                       </h3>
                       <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                        Overview of all activity statuses.
+                        {t("admin.activities.summary.subtitle")}
                       </p>
 
                       <div className="space-y-3">
-                        <SummaryRow label="Total Activities" value={stats.total} />
-                        <SummaryRow label="Published" value={stats.published} />
-                        <SummaryRow label="Drafts" value={stats.drafts} />
-                        <SummaryRow label="Archived" value={stats.archived} />
-                        <SummaryRow label="Cancelled" value={stats.cancelled} />
+                        <SummaryRow label={t("admin.reports.statActivities")} value={stats.total} />
+                        <SummaryRow label={t("statuses.PUBLISHED")} value={stats.published} />
+                        <SummaryRow label={t("statuses.DRAFT")} value={stats.drafts} />
+                        <SummaryRow label={t("statuses.ARCHIVED")} value={stats.archived} />
+                        <SummaryRow label={t("statuses.CANCELLED")} value={stats.cancelled} />
                       </div>
                     </section>
 
                     <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                       <h3 className="text-[24px] font-bold text-[#2F343B]">
-                        Admin actions
+                        {t("admin.activities.adminActions.title")}
                       </h3>
                       <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                        Quick shortcuts for activity management.
+                        {t("admin.activities.adminActions.subtitle")}
                       </p>
 
                       <div className="space-y-3">
                         <ActionCard
-                          title="Create new activity"
-                          desc="Set up a new activity, define rules, and upload assets."
-                          button="Create"
+                          title={t("admin.activities.adminActions.create")}
+                          desc={t("admin.activities.adminActions.createDesc")}
+                          button={t("common.create")}
                           to="/dashboard/admin/activities/create"
                         />
                         <ActionCard
-                          title="Launch a draw"
-                          desc="Run the random selection algorithm for ready sessions."
-                          button="Launch"
+                          title={t("admin.activities.adminActions.launch")}
+                          desc={t("admin.activities.adminActions.launchDesc")}
+                          button={t("admin.launchDraw.title")}
                           to="/dashboard/admin/draw"
                         />
                         <ActionCard
-                          title="Export reports"
-                          desc="Download activity participation data and history."
-                          button="Export"
+                          title={t("admin.activities.adminActions.export")}
+                          desc={t("admin.activities.adminActions.exportDesc")}
+                          button={t("admin.reports.title")}
                           to="/dashboard/admin/reports"
                         />
                       </div>
@@ -302,17 +305,17 @@ export default function ManageActivities() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              {modal.type === "archive" && "Archive Activity"}
-              {modal.type === "activate" && "Publish Activity"}
-              {modal.type === "deactivate" && "Move to Draft"}
-              {modal.type === "delete" && "Delete Activity"}
+              {modal.type === "archive" && t("admin.activities.modal.archiveTitle")}
+              {modal.type === "activate" && t("admin.activities.activate")}
+              {modal.type === "deactivate" && t("admin.activities.deactivate")}
+              {modal.type === "delete" && t("common.delete")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-6">
-              {modal.type === "archive" && "This will archive the activity and remove it from the public catalog."}
-              {modal.type === "activate" && "This will publish the activity so it appears in the public catalog."}
-              {modal.type === "deactivate" && "This will move the activity back to draft and remove it from the public catalog."}
-              {modal.type === "delete" && "This will permanently delete the activity. This action cannot be undone."}
+              {modal.type === "archive" && t("admin.activities.modal.archiveText")}
+              {modal.type === "activate" && t("admin.activities.modal.deactivateText")}
+              {modal.type === "deactivate" && t("admin.activities.modal.deactivateText")}
+              {modal.type === "delete" && t("admin.site.deleteText", { name: modal.activity?.title || "" })}
             </p>
 
             <div className="flex justify-end gap-3">
@@ -321,7 +324,7 @@ export default function ManageActivities() {
                 disabled={actionLoading}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
@@ -329,7 +332,7 @@ export default function ManageActivities() {
                 disabled={actionLoading}
                 className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium disabled:opacity-60"
               >
-                {actionLoading ? "Processing..." : "Confirm"}
+                {actionLoading ? t("common.processing") : t("common.confirm")}
               </button>
             </div>
           </div>
@@ -350,6 +353,7 @@ function ActivityTable({
   onDeactivate,
   onDelete,
   showActivate,
+  t,
 }) {
   return (
     <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
@@ -368,11 +372,11 @@ function ActivityTable({
         <table className="w-full min-w-[860px]">
           <thead className="bg-[#FBFAF8]">
             <tr>
-              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Activity</th>
-              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Category</th>
-              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Status</th>
-              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Created</th>
-              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Actions</th>
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.activities.col.activity")}</th>
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.activities.col.category")}</th>
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("common.status")}</th>
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("common.date")}</th>
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("common.actions")}</th>
             </tr>
           </thead>
 
@@ -380,7 +384,7 @@ function ActivityTable({
             {items.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-5 py-8 text-center text-sm text-[#7A8088]">
-                  No activities found.
+                  {t("catalog.noActivities")}
                 </td>
               </tr>
             )}
@@ -405,7 +409,11 @@ function ActivityTable({
                   </div>
                 </td>
 
-                <td className="px-5 py-5 text-sm text-[#7A8088]">{activity.category}</td>
+                <td className="px-5 py-5 text-sm text-[#7A8088]">
+                  {t(`categories.${activity.category}`) === `categories.${activity.category}`
+                    ? activity.category
+                    : t(`categories.${activity.category}`)}
+                </td>
 
                 <td className="px-5 py-5">
                   <span
@@ -413,7 +421,9 @@ function ActivityTable({
                       STATUS_BADGE[activity.status] || "bg-[#F1F0EC] text-[#7A8088]"
                     }`}
                   >
-                    {activity.status}
+                    {t(`statuses.${activity.status}`) === `statuses.${activity.status}`
+                      ? activity.status
+                      : t(`statuses.${activity.status}`)}
                   </span>
                 </td>
 
@@ -429,7 +439,7 @@ function ActivityTable({
                       to={`/dashboard/admin/activities/${activity.id}/edit`}
                       className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white inline-block"
                     >
-                      Modify
+                      {t("admin.activities.modify")}
                     </Link>
 
                     {showActivate ? (
@@ -437,14 +447,14 @@ function ActivityTable({
                         onClick={() => onActivate?.(activity)}
                         className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium"
                       >
-                        Publish
+                        {t("admin.activities.activate")}
                       </button>
                     ) : (
                       <button
                         onClick={() => onDeactivate?.(activity)}
                         className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
                       >
-                        Unpublish
+                        {t("admin.activities.deactivate")}
                       </button>
                     )}
 
@@ -452,21 +462,21 @@ function ActivityTable({
                       onClick={() => onArchive?.(activity)}
                       className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
                     >
-                      Archive
+                      {t("admin.activities.archive")}
                     </button>
 
                     <button
                       onClick={() => onDelete?.(activity)}
                       className="px-3 py-1.5 rounded-lg border border-red-200 text-sm bg-white text-red-600"
                     >
-                      Delete
+                      {t("common.delete")}
                     </button>
 
                     <Link
                       to={`/dashboard/admin/activities/${activity.id}/sessions`}
                       className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white inline-block"
                     >
-                      Sessions
+                      {t("admin.activities.col.sessions")}
                     </Link>
                   </div>
                 </td>

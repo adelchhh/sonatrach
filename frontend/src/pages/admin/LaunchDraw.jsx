@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -16,6 +17,7 @@ function formatDate(value) {
 }
 
 export default function LaunchDraw() {
+  const t = useT();
   const [ready, setReady] = useState([]);
   const [notReady, setNotReady] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,15 +64,13 @@ export default function LaunchDraw() {
           <div className="space-y-6">
             <div>
               <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                Admin tools
+                {t("admin.launchDraw.adminTools")}
               </p>
               <h1 className="text-[38px] font-extrabold text-[#2F343B] leading-[110%]">
-                Launch Draw
+                {t("admin.launchDraw.title")}
               </h1>
               <p className="text-[#7A8088] text-sm mt-2 leading-[170%] max-w-[850px]">
-                Review sessions that require a draw and launch the random
-                selection algorithm. Sessions appear here only when their
-                activity has draw enabled.
+                {t("admin.launchDraw.subtitle")}
               </p>
             </div>
 
@@ -82,35 +82,34 @@ export default function LaunchDraw() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               <StatCard
-                title="Sessions requiring draw"
+                title={t("admin.launchDraw.statTotal")}
                 value={stats.total}
-                subtitle="All sessions with draw logic"
+                subtitle={t("admin.launchDraw.statTotalHint")}
               />
               <StatCard
-                title="Ready for draw"
+                title={t("admin.launchDraw.statReady")}
                 value={stats.ready}
-                subtitle="Can launch now"
+                subtitle={t("admin.launchDraw.statReadyHint")}
               />
               <StatCard
-                title="Not ready"
+                title={t("admin.launchDraw.statNotReady")}
                 value={stats.notReady}
-                subtitle="Blocked by prerequisites"
+                subtitle={t("admin.launchDraw.statNotReadyHint")}
               />
               <StatCard
-                title="Eligible applicants"
+                title={t("admin.launchDraw.statEligible")}
                 value={stats.eligible}
-                subtitle="Across ready sessions"
+                subtitle={t("admin.launchDraw.statEligibleHint")}
               />
             </div>
 
             <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E5E2DC]">
                 <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Ready sessions
+                  {t("admin.launchDraw.readyTitle")}
                 </h2>
                 <p className="text-sm text-[#7A8088] mt-1">
-                  All prerequisites met — quotas configured, deadline passed,
-                  eligible applicants present.
+                  {t("admin.launchDraw.readyHint")}
                 </p>
               </div>
 
@@ -119,25 +118,25 @@ export default function LaunchDraw() {
                   <thead className="bg-[#FBFAF8]">
                     <tr>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Activity
+                        {t("admin.launchDraw.col.activity")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Session
+                        {t("admin.launchDraw.col.session")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Draw date
+                        {t("admin.launchDraw.col.drawDate")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Applicants
+                        {t("admin.launchDraw.col.applicants")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Eligible
+                        {t("admin.launchDraw.col.eligible")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Quota
+                        {t("admin.launchDraw.col.quota")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Action
+                        {t("admin.launchDraw.col.action")}
                       </th>
                     </tr>
                   </thead>
@@ -148,7 +147,7 @@ export default function LaunchDraw() {
                           colSpan="7"
                           className="px-5 py-10 text-center text-sm text-[#7A8088]"
                         >
-                          Loading sessions...
+                          {t("admin.launchDraw.loading")}
                         </td>
                       </tr>
                     )}
@@ -159,7 +158,7 @@ export default function LaunchDraw() {
                           colSpan="7"
                           className="px-5 py-10 text-center text-sm text-[#7A8088]"
                         >
-                          No sessions ready for draw right now.
+                          {t("admin.launchDraw.noReady")}
                         </td>
                       </tr>
                     )}
@@ -198,7 +197,7 @@ export default function LaunchDraw() {
                             }
                             className="px-4 py-2 rounded-lg bg-[#ED8D31] text-white text-sm font-semibold"
                           >
-                            Run draw
+                            {t("admin.launchDraw.runDraw")}
                           </button>
                         </td>
                       </tr>
@@ -211,10 +210,10 @@ export default function LaunchDraw() {
             <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E5E2DC]">
                 <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Not ready
+                  {t("admin.launchDraw.notReadyTitle")}
                 </h2>
                 <p className="text-sm text-[#7A8088] mt-1">
-                  Fix the blocking issues below to unlock the draw.
+                  {t("admin.launchDraw.notReadyHint")}
                 </p>
               </div>
 
@@ -223,13 +222,13 @@ export default function LaunchDraw() {
                   <thead className="bg-[#FBFAF8]">
                     <tr>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Activity
+                        {t("admin.launchDraw.col.activity")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Session
+                        {t("admin.launchDraw.col.session")}
                       </th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Blocking reasons
+                        {t("admin.launchDraw.col.blocking")}
                       </th>
                     </tr>
                   </thead>
@@ -240,7 +239,7 @@ export default function LaunchDraw() {
                           colSpan="3"
                           className="px-5 py-10 text-center text-sm text-[#7A8088]"
                         >
-                          All sessions are ready 🎉
+                          {t("admin.launchDraw.allReady")}
                         </td>
                       </tr>
                     )}

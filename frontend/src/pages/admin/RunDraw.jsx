@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -24,6 +25,7 @@ function getCurrentUserId() {
 }
 
 export default function RunDraw() {
+  const t = useT();
   const { sessionId } = useParams();
   const navigate = useNavigate();
 
@@ -53,15 +55,11 @@ export default function RunDraw() {
 
   const handleLaunch = async () => {
     if (!adminId) {
-      alert("You must be logged in to run a draw.");
+      alert(t("admin.runDraw.loginRequired"));
       return;
     }
 
-    if (
-      !window.confirm(
-        "Launch the draw now? This action cannot be undone for this session."
-      )
-    ) {
+    if (!window.confirm(t("admin.runDraw.confirmLaunch"))) {
       return;
     }
 

@@ -2,13 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPatch } from "../../api";
-
-const STATUS_LABEL = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  PROCESSED: "Processed",
-};
+import { useT } from "../../i18n/LanguageContext";
 
 const STATUS_STYLES = {
   PENDING: "bg-[#FFF4D6] text-[#B98900]",
@@ -37,6 +31,7 @@ function getCurrentUserId() {
 }
 
 export default function ManageWithdrawals() {
+  const t = useT();
   const [withdrawals, setWithdrawals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -129,11 +124,10 @@ export default function ManageWithdrawals() {
             <div className="space-y-6">
               <div>
                 <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Manage Withdrawals
+                  {t("admin.withdrawals.title")}
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Review withdrawal requests submitted by employees. Approving
-                  marks the registration as withdrawn and frees the spot.
+                  {t("admin.withdrawals.subtitle")}
                 </p>
               </div>
 
@@ -144,10 +138,10 @@ export default function ManageWithdrawals() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard title="Total requests" value={stats.total} />
-                <StatCard title="Pending" value={stats.pending} />
-                <StatCard title="Approved" value={stats.approved} />
-                <StatCard title="Processed" value={stats.processed} />
+                <StatCard title={t("admin.withdrawals.statTotal")} value={stats.total} />
+                <StatCard title={t("admin.withdrawals.statPending")} value={stats.pending} />
+                <StatCard title={t("admin.withdrawals.statApproved")} value={stats.approved} />
+                <StatCard title={t("admin.withdrawals.statProcessed")} value={stats.processed} />
               </div>
 
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
@@ -158,7 +152,7 @@ export default function ManageWithdrawals() {
                     onChange={(e) =>
                       setFilters((f) => ({ ...f, search: e.target.value }))
                     }
-                    placeholder="Search employee, activity, reason..."
+                    placeholder={t("admin.withdrawals.searchPlaceholder")}
                     className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   />
 
@@ -169,10 +163,10 @@ export default function ManageWithdrawals() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   >
-                    <option value="all">All statuses</option>
-                    {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                    <option value="all">{t("common.allStatuses")}</option>
+                    {["PENDING", "APPROVED", "REJECTED", "PROCESSED"].map((k) => (
                       <option key={k} value={k}>
-                        {v}
+                        {t(`statuses.${k}`)}
                       </option>
                     ))}
                   </select>
@@ -181,7 +175,7 @@ export default function ManageWithdrawals() {
                     onClick={() => setFilters({ search: "", status: "all" })}
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
                   >
-                    Reset
+                    {t("common.reset")}
                   </button>
                 </div>
               </section>
@@ -192,22 +186,22 @@ export default function ManageWithdrawals() {
                     <thead className="bg-[#FBFAF8]">
                       <tr>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Employee
+                          {t("admin.withdrawals.col.employee")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Activity / Session
+                          {t("admin.withdrawals.col.activitySession")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Requested
+                          {t("admin.withdrawals.col.requested")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Reason
+                          {t("admin.withdrawals.col.reason")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Status
+                          {t("common.status")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Actions
+                          {t("common.actions")}
                         </th>
                       </tr>
                     </thead>
@@ -219,7 +213,7 @@ export default function ManageWithdrawals() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            Loading withdrawals...
+                            {t("admin.withdrawals.loading")}
                           </td>
                         </tr>
                       )}
@@ -230,7 +224,7 @@ export default function ManageWithdrawals() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            No withdrawal requests match the filters.
+                            {t("admin.withdrawals.emptyFiltered")}
                           </td>
                         </tr>
                       )}
@@ -246,7 +240,7 @@ export default function ManageWithdrawals() {
                                 {w.user_first_name} {w.user_last_name}
                               </p>
                               <p className="text-xs text-[#7A8088] mt-1">
-                                Matricule {w.employee_number}
+                                {t("admin.registrations.matricule", { number: w.employee_number })}
                               </p>
                             </td>
 
@@ -269,7 +263,7 @@ export default function ManageWithdrawals() {
                               {w.reason || "—"}
                               {w.admin_comment && (
                                 <p className="text-xs text-[#7A8088] mt-1">
-                                  Admin: {w.admin_comment}
+                                  {t("admin.withdrawals.adminLabel")}: {w.admin_comment}
                                 </p>
                               )}
                             </td>
@@ -292,7 +286,7 @@ export default function ManageWithdrawals() {
                                     disabled={actingOn === w.id}
                                     className="px-3 py-1.5 rounded-lg bg-[#2D7A4A] text-white text-sm font-medium disabled:opacity-60"
                                   >
-                                    Approve
+                                    {t("admin.withdrawals.approve")}
                                   </button>
                                   <button
                                     onClick={() =>
@@ -305,7 +299,7 @@ export default function ManageWithdrawals() {
                                     disabled={actingOn === w.id}
                                     className="px-3 py-1.5 rounded-lg bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
                                   >
-                                    Reject
+                                    {t("admin.withdrawals.reject")}
                                   </button>
                                 </div>
                               ) : w.status === "APPROVED" ? (
@@ -316,7 +310,7 @@ export default function ManageWithdrawals() {
                                   disabled={actingOn === w.id}
                                   className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium disabled:opacity-60"
                                 >
-                                  Mark processed
+                                  {t("admin.withdrawals.markProcessed")}
                                 </button>
                               ) : (
                                 <span className="text-xs text-[#7A8088]">
@@ -346,14 +340,14 @@ export default function ManageWithdrawals() {
           >
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
               {modal.type === "approve"
-                ? "Approve Withdrawal"
-                : "Reject Withdrawal"}
+                ? t("admin.withdrawals.modal.approveTitle")
+                : t("admin.withdrawals.modal.rejectTitle")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-4">
               {modal.type === "approve"
-                ? "Approving will mark the registration as withdrawn and free the spot. Add an optional admin comment."
-                : "Add a comment to explain the rejection."}
+                ? t("admin.withdrawals.modal.approveText")
+                : t("admin.withdrawals.modal.rejectText")}
             </p>
 
             <textarea
@@ -362,8 +356,8 @@ export default function ManageWithdrawals() {
               rows={3}
               placeholder={
                 modal.type === "approve"
-                  ? "Optional admin comment..."
-                  : "Required reason for rejection..."
+                  ? t("admin.withdrawals.modal.approvePlaceholder")
+                  : t("admin.withdrawals.modal.rejectPlaceholder")
               }
               className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
             />
@@ -374,7 +368,7 @@ export default function ManageWithdrawals() {
                 disabled={actingOn === modal.id}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm disabled:opacity-60"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
@@ -391,10 +385,10 @@ export default function ManageWithdrawals() {
                 }`}
               >
                 {actingOn === modal.id
-                  ? "Processing..."
+                  ? t("admin.withdrawals.modal.processing")
                   : modal.type === "approve"
-                  ? "Confirm approval"
-                  : "Confirm rejection"}
+                  ? t("admin.withdrawals.modal.confirmApprove")
+                  : t("admin.withdrawals.modal.confirmReject")}
               </button>
             </div>
           </div>

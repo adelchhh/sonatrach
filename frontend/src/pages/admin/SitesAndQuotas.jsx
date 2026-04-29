@@ -3,8 +3,10 @@ import { Link, useParams } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, apiDelete, apiPut } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
 
 export default function SitesAndQuotas() {
+  const t = useT();
   const { id, sessionId } = useParams();
 
   const [allocations, setAllocations] = useState([]);
@@ -109,26 +111,26 @@ export default function SitesAndQuotas() {
                 to="/dashboard/admin/activities"
                 className="text-[#ED8D31] font-medium"
               >
-                Manage Activities
+                {t("admin.activities.title")}
               </Link>
               <span className="mx-2">›</span>
               <Link
                 to={`/dashboard/admin/activities/${id}/sessions`}
                 className="text-[#ED8D31] font-medium"
               >
-                Sessions
+                {t("admin.createSession.backToSessions")}
               </Link>
               <span className="mx-2">›</span>
-              <span className="text-[#2F343B] font-medium">Sites & Quotas</span>
+              <span className="text-[#2F343B] font-medium">{t("admin.sessions.sitesQuotas")}</span>
             </div>
 
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
               <div>
                 <h1 className="text-[38px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Sites & Quotas Configuration
+                  {t("admin.sitesQuotas.title")}
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 leading-[170%]">
-                  Assign sites and configure quotas for Session #{sessionId}.
+                  {t("admin.sitesQuotas.subtitle", { id: sessionId })}
                 </p>
               </div>
 
@@ -137,7 +139,7 @@ export default function SitesAndQuotas() {
                   to={`/dashboard/admin/activities/${id}/sessions`}
                   className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
                 >
-                  Back to sessions
+                  {t("admin.sitesQuotas.backToSessions")}
                 </Link>
               </div>
             </div>
@@ -150,24 +152,24 @@ export default function SitesAndQuotas() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               <StatCard
-                title="Assigned Sites"
+                title={t("admin.sitesQuotas.statSites")}
                 value={allocations.length}
-                subtitle={`For Session #${sessionId}`}
+                subtitle={t("admin.sitesQuotas.statForSession", { id: sessionId })}
               />
               <StatCard
-                title="Total Quota"
+                title={t("admin.sitesQuotas.statQuota")}
                 value={totalQuota}
-                subtitle="Places allocated"
+                subtitle={t("admin.sitesQuotas.statAllocated")}
               />
               <StatCard
-                title="Site Choices"
+                title={t("admin.sitesQuotas.statChoices")}
                 value={totalChoices}
-                subtitle="Picked by employees"
+                subtitle={t("admin.sitesQuotas.statPickedByEmployees")}
               />
               <StatCard
-                title="Remaining Places"
+                title={t("admin.sitesQuotas.statRemaining")}
                 value={remainingPlaces}
-                subtitle="After selections"
+                subtitle={t("admin.sitesQuotas.statAfterSelections")}
               />
             </div>
 
@@ -175,10 +177,10 @@ export default function SitesAndQuotas() {
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
                 <div className="px-5 py-4 border-b border-[#E5E2DC]">
                   <h2 className="text-[28px] font-bold text-[#2F343B]">
-                    Assigned Sites
+                    {t("admin.sitesQuotas.assigned")}
                   </h2>
                   <p className="text-sm text-[#7A8088] mt-1">
-                    Manage the sites and their allocated quotas for this session.
+                    {t("admin.sitesQuotas.assignedHint")}
                   </p>
                 </div>
 
@@ -187,19 +189,19 @@ export default function SitesAndQuotas() {
                     <thead className="bg-[#FBFAF8]">
                       <tr>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Site Name
+                          {t("admin.sitesQuotas.col.site")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Quota
+                          {t("admin.sitesQuotas.col.quota")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Choices
+                          {t("admin.sitesQuotas.col.choices")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Selected (after draw)
+                          {t("admin.sitesQuotas.col.selected")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Action
+                          {t("admin.sitesQuotas.col.action")}
                         </th>
                       </tr>
                     </thead>
@@ -211,7 +213,7 @@ export default function SitesAndQuotas() {
                             colSpan="5"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            Loading allocations...
+                            {t("common.loading")}
                           </td>
                         </tr>
                       )}
@@ -222,7 +224,7 @@ export default function SitesAndQuotas() {
                             colSpan="5"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            No sites assigned to this session yet.
+                            {t("admin.sitesQuotas.emptyAllocations")}
                           </td>
                         </tr>
                       )}
@@ -288,10 +290,10 @@ export default function SitesAndQuotas() {
               <div className="space-y-6">
                 <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                   <h3 className="text-[28px] font-bold text-[#2F343B]">
-                    Assign Site
+                    {t("admin.sitesQuotas.assignSite")}
                   </h3>
                   <p className="text-sm text-[#7A8088] mt-1 mb-5">
-                    Allocate quota to a site for this session.
+                    {t("admin.sitesQuotas.assignSiteHint")}
                   </p>
 
                   <form onSubmit={handleAddSite} className="space-y-4">
@@ -301,7 +303,7 @@ export default function SitesAndQuotas() {
                       </div>
                     )}
 
-                    <Field label="Site *">
+                    <Field label={t("admin.sitesQuotas.siteLabel")}>
                       <select
                         value={form.site_id}
                         onChange={(e) =>
@@ -314,8 +316,8 @@ export default function SitesAndQuotas() {
                       >
                         <option value="">
                           {availableSites.length === 0
-                            ? "All sites already assigned"
-                            : "Select a site..."}
+                            ? t("admin.sitesQuotas.allAssigned")
+                            : t("admin.sitesQuotas.selectSite")}
                         </option>
                         {availableSites.map((site) => (
                           <option key={site.id} value={site.id}>
@@ -326,7 +328,7 @@ export default function SitesAndQuotas() {
                       </select>
                     </Field>
 
-                    <Field label="Quota (Places) *">
+                    <Field label={t("admin.sitesQuotas.quotaLabel")}>
                       <input
                         type="number"
                         min="1"
@@ -337,7 +339,7 @@ export default function SitesAndQuotas() {
                             quota: e.target.value,
                           }))
                         }
-                        placeholder="e.g., 50"
+                        placeholder={t("admin.sitesQuotas.quotaPlaceholder")}
                         className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
                       />
                     </Field>
@@ -347,24 +349,17 @@ export default function SitesAndQuotas() {
                       disabled={submitting || availableSites.length === 0}
                       className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors disabled:opacity-50"
                     >
-                      {submitting ? "Adding..." : "+ Add to Session"}
+                      {submitting ? t("admin.sitesQuotas.adding") : t("admin.sitesQuotas.addToSession")}
                     </button>
                   </form>
                 </section>
 
                 <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                   <h3 className="text-lg font-bold text-[#2F343B] mb-2">
-                    💡 Tip
+                    💡 {t("admin.sitesQuotas.addNote")}
                   </h3>
                   <p className="text-sm text-[#7A8088] leading-[170%]">
-                    Need to add a brand-new site to the system? Go to{" "}
-                    <Link
-                      to="/dashboard/admin/site"
-                      className="text-[#ED8D31] font-semibold"
-                    >
-                      Manage Sites
-                    </Link>{" "}
-                    first, then it will appear here in the dropdown.
+                    {t("admin.sitesQuotas.addNoteHint")}
                   </p>
                 </section>
               </div>
@@ -377,12 +372,11 @@ export default function SitesAndQuotas() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-[20px] p-6 w-full max-w-[400px] shadow-lg">
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Remove Site Allocation
+              {t("admin.sitesQuotas.removeModal.title")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-6">
-              Are you sure you want to remove this site from the session? This
-              cannot be undone.
+              {t("admin.sitesQuotas.removeModal.text")}
             </p>
 
             <div className="flex justify-end gap-3">
@@ -390,14 +384,14 @@ export default function SitesAndQuotas() {
                 onClick={() => setModal({ open: false, allocationId: null })}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
               >
-                Confirm
+                {t("common.confirm")}
               </button>
             </div>
           </div>

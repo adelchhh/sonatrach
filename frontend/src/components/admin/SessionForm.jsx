@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
+import { useT } from "../../i18n/LanguageContext";
 
-const STATUS_OPTIONS = [
-  { value: "DRAFT", label: "Draft" },
-  { value: "OPEN", label: "Open" },
-  { value: "CLOSED", label: "Closed" },
-  { value: "DRAW_DONE", label: "Draw done" },
-  { value: "FINISHED", label: "Finished" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
+const STATUS_VALUES = ["DRAFT", "OPEN", "CLOSED", "DRAW_DONE", "FINISHED", "CANCELLED"];
 
 export default function SessionForm({
   initial,
@@ -16,8 +10,9 @@ export default function SessionForm({
   errorMessage = null,
   onSubmit,
   onCancel,
-  submitLabel = "Save Session",
+  submitLabel,
 }) {
+  const t = useT();
   const [form, setForm] = useState({
     start_date: "",
     end_date: "",
@@ -83,16 +78,16 @@ export default function SessionForm({
           <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
             <div className="px-5 py-4 border-b border-[#E5E2DC]">
               <h2 className="text-[24px] font-bold text-[#2F343B]">
-                Session Dates
+                {t("admin.sessionForm.sessionDates")}
               </h2>
               <p className="text-sm text-[#7A8088] mt-1">
-                Define the main schedule and deadlines of this session.
+                {t("admin.sessionForm.sessionDatesHint")}
               </p>
             </div>
 
             <div className="p-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Start Date *">
+                <Field label={t("admin.sessionForm.startDate")}>
                   <input
                     type="date"
                     required
@@ -104,7 +99,7 @@ export default function SessionForm({
                   />
                 </Field>
 
-                <Field label="End Date *">
+                <Field label={t("admin.sessionForm.endDate")}>
                   <input
                     type="date"
                     required
@@ -114,7 +109,7 @@ export default function SessionForm({
                   />
                 </Field>
 
-                <Field label="Registration Deadline *">
+                <Field label={t("admin.sessionForm.registrationDeadline")}>
                   <input
                     type="date"
                     required
@@ -126,7 +121,7 @@ export default function SessionForm({
                   />
                 </Field>
 
-                <Field label="Document Upload Deadline">
+                <Field label={t("admin.sessionForm.documentUploadDeadline")}>
                   <input
                     type="date"
                     value={form.document_upload_deadline}
@@ -139,7 +134,7 @@ export default function SessionForm({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Confirmation Delay (hours)">
+                <Field label={t("admin.sessionForm.confirmationDelay")}>
                   <input
                     type="number"
                     min="0"
@@ -155,7 +150,7 @@ export default function SessionForm({
                   />
                 </Field>
 
-                <Field label="Number of Substitutes">
+                <Field label={t("admin.sessionForm.substitutesCount")}>
                   <input
                     type="number"
                     min="0"
@@ -175,16 +170,16 @@ export default function SessionForm({
             <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E5E2DC]">
                 <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Draw Settings
+                  {t("admin.sessionForm.drawSettings")}
                 </h2>
                 <p className="text-sm text-[#7A8088] mt-1">
-                  Configure the draw information for this session.
+                  {t("admin.sessionForm.drawSettingsHint")}
                 </p>
               </div>
 
               <div className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Draw Date">
+                  <Field label={t("admin.sessionForm.drawDate")}>
                     <input
                       type="date"
                       value={form.draw_date}
@@ -195,14 +190,14 @@ export default function SessionForm({
                     />
                   </Field>
 
-                  <Field label="Draw Location">
+                  <Field label={t("admin.sessionForm.drawLocation")}>
                     <input
                       type="text"
                       value={form.draw_location}
                       onChange={(e) =>
                         handleChange("draw_location", e.target.value)
                       }
-                      placeholder="e.g., Algiers HQ"
+                      placeholder={t("admin.sessionForm.drawLocationPlaceholder")}
                       className="input-text"
                     />
                   </Field>
@@ -214,31 +209,31 @@ export default function SessionForm({
           <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
             <div className="px-5 py-4 border-b border-[#E5E2DC]">
               <h2 className="text-[24px] font-bold text-[#2F343B]">
-                Logistics & Documents
+                {t("admin.sessionForm.logistics")}
               </h2>
               <p className="text-sm text-[#7A8088] mt-1">
-                Configure transport support and supporting session documents.
+                {t("admin.sessionForm.logisticsHint")}
               </p>
             </div>
 
             <div className="p-5 space-y-5">
               <ToggleCard
-                title="Transport Covered"
-                description="Enable this if transportation is provided for this session."
+                title={t("admin.sessionForm.transportCovered")}
+                description={t("admin.sessionForm.transportHint")}
                 checked={form.transport_included}
                 onToggle={() =>
                   handleChange("transport_included", !form.transport_included)
                 }
               />
 
-              <Field label="Telefax / Session Document URL">
+              <Field label={t("admin.sessionForm.telefax")}>
                 <input
                   type="text"
                   value={form.telefax_url}
                   onChange={(e) =>
                     handleChange("telefax_url", e.target.value)
                   }
-                  placeholder="https://... (link to the session brief, PDF, etc.)"
+                  placeholder={t("admin.sessionForm.telefaxPlaceholder")}
                   className="input-text"
                 />
               </Field>
@@ -252,7 +247,7 @@ export default function SessionForm({
                 onClick={onCancel}
                 className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             )}
 
@@ -261,7 +256,7 @@ export default function SessionForm({
               disabled={submitting}
               className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors disabled:opacity-60"
             >
-              {submitting ? "Saving..." : submitLabel}
+              {submitting ? t("common.saving") : (submitLabel || t("admin.createSession.save"))}
             </button>
           </div>
         </div>
@@ -271,23 +266,23 @@ export default function SessionForm({
           <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
             <div className="px-5 py-4 border-b border-[#E5E2DC]">
               <h3 className="text-[24px] font-bold text-[#2F343B]">
-                Session Status
+                {t("admin.sessionForm.sessionStatus")}
               </h3>
               <p className="text-sm text-[#7A8088] mt-1">
-                Set the current status of the session.
+                {t("admin.sessionForm.sessionStatusHint")}
               </p>
             </div>
 
             <div className="p-5">
-              <Field label="Status">
+              <Field label={t("common.status")}>
                 <select
                   value={form.status}
                   onChange={(e) => handleChange("status", e.target.value)}
                   className="input-text"
                 >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {STATUS_VALUES.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`statuses.${v}`)}
                     </option>
                   ))}
                 </select>
@@ -298,42 +293,39 @@ export default function SessionForm({
           <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
             <div className="px-5 py-4 border-b border-[#E5E2DC]">
               <h3 className="text-[24px] font-bold text-[#2F343B]">
-                Preview Summary
+                {t("admin.sessionForm.previewSummary")}
               </h3>
               <p className="text-sm text-[#7A8088] mt-1">
-                Quick overview of this session configuration.
+                {t("admin.sessionForm.previewHint")}
               </p>
             </div>
 
             <div className="p-5 space-y-3">
-              <SummaryRow label="Start" value={form.start_date || "Not set"} />
-              <SummaryRow label="End" value={form.end_date || "Not set"} />
+              <SummaryRow label={t("admin.sessionForm.summaryStart")} value={form.start_date || t("common.notSet")} />
+              <SummaryRow label={t("admin.sessionForm.summaryEnd")} value={form.end_date || t("common.notSet")} />
               <SummaryRow
-                label="Registration Deadline"
-                value={form.registration_deadline || "Not set"}
+                label={t("admin.sessionForm.summaryRegDeadline")}
+                value={form.registration_deadline || t("common.notSet")}
               />
               <SummaryRow
-                label="Docs Deadline"
-                value={form.document_upload_deadline || "Not set"}
+                label={t("admin.sessionForm.summaryDocsDeadline")}
+                value={form.document_upload_deadline || t("common.notSet")}
               />
               <SummaryRow
-                label="Draw Date"
-                value={form.draw_date || "Not set"}
+                label={t("admin.sessionForm.summaryDrawDate")}
+                value={form.draw_date || t("common.notSet")}
               />
               <SummaryRow
-                label="Transport"
-                value={form.transport_included ? "Covered" : "Not covered"}
+                label={t("admin.sessionForm.summaryTransport")}
+                value={form.transport_included ? t("admin.sessionForm.transportCoveredYes") : t("admin.sessionForm.transportCoveredNo")}
               />
               <SummaryRow
-                label="Substitutes"
+                label={t("admin.sessionForm.summarySubstitutes")}
                 value={String(form.substitutes_count)}
               />
               <SummaryRow
-                label="Status"
-                value={
-                  STATUS_OPTIONS.find((o) => o.value === form.status)?.label ||
-                  form.status
-                }
+                label={t("common.status")}
+                value={t(`statuses.${form.status}`)}
               />
             </div>
           </section>

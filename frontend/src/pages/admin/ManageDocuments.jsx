@@ -2,12 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost } from "../../api";
-
-const STATUS_LABEL = {
-  UPLOADED: "Uploaded",
-  VALIDATED: "Validated",
-  REJECTED: "Rejected",
-};
+import { useT } from "../../i18n/LanguageContext";
 
 const STATUS_STYLES = {
   UPLOADED: "bg-[#FFF4D6] text-[#B98900]",
@@ -36,6 +31,7 @@ function getCurrentUserId() {
 }
 
 export default function ManageDocuments() {
+  const t = useT();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -157,11 +153,10 @@ export default function ManageDocuments() {
             <div className="space-y-6">
               <div>
                 <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Manage Documents
+                  {t("admin.documents.title")}
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Review documents uploaded by employees, validate them, or
-                  reject them with a comment that the employee will see.
+                  {t("admin.documents.subtitle")}
                 </p>
               </div>
 
@@ -172,10 +167,10 @@ export default function ManageDocuments() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard title="Total documents" value={stats.total} />
-                <StatCard title="Pending review" value={stats.uploaded} />
-                <StatCard title="Validated" value={stats.validated} />
-                <StatCard title="Rejected" value={stats.rejected} />
+                <StatCard title={t("admin.documents.statTotal")} value={stats.total} />
+                <StatCard title={t("admin.documents.statPending")} value={stats.uploaded} />
+                <StatCard title={t("admin.documents.statValidated")} value={stats.validated} />
+                <StatCard title={t("admin.documents.statRejected")} value={stats.rejected} />
               </div>
 
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
@@ -186,7 +181,7 @@ export default function ManageDocuments() {
                     onChange={(e) =>
                       setFilters((f) => ({ ...f, search: e.target.value }))
                     }
-                    placeholder="Search employee, file name, type..."
+                    placeholder={t("admin.documents.searchPlaceholder")}
                     className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   />
 
@@ -197,7 +192,7 @@ export default function ManageDocuments() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   >
-                    <option value="all">All activities</option>
+                    <option value="all">{t("admin.registrations.allActivities")}</option>
                     {activities.map((a) => (
                       <option key={a} value={a}>
                         {a}
@@ -212,10 +207,10 @@ export default function ManageDocuments() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   >
-                    <option value="all">All statuses</option>
-                    {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                    <option value="all">{t("common.allStatuses")}</option>
+                    {["UPLOADED", "VALIDATED", "REJECTED"].map((k) => (
                       <option key={k} value={k}>
-                        {v}
+                        {k === "UPLOADED" ? t("admin.documents.statPending") : t(`statuses.${k}`)}
                       </option>
                     ))}
                   </select>
@@ -226,7 +221,7 @@ export default function ManageDocuments() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
                   >
-                    Reset
+                    {t("common.reset")}
                   </button>
                 </div>
               </section>
@@ -237,22 +232,22 @@ export default function ManageDocuments() {
                     <thead className="bg-[#FBFAF8]">
                       <tr>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Employee
+                          {t("admin.documents.col.employee")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Activity
+                          {t("admin.documents.col.activity")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Document
+                          {t("admin.documents.col.document")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Uploaded
+                          {t("admin.documents.col.uploaded")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Status
+                          {t("common.status")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Actions
+                          {t("common.actions")}
                         </th>
                       </tr>
                     </thead>
@@ -264,7 +259,7 @@ export default function ManageDocuments() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            Loading documents...
+                            {t("admin.documents.loading")}
                           </td>
                         </tr>
                       )}
@@ -275,7 +270,7 @@ export default function ManageDocuments() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            No documents match the filters.
+                            {t("admin.documents.emptyFiltered")}
                           </td>
                         </tr>
                       )}
@@ -291,7 +286,7 @@ export default function ManageDocuments() {
                                 {d.user_first_name} {d.user_last_name}
                               </p>
                               <p className="text-xs text-[#7A8088] mt-1">
-                                Matricule {d.employee_number}
+                                {t("admin.registrations.matricule", { number: d.employee_number })}
                               </p>
                             </td>
 
@@ -336,7 +331,7 @@ export default function ManageDocuments() {
                                       disabled={actingOn === d.id}
                                       className="px-3 py-1.5 rounded-lg bg-[#2D7A4A] text-white text-sm font-medium disabled:opacity-60"
                                     >
-                                      Validate
+                                      {t("admin.documents.validate")}
                                     </button>
                                     <button
                                       onClick={() => {
@@ -350,7 +345,7 @@ export default function ManageDocuments() {
                                       disabled={actingOn === d.id}
                                       className="px-3 py-1.5 rounded-lg bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
                                     >
-                                      Reject
+                                      {t("admin.documents.reject")}
                                     </button>
                                   </>
                                 )}
@@ -359,9 +354,9 @@ export default function ManageDocuments() {
                                     onClick={() => handleValidate(d.id)}
                                     disabled={actingOn === d.id}
                                     className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white text-[#7A8088] disabled:opacity-60"
-                                    title="Re-validate"
+                                    title={t("admin.documents.revalidate")}
                                   >
-                                    Re-validate
+                                    {t("admin.documents.revalidate")}
                                   </button>
                                 )}
                               </div>
@@ -387,18 +382,18 @@ export default function ManageDocuments() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Reject Document
+              {t("admin.documents.rejectModal.title")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-4">
-              Provide a comment so the employee knows what to fix.
+              {t("admin.documents.rejectModal.text")}
             </p>
 
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={4}
-              placeholder="e.g., The scan is unreadable, please re-upload..."
+              placeholder={t("admin.documents.rejectModal.placeholder")}
               className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
             />
 
@@ -408,7 +403,7 @@ export default function ManageDocuments() {
                 disabled={actingOn === modal.id}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm disabled:opacity-60"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
@@ -416,7 +411,7 @@ export default function ManageDocuments() {
                 disabled={actingOn === modal.id}
                 className="px-4 py-2 rounded-[12px] bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
               >
-                {actingOn === modal.id ? "Rejecting..." : "Confirm rejection"}
+                {actingOn === modal.id ? t("admin.documents.rejectModal.rejecting") : t("admin.documents.rejectModal.confirm")}
               </button>
             </div>
           </div>
@@ -436,8 +431,14 @@ function StatCard({ title, value }) {
 }
 
 function StatusBadge({ status }) {
+  const t = useT();
   const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
-  const label = STATUS_LABEL[status] || status;
+  const labelMap = {
+    UPLOADED: t("admin.documents.statPending"),
+    VALIDATED: t("statuses.VALIDATED"),
+    REJECTED: t("statuses.REJECTED"),
+  };
+  const label = labelMap[status] || status;
   return (
     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
       {label}

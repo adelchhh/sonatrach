@@ -3,15 +3,7 @@ import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { Link, useParams } from "react-router-dom";
 import { apiGet, apiDelete } from "../../api";
-
-const STATUS_LABEL = {
-  DRAFT: "Draft",
-  OPEN: "Open",
-  CLOSED: "Closed",
-  DRAW_DONE: "Draw done",
-  FINISHED: "Finished",
-  CANCELLED: "Cancelled",
-};
+import { useT } from "../../i18n/LanguageContext";
 
 const STATUS_STYLES = {
   DRAFT: "bg-[#FFF4D6] text-[#B98900]",
@@ -34,6 +26,7 @@ function formatDate(value) {
 }
 
 export default function ManageSessions() {
+  const t = useT();
   const { id } = useParams();
 
   const [activity, setActivity] = useState(null);
@@ -103,7 +96,7 @@ export default function ManageSessions() {
                   to="/dashboard/admin/activities"
                   className="text-[#ED8D31] font-medium"
                 >
-                  Manage Activities
+                  {t("admin.activities.title")}
                 </Link>
                 <span className="mx-2">›</span>
                 <span className="text-[#2F343B] font-medium">
@@ -113,11 +106,10 @@ export default function ManageSessions() {
 
               <div>
                 <h1 className="text-[38px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Session Management
+                  {t("admin.sessions.title")}
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 leading-[170%]">
-                  Create and manage sessions, define draw dates, and configure
-                  site allocations.
+                  {t("admin.sessions.subtitle")}
                 </p>
               </div>
 
@@ -129,24 +121,24 @@ export default function ManageSessions() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <StatCard
-                  title="Total Sessions"
+                  title={t("admin.sessions.statTotal")}
                   value={totalSessions}
-                  subtitle={activity ? `For ${activity.title}` : ""}
+                  subtitle={activity ? t("admin.sessions.statForActivity", { title: activity.title }) : ""}
                 />
                 <StatCard
-                  title="Assigned Sites"
+                  title={t("admin.sessions.statSites")}
                   value={totalSites}
-                  subtitle="Across all sessions"
+                  subtitle={t("admin.sessions.statAcrossSessions")}
                 />
                 <StatCard
-                  title="Total Quota"
+                  title={t("admin.sessions.statQuota")}
                   value={totalQuota}
-                  subtitle="Places available"
+                  subtitle={t("admin.sessions.statPlacesAvailable")}
                 />
                 <StatCard
-                  title="Next Draw"
+                  title={t("admin.sessions.statNextDraw")}
                   value={upcomingDraw ? formatDate(upcomingDraw.draw_date) : "—"}
-                  subtitle={upcomingDraw ? `Session #${upcomingDraw.id}` : "No upcoming draw"}
+                  subtitle={upcomingDraw ? t("admin.sessions.sessionRef", { id: upcomingDraw.id }) : t("admin.sessions.noUpcomingDraw")}
                 />
               </div>
 
@@ -154,11 +146,10 @@ export default function ManageSessions() {
                 <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
                   <div>
                     <h2 className="text-[28px] font-bold text-[#2F343B]">
-                      Sessions List
+                      {t("admin.sessions.list")}
                     </h2>
                     <p className="text-sm text-[#7A8088] mt-1">
-                      Manage all sessions and their assigned sites for this
-                      activity.
+                      {t("admin.sessions.listHint")}
                     </p>
                   </div>
 
@@ -166,7 +157,7 @@ export default function ManageSessions() {
                     to={`/dashboard/admin/activities/${id}/sessions/create`}
                     className="px-4 py-2.5 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold inline-block"
                   >
-                    + Add Session
+                    {t("admin.sessions.addSession")}
                   </Link>
                 </div>
 
@@ -175,22 +166,22 @@ export default function ManageSessions() {
                     <thead className="bg-[#FBFAF8]">
                       <tr>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Session
+                          {t("admin.sessions.col.session")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Dates (Start - End)
+                          {t("admin.sessions.col.dates")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Draw
+                          {t("admin.sessions.col.draw")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Sites / Quota
+                          {t("admin.sessions.col.sitesQuota")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Status
+                          {t("common.status")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Actions
+                          {t("common.actions")}
                         </th>
                       </tr>
                     </thead>
@@ -202,7 +193,7 @@ export default function ManageSessions() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            Loading sessions...
+                            {t("common.loading")}
                           </td>
                         </tr>
                       )}
@@ -213,8 +204,7 @@ export default function ManageSessions() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            No sessions yet for this activity. Click "Add Session"
-                            to create one.
+                            {t("admin.sessions.empty")}
                           </td>
                         </tr>
                       )}
@@ -227,10 +217,10 @@ export default function ManageSessions() {
                           >
                             <td className="px-5 py-5">
                               <p className="font-semibold text-[#2F343B] text-sm">
-                                Session #{session.id}
+                                {t("admin.sessions.sessionRef", { id: session.id })}
                               </p>
                               <p className="text-xs text-[#7A8088] mt-1">
-                                {session.registrations_count} registration(s)
+                                {t("admin.sessions.registrationsCount", { count: session.registrations_count })}
                               </p>
                             </td>
 
@@ -254,10 +244,10 @@ export default function ManageSessions() {
 
                             <td className="px-5 py-5">
                               <p className="text-sm font-medium text-[#2F343B]">
-                                {session.sites_count} site(s)
+                                {t("admin.sessions.sitesCount", { count: session.sites_count })}
                               </p>
                               <p className="text-xs text-[#7A8088] mt-1">
-                                Quota: {session.total_quota}
+                                {t("admin.sessions.statQuota")}: {session.total_quota}
                               </p>
                             </td>
 
@@ -270,7 +260,7 @@ export default function ManageSessions() {
                                 <Link
                                   to={`/dashboard/admin/activities/${id}/sessions/${session.id}`}
                                   className="w-9 h-9 rounded-lg border border-[#E5E2DC] bg-white text-[#7A8088] flex items-center justify-center"
-                                  title="View session"
+                                  title={t("admin.sessions.viewSession")}
                                 >
                                   👁
                                 </Link>
@@ -278,7 +268,7 @@ export default function ManageSessions() {
                                 <Link
                                   to={`/dashboard/admin/activities/${id}/sessions/${session.id}/edit`}
                                   className="w-9 h-9 rounded-lg border border-[#E5E2DC] bg-white text-[#7A8088] flex items-center justify-center"
-                                  title="Edit session"
+                                  title={t("admin.sessions.editSession")}
                                 >
                                   ✎
                                 </Link>
@@ -291,7 +281,7 @@ export default function ManageSessions() {
                                     })
                                   }
                                   className="w-9 h-9 rounded-lg border border-[#F0B1B1] bg-white text-[#D85C5C]"
-                                  title="Delete session"
+                                  title={t("admin.sessions.deleteSession")}
                                 >
                                   🗑
                                 </button>
@@ -300,7 +290,7 @@ export default function ManageSessions() {
                                   to={`/dashboard/admin/activities/${id}/sessions/${session.id}/sites-quotas`}
                                   className="px-4 py-2 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-medium inline-block"
                                 >
-                                  Sites & Quotas
+                                  {t("admin.sessions.sitesQuotas")}
                                 </Link>
                               </div>
                             </td>
@@ -319,12 +309,11 @@ export default function ManageSessions() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-[20px] p-6 w-full max-w-[400px] shadow-lg">
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Delete Session
+              {t("admin.sessions.deleteModal.title")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-6">
-              Are you sure you want to delete this session? This action cannot be
-              undone, and will fail if registrations already exist.
+              {t("admin.sessions.deleteModal.text")}
             </p>
 
             <div className="flex justify-end gap-3">
@@ -333,7 +322,7 @@ export default function ManageSessions() {
                 disabled={deleting}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm disabled:opacity-60"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
@@ -341,7 +330,7 @@ export default function ManageSessions() {
                 disabled={deleting}
                 className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium disabled:opacity-60"
               >
-                {deleting ? "Deleting..." : "Confirm"}
+                {deleting ? t("common.deleting") : t("common.confirm")}
               </button>
             </div>
           </div>
@@ -364,8 +353,10 @@ function StatCard({ title, value, subtitle }) {
 }
 
 function StatusBadge({ status }) {
+  const t = useT();
   const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
-  const label = STATUS_LABEL[status] || status;
+  const tr = t(`statuses.${status}`);
+  const label = tr === `statuses.${status}` ? status : tr;
   return (
     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
       {label}

@@ -4,8 +4,10 @@ import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import SessionForm from "../../components/admin/SessionForm";
 import { apiGet, apiPost } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
 
 export default function CreateSession() {
+  const t = useT();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -17,7 +19,7 @@ export default function CreateSession() {
   useEffect(() => {
     apiGet(`/activities/${id}`)
       .then((res) => setActivity(res.data))
-      .catch((err) => setError(err.message || "Could not load activity."))
+      .catch((err) => setError(err.message || t("admin.createSession.loadingActivity")))
       .finally(() => setLoadingActivity(false));
   }, [id]);
 
@@ -48,28 +50,28 @@ export default function CreateSession() {
                 to={`/dashboard/admin/activities/${id}/sessions`}
                 className="text-[#ED8D31] font-medium"
               >
-                Sessions
+                {t("admin.createSession.backToSessions")}
               </Link>
               <span className="mx-2">›</span>
               <span className="text-[#2F343B] font-medium">
-                Create Session
+                {t("admin.createSession.breadcrumbCreate")}
               </span>
             </div>
 
             <div>
               <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                Create Session
+                {t("admin.createSession.title")}
               </h1>
               <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
                 {activity
-                  ? `Configure a new session for "${activity.title}".`
-                  : "Configure the session dates, draw settings, deadlines and logistics."}
+                  ? t("admin.createSession.subtitleFor", { title: activity.title })
+                  : t("admin.createSession.subtitleGeneric")}
               </p>
             </div>
 
             {loadingActivity ? (
               <div className="rounded-[14px] border border-[#E5E2DC] bg-white px-4 py-6 text-sm text-[#7A8088]">
-                Loading activity...
+                {t("admin.createSession.loadingActivity")}
               </div>
             ) : (
               <SessionForm
@@ -80,7 +82,7 @@ export default function CreateSession() {
                   navigate(`/dashboard/admin/activities/${id}/sessions`)
                 }
                 onSubmit={handleSave}
-                submitLabel="Save Session"
+                submitLabel={t("admin.createSession.save")}
               />
             )}
           </div>

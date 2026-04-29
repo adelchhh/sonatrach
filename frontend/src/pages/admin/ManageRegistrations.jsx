@@ -2,17 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, apiPatch } from "../../api";
-
-const STATUS_LABEL = {
-  PENDING: "Pending",
-  VALIDATED: "Validated",
-  REJECTED: "Rejected",
-  SELECTED: "Selected",
-  WAITING_LIST: "Waiting list",
-  CONFIRMED: "Confirmed",
-  WITHDRAWN: "Withdrawn",
-  CANCELLED: "Cancelled",
-};
+import { useT } from "../../i18n/LanguageContext";
 
 const STATUS_STYLES = {
   PENDING: "bg-[#FFF4D6] text-[#B98900]",
@@ -37,6 +27,17 @@ function formatDate(value) {
 }
 
 export default function ManageRegistrations() {
+  const t = useT();
+  const STATUS_LABEL = {
+    PENDING: t("statuses.PENDING"),
+    VALIDATED: t("statuses.VALIDATED"),
+    REJECTED: t("statuses.REJECTED"),
+    SELECTED: t("statuses.SELECTED"),
+    WAITING_LIST: t("statuses.WAITING_LIST"),
+    CONFIRMED: t("statuses.CONFIRMED"),
+    WITHDRAWN: t("statuses.WITHDRAWN"),
+    CANCELLED: t("statuses.CANCELLED"),
+  };
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -201,11 +202,10 @@ export default function ManageRegistrations() {
             <div className="space-y-6">
               <div>
                 <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Manage Registrations
+                  {t("admin.registrations.title")}
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Review employee registrations, validate eligibility, reject
-                  with a reason, or change registration status.
+                  {t("admin.registrations.subtitle")}
                 </p>
               </div>
 
@@ -216,10 +216,10 @@ export default function ManageRegistrations() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard title="Total" value={stats.total} />
-                <StatCard title="Pending" value={stats.pending} />
-                <StatCard title="Validated / Selected" value={stats.validated} />
-                <StatCard title="Rejected / Cancelled" value={stats.rejected} />
+                <StatCard title={t("admin.registrations.statTotal")} value={stats.total} />
+                <StatCard title={t("admin.registrations.statPending")} value={stats.pending} />
+                <StatCard title={t("admin.registrations.statValidated")} value={stats.validated} />
+                <StatCard title={t("admin.registrations.statRejected")} value={stats.rejected} />
               </div>
 
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
@@ -230,7 +230,7 @@ export default function ManageRegistrations() {
                     onChange={(e) =>
                       setFilters((f) => ({ ...f, search: e.target.value }))
                     }
-                    placeholder="Search name, matricule, email, ref..."
+                    placeholder={t("admin.registrations.searchPlaceholder")}
                     className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   />
 
@@ -241,7 +241,7 @@ export default function ManageRegistrations() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   >
-                    <option value="all">All activities</option>
+                    <option value="all">{t("admin.registrations.allActivities")}</option>
                     {activities.map(([id, title]) => (
                       <option key={id} value={id}>
                         {title}
@@ -256,7 +256,7 @@ export default function ManageRegistrations() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   >
-                    <option value="all">All sessions</option>
+                    <option value="all">{t("admin.registrations.allSessions")}</option>
                     {sessions.map(([id, label]) => (
                       <option key={id} value={id}>
                         {label}
@@ -271,7 +271,7 @@ export default function ManageRegistrations() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   >
-                    <option value="all">All status</option>
+                    <option value="all">{t("common.allStatuses")}</option>
                     {Object.entries(STATUS_LABEL).map(([k, v]) => (
                       <option key={k} value={k}>
                         {v}
@@ -290,7 +290,7 @@ export default function ManageRegistrations() {
                     }
                     className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
                   >
-                    Reset
+                    {t("common.reset")}
                   </button>
                 </div>
               </section>
@@ -301,22 +301,22 @@ export default function ManageRegistrations() {
                     <thead className="bg-[#FBFAF8]">
                       <tr>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Employee
+                          {t("admin.registrations.col.employee")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Activity / Session
+                          {t("admin.registrations.col.activitySession")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Submitted
+                          {t("admin.registrations.col.submitted")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Documents
+                          {t("admin.registrations.col.documents")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Status
+                          {t("common.status")}
                         </th>
                         <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Actions
+                          {t("common.actions")}
                         </th>
                       </tr>
                     </thead>
@@ -328,7 +328,7 @@ export default function ManageRegistrations() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            Loading registrations...
+                            {t("admin.registrations.loading")}
                           </td>
                         </tr>
                       )}
@@ -339,7 +339,7 @@ export default function ManageRegistrations() {
                             colSpan="6"
                             className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            No registrations match the filters.
+                            {t("admin.registrations.emptyFiltered")}
                           </td>
                         </tr>
                       )}
@@ -355,7 +355,7 @@ export default function ManageRegistrations() {
                                 {r.user_first_name} {r.user_last_name}
                               </p>
                               <p className="text-xs text-[#7A8088] mt-1">
-                                Matricule {r.employee_number}
+                                {t("admin.registrations.matricule", { number: r.employee_number })}
                               </p>
                             </td>
 
@@ -375,8 +375,10 @@ export default function ManageRegistrations() {
                             </td>
 
                             <td className="px-5 py-5 text-sm text-[#2F343B]">
-                              {r.documents_validated_count} /{" "}
-                              {r.documents_count} validated
+                              {t("admin.registrations.documentsValidated", {
+                                validated: r.documents_validated_count,
+                                total: r.documents_count,
+                              })}
                             </td>
 
                             <td className="px-5 py-5">
@@ -397,7 +399,7 @@ export default function ManageRegistrations() {
                                   onClick={() => openDetails(r.id)}
                                   className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
                                 >
-                                  View
+                                  {t("common.view")}
                                 </button>
 
                                 {r.status === "PENDING" && (
@@ -407,14 +409,14 @@ export default function ManageRegistrations() {
                                       disabled={actingOn === r.id}
                                       className="px-3 py-1.5 rounded-lg bg-[#2D7A4A] text-white text-sm font-medium disabled:opacity-60"
                                     >
-                                      Validate
+                                      {t("admin.registrations.validate")}
                                     </button>
                                     <button
                                       onClick={() => openReject(r.id)}
                                       disabled={actingOn === r.id}
                                       className="px-3 py-1.5 rounded-lg bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
                                     >
-                                      Reject
+                                      {t("admin.registrations.reject")}
                                     </button>
                                   </>
                                 )}
@@ -427,7 +429,7 @@ export default function ManageRegistrations() {
                                     disabled={actingOn === r.id}
                                     className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium disabled:opacity-60"
                                   >
-                                    Mark confirmed
+                                    {t("admin.registrations.markConfirmed")}
                                   </button>
                                 )}
                               </div>
@@ -453,11 +455,11 @@ export default function ManageRegistrations() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold text-[#2F343B] mb-4">
-              Registration Details
+              {t("admin.registrations.details.title")}
             </h2>
 
             {!details && (
-              <p className="text-sm text-[#7A8088]">Loading...</p>
+              <p className="text-sm text-[#7A8088]">{t("admin.registrations.details.loading")}</p>
             )}
 
             {details?.error && (
@@ -467,46 +469,46 @@ export default function ManageRegistrations() {
             {details?.registration && (
               <div className="space-y-4 text-sm">
                 <DetailRow
-                  label="Employee"
+                  label={t("admin.registrations.details.employee")}
                   value={`${details.registration.user_first_name} ${details.registration.user_last_name} (${details.registration.employee_number})`}
                 />
                 <DetailRow
-                  label="Email"
+                  label={t("admin.registrations.details.email")}
                   value={details.registration.user_email}
                 />
                 <DetailRow
-                  label="Activity"
+                  label={t("admin.registrations.details.activity")}
                   value={`${details.registration.activity_title} (${details.registration.activity_category})`}
                 />
                 <DetailRow
-                  label="Session"
+                  label={t("admin.registrations.details.session")}
                   value={`${formatDate(details.registration.start_date)} → ${formatDate(details.registration.end_date)}`}
                 />
                 <DetailRow
-                  label="Status"
+                  label={t("admin.registrations.details.status")}
                   value={STATUS_LABEL[details.registration.status]}
                 />
                 <DetailRow
-                  label="Eligible"
-                  value={details.registration.is_eligible ? "Yes" : "No"}
+                  label={t("admin.registrations.details.eligible")}
+                  value={details.registration.is_eligible ? t("common.yes") : t("common.no")}
                 />
                 <DetailRow
-                  label="Submitted"
+                  label={t("admin.registrations.details.submitted")}
                   value={formatDate(details.registration.registered_at)}
                 />
                 {details.registration.rejection_reason && (
                   <DetailRow
-                    label="Rejection reason"
+                    label={t("admin.registrations.details.rejectionReason")}
                     value={details.registration.rejection_reason}
                   />
                 )}
 
                 <div>
                   <p className="text-xs text-[#7A8088] uppercase font-semibold mb-2">
-                    Site choices ({details.choices.length})
+                    {t("admin.registrations.details.siteChoices")} ({details.choices.length})
                   </p>
                   {details.choices.length === 0 ? (
-                    <p className="text-[#7A8088]">No site choices recorded.</p>
+                    <p className="text-[#7A8088]">{t("admin.registrations.details.noChoices")}</p>
                   ) : (
                     <ul className="space-y-1">
                       {details.choices.map((c) => (
@@ -520,10 +522,10 @@ export default function ManageRegistrations() {
 
                 <div>
                   <p className="text-xs text-[#7A8088] uppercase font-semibold mb-2">
-                    Documents ({details.documents.length})
+                    {t("admin.registrations.details.documents")} ({details.documents.length})
                   </p>
                   {details.documents.length === 0 ? (
-                    <p className="text-[#7A8088]">No documents uploaded.</p>
+                    <p className="text-[#7A8088]">{t("admin.registrations.details.noDocs")}</p>
                   ) : (
                     <ul className="space-y-1">
                       {details.documents.map((d) => (
@@ -543,7 +545,7 @@ export default function ManageRegistrations() {
                 onClick={closeModal}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
           </div>
@@ -560,18 +562,18 @@ export default function ManageRegistrations() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Reject Registration
+              {t("admin.registrations.rejectModal.title")}
             </h2>
 
             <p className="text-sm text-[#7A8088] mb-4">
-              Provide a reason. This will be visible to the employee.
+              {t("admin.registrations.rejectModal.text")}
             </p>
 
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               rows={4}
-              placeholder="e.g., Documents are missing or incomplete..."
+              placeholder={t("admin.registrations.rejectModal.placeholder")}
               className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
             />
 
@@ -581,7 +583,7 @@ export default function ManageRegistrations() {
                 disabled={actingOn === modal.id}
                 className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm disabled:opacity-60"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
 
               <button
@@ -589,7 +591,7 @@ export default function ManageRegistrations() {
                 disabled={actingOn === modal.id}
                 className="px-4 py-2 rounded-[12px] bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
               >
-                {actingOn === modal.id ? "Rejecting..." : "Confirm rejection"}
+                {actingOn === modal.id ? t("admin.registrations.rejectModal.rejecting") : t("admin.registrations.rejectModal.confirm")}
               </button>
             </div>
           </div>
@@ -609,8 +611,10 @@ function StatCard({ title, value }) {
 }
 
 function StatusBadge({ status }) {
+  const t = useT();
   const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
-  const label = STATUS_LABEL[status] || status;
+  const tr = t(`statuses.${status}`);
+  const label = tr === `statuses.${status}` ? status : tr;
   return (
     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
       {label}

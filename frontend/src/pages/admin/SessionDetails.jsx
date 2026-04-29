@@ -3,15 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet } from "../../api";
-
-const STATUS_LABEL = {
-  DRAFT: "Draft",
-  OPEN: "Open",
-  CLOSED: "Closed",
-  DRAW_DONE: "Draw done",
-  FINISHED: "Finished",
-  CANCELLED: "Cancelled",
-};
+import { useT } from "../../i18n/LanguageContext";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -25,6 +17,7 @@ function formatDate(value) {
 }
 
 export default function SessionDetails() {
+  const t = useT();
   const { id, sessionId } = useParams();
 
   const [session, setSession] = useState(null);
@@ -40,7 +33,7 @@ export default function SessionDetails() {
         setSession(res.data.session);
         setSites(res.data.sites || []);
       })
-      .catch((err) => setError(err.message || "Could not load session."))
+      .catch((err) => setError(err.message || t("admin.createSession.loadingSession")))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -57,28 +50,28 @@ export default function SessionDetails() {
                 to="/dashboard/admin/activities"
                 className="text-[#ED8D31] font-medium"
               >
-                Manage Activities
+                {t("admin.activities.title")}
               </Link>
               <span className="mx-2">›</span>
               <Link
                 to={`/dashboard/admin/activities/${id}/sessions`}
                 className="text-[#ED8D31] font-medium"
               >
-                Sessions
+                {t("admin.createSession.backToSessions")}
               </Link>
               <span className="mx-2">›</span>
               <span className="text-[#2F343B] font-medium">
-                Session #{sessionId}
+                {t("admin.sessions.sessionRef", { id: sessionId })}
               </span>
             </div>
 
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
               <div>
                 <h1 className="text-[36px] font-extrabold text-[#2F343B]">
-                  Session Details
+                  {t("admin.sessionDetails.title")}
                 </h1>
                 <p className="text-[#7A8088] text-sm mt-2">
-                  Review the full configuration of this session.
+                  {t("admin.sessionDetails.subtitle")}
                 </p>
               </div>
 
@@ -87,13 +80,13 @@ export default function SessionDetails() {
                   to={`/dashboard/admin/activities/${id}/sessions/${sessionId}/edit`}
                   className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
                 >
-                  Edit session
+                  {t("admin.sessionDetails.editSession")}
                 </Link>
                 <Link
                   to={`/dashboard/admin/activities/${id}/sessions/${sessionId}/sites-quotas`}
                   className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold"
                 >
-                  Manage sites & quotas
+                  {t("admin.sessionDetails.manageSitesQuotas")}
                 </Link>
               </div>
             </div>
@@ -106,69 +99,69 @@ export default function SessionDetails() {
 
             {loading ? (
               <div className="rounded-[14px] border border-[#E5E2DC] bg-white px-4 py-6 text-sm text-[#7A8088]">
-                Loading session...
+                {t("admin.createSession.loadingSession")}
               </div>
             ) : session ? (
               <>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   <InfoCard
-                    label="Activity"
+                    label={t("admin.sessionDetails.info.activity")}
                     value={session.activity_title || `Activity ${id}`}
                   />
                   <InfoCard
-                    label="Status"
-                    value={STATUS_LABEL[session.status] || session.status}
+                    label={t("admin.sessionDetails.info.status")}
+                    value={t(`statuses.${session.status}`) === `statuses.${session.status}` ? session.status : t(`statuses.${session.status}`)}
                   />
                   <InfoCard
-                    label="Start Date"
+                    label={t("admin.sessionDetails.info.startDate")}
                     value={formatDate(session.start_date)}
                   />
                   <InfoCard
-                    label="End Date"
+                    label={t("admin.sessionDetails.info.endDate")}
                     value={formatDate(session.end_date)}
                   />
                   <InfoCard
-                    label="Registration Deadline"
+                    label={t("admin.sessionDetails.info.registrationDeadline")}
                     value={formatDate(session.registration_deadline)}
                   />
                   <InfoCard
-                    label="Document Upload Deadline"
+                    label={t("admin.sessionDetails.info.docsDeadline")}
                     value={formatDate(session.document_upload_deadline)}
                   />
                   <InfoCard
-                    label="Draw Date"
+                    label={t("admin.sessionDetails.info.drawDate")}
                     value={formatDate(session.draw_date)}
                   />
                   <InfoCard
-                    label="Draw Location"
+                    label={t("admin.sessionDetails.info.drawLocation")}
                     value={session.draw_location || "—"}
                   />
                   <InfoCard
-                    label="Confirmation Delay"
-                    value={`${session.confirmation_delay_hours} hour(s)`}
+                    label={t("admin.sessionDetails.info.confirmationDelay")}
+                    value={t("admin.sessionDetails.info.hours", { count: session.confirmation_delay_hours })}
                   />
                   <InfoCard
-                    label="Substitutes"
+                    label={t("admin.sessionDetails.info.substitutes")}
                     value={String(session.substitutes_count)}
                   />
                   <InfoCard
-                    label="Transport"
-                    value={session.transport_included ? "Covered" : "Not covered"}
+                    label={t("admin.sessionDetails.info.transport")}
+                    value={session.transport_included ? t("admin.sessionForm.transportCoveredYes") : t("admin.sessionForm.transportCoveredNo")}
                   />
                   <InfoCard
-                    label="Telefax / Document"
+                    label={t("admin.sessionDetails.info.telefax")}
                     value={session.telefax_url || "—"}
                   />
                   <InfoCard
-                    label="Total Sites"
-                    value={`${session.sites_count} site(s)`}
+                    label={t("admin.sessionDetails.info.totalSites")}
+                    value={t("admin.sessions.sitesCount", { count: session.sites_count })}
                   />
                   <InfoCard
-                    label="Total Quota"
-                    value={`${session.total_quota} place(s)`}
+                    label={t("admin.sessionDetails.info.totalQuota")}
+                    value={`${session.total_quota} ${t("activityDetail.places")}`}
                   />
                   <InfoCard
-                    label="Registrations"
+                    label={t("admin.sessionDetails.info.registrations")}
                     value={String(session.registrations_count)}
                   />
                 </div>
@@ -176,16 +169,16 @@ export default function SessionDetails() {
                 <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
                   <div className="px-5 py-4 border-b border-[#E5E2DC]">
                     <h2 className="text-[22px] font-bold text-[#2F343B]">
-                      Sites & Quotas
+                      {t("admin.sessionDetails.sitesAndQuotas")}
                     </h2>
                     <p className="text-sm text-[#7A8088] mt-1">
-                      Allocations of places per site for this session.
+                      {t("admin.sessionDetails.sitesQuotasHint")}
                     </p>
                   </div>
 
                   {sites.length === 0 ? (
                     <p className="px-5 py-8 text-center text-sm text-[#7A8088]">
-                      No sites assigned yet. Use "Manage sites & quotas" to add some.
+                      {t("admin.sessionDetails.noSitesAssigned")}
                     </p>
                   ) : (
                     <div className="overflow-x-auto">
@@ -193,13 +186,13 @@ export default function SessionDetails() {
                         <thead className="bg-[#FBFAF8]">
                           <tr>
                             <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                              Site
+                              {t("admin.site.col.site")}
                             </th>
                             <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                              Address
+                              {t("admin.site.col.address")}
                             </th>
                             <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                              Quota
+                              {t("admin.sitesQuotas.col.quota")}
                             </th>
                           </tr>
                         </thead>
