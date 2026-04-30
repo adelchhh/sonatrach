@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { apiGet, getCurrentUserId } from "../../api";
 
 export default function DashboardRightPanel() {
   const [dashboardData, setDashboardData] = useState(null);
+  const [surveys, setSurveys] = useState([]);
   const [ideaForm, setIdeaForm] = useState({
     title: "",
     description: "",
@@ -16,6 +18,17 @@ export default function DashboardRightPanel() {
       .catch((error) => {
         console.error("Right panel dashboard error:", error);
       });
+
+    const userId = getCurrentUserId();
+    if (userId) {
+      apiGet(`/surveys?user_id=${userId}`)
+        .then((res) => {
+          setSurveys(res.data || []);
+        })
+        .catch((error) => {
+          console.error("Right panel surveys error:", error);
+        });
+    }
   }, []);
 
   const handleSubmitIdea = (e) => {
@@ -94,22 +107,48 @@ export default function DashboardRightPanel() {
           Active surveys
         </h3>
 
-        <div className="rounded-lg border border-[#E5E2DC] p-3 bg-white hover:shadow-sm transition-shadow">
-          <div className="flex items-start gap-2 mb-2">
-            <div className="w-6 h-6 rounded-lg bg-[#ED8D31] flex items-center justify-center flex-shrink-0">
-              <span className="text-xs text-white font-bold">📋</span>
-            </div>
+        {surveys.length === 0 ? (
+          <div className="rounded-lg border border-[#E5E2DC] p-3 bg-white hover:shadow-sm transition-shadow">
+            <div className="flex items-start gap-2 mb-2">
+              <div className="w-6 h-6 rounded-lg bg-[#ED8D31] flex items-center justify-center flex-shrink-0">
+                <span className="text-xs text-white font-bold">📋</span>
+              </div>
 
-            <div className="flex-1">
-              <p className="text-xs font-semibold text-[#2F343B]">
-                No active surveys yet
-              </p>
-              <p className="text-xs text-[#7A8088] mt-0.5">
-                Surveys will appear when communicator tools are connected.
-              </p>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-[#2F343B]">
+                  No active surveys yet
+                </p>
+                <p className="text-xs text-[#7A8088] mt-0.5">
+                  Surveys will appear when communicator tools are connected.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-2">
+            {surveys.slice(0, 3).map((survey) => (
+              <div
+                key={survey.id}
+                className="rounded-lg border border-[#E5E2DC] p-3 bg-white hover:shadow-sm transition-shadow"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#ED8D31] flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs text-white font-bold">📋</span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-[#2F343B] truncate">
+                      {survey.title || "Survey"}
+                    </p>
+                    <p className="text-xs text-[#7A8088] mt-0.5 line-clamp-2">
+                      {survey.question}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Platform Summary */}

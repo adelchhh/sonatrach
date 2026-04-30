@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiPost, getCurrentUserId } from "../../api";
 
 const audiences = [
   "All Employees",
@@ -20,6 +21,7 @@ const ctaOptions = [
 ];
 
 export default function CreateSurveyNotice() {
+  const userId = getCurrentUserId();
   const [form, setForm] = useState({
     title: "",
     targetAudience: "",
@@ -34,6 +36,7 @@ export default function CreateSurveyNotice() {
     sendNotification: true,
     highlightSurvey: false,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (field, value) => {
     setForm((prev) => ({
@@ -42,24 +45,55 @@ export default function CreateSurveyNotice() {
     }));
   };
 
-  const handleSaveDraft = () => {
+  const toAudience = (value) => {
+    const map = {
+      "All Employees": "ALL",
+      Applicants: "EMPLOYEES",
+      Participants: "EMPLOYEES",
+      "Selected Participants": "EMPLOYEES",
+      Families: "EMPLOYEES",
+      "Selected Families": "EMPLOYEES",
+    };
+    return map[value] || "ALL";
+  };
+
+  const submitSurvey = async (status) => {
+    if (!userId) {
+      alert("Please log in first.");
+      return;
+    }
+    if (!form.content.trim()) {
+      alert("Please fill in the Full Message.");
+      return;
+    }
+
     const payload = {
-      ...form,
-      status: "Draft",
+      user_id: userId,
+      title: form.title || null,
+      question: form.content.trim(),
+      start_date: form.publishDate || new Date().toISOString().slice(0, 10),
+      end_date: form.deadline || form.publishDate || new Date().toISOString().slice(0, 10),
+      audience: toAudience(form.targetAudience),
+      status,
     };
 
-    console.log("Save survey notice draft:", payload);
-    alert("Survey notice draft saved.");
+    setSubmitting(true);
+    try {
+      await apiPost("/surveys", payload);
+      alert(status === "PUBLISHED" ? "Survey notice published." : "Survey notice draft saved.");
+    } catch (err) {
+      alert(err.message || "Could not save survey.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = () => {
+    submitSurvey("DRAFT");
   };
 
   const handlePublish = () => {
-    const payload = {
-      ...form,
-      status: "Published",
-    };
-
-    console.log("Publish survey notice:", payload);
-    alert("Survey notice published.");
+    submitSurvey("PUBLISHED");
   };
 
   return (
@@ -96,6 +130,7 @@ export default function CreateSurveyNotice() {
 
                 <button
                   onClick={handleSaveDraft}
+                  disabled={submitting}
                   className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors"
                 >
                   Save Draft
@@ -103,9 +138,10 @@ export default function CreateSurveyNotice() {
 
                 <button
                   onClick={handlePublish}
+                  disabled={submitting}
                   className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
                 >
-                  Publish Survey Notice
+                  {submitting ? "Submitting..." : "Publish Survey Notice"}
                 </button>
               </div>
             </div>
@@ -271,6 +307,7 @@ export default function CreateSurveyNotice() {
 
                   <button
                     onClick={handleSaveDraft}
+                    disabled={submitting}
                     className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors"
                   >
                     Save Draft
@@ -278,9 +315,10 @@ export default function CreateSurveyNotice() {
 
                   <button
                     onClick={handlePublish}
+                    disabled={submitting}
                     className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
                   >
-                    Publish Survey Notice
+                    {submitting ? "Submitting..." : "Publish Survey Notice"}
                   </button>
                 </div>
               </div>

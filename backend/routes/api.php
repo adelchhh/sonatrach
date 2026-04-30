@@ -95,7 +95,14 @@ Route::get('/me/participations', [EmployeeController::class, 'myParticipations']
 
 // ----- SURVEYS -----
 Route::get('/surveys', [SurveyController::class, 'index']);
+Route::post('/surveys', [SurveyController::class, 'store']);
+Route::get('/surveys/{id}', [SurveyController::class, 'show']);
+Route::put('/surveys/{id}', [SurveyController::class, 'update']);
+Route::patch('/surveys/{id}/status', [SurveyController::class, 'updateStatus']);
+Route::delete('/surveys/{id}', [SurveyController::class, 'destroy']);
+Route::get('/surveys/{id}/responses', [SurveyController::class, 'responses']);
 Route::post('/surveys/{id}/respond', [SurveyController::class, 'respond']);
+
 
 // ----- IDEAS -----
 Route::get('/me/ideas', [IdeaController::class, 'myIdeas']);

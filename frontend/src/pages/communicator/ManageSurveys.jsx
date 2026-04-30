@@ -1,66 +1,60 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { Link } from "react-router-dom";
+import { apiGet, apiPatch } from "../../api";
 
-const initialSurveys = [
-    {
-      id: 1,
-      title: "Winter Activity Satisfaction Survey",
-      status: "Published",
-      targetAudience: "Participants",
-      publishDate: "Oct 20, 2024",
-      deadline: "Oct 30, 2024",
-      participationRate: "68%",
-      totalInvited: 250,
-      totalResponses: 170,
-      summary:
-        "Survey published for employees who joined winter activities to collect feedback on organization and satisfaction.",
-    },
-    {
-      id: 2,
-      title: "Family Stay Experience Survey",
-      status: "Draft",
-      targetAudience: "Families",
-      publishDate: "Oct 24, 2024",
-      deadline: "Nov 02, 2024",
-      participationRate: "0%",
-      totalInvited: 180,
-      totalResponses: 0,
-      summary:
-        "Survey notice prepared for families who participated in the latest family stay program.",
-    },
-    {
-      id: 3,
-      title: "Omra Communication Feedback",
-      status: "Published",
-      targetAudience: "Selected Participants",
-      publishDate: "Oct 12, 2024",
-      deadline: "Oct 22, 2024",
-      participationRate: "74%",
-      totalInvited: 120,
-      totalResponses: 89,
-      summary:
-        "Feedback survey shared with selected Omra participants regarding communication clarity and document process.",
-    },
-    {
-      id: 4,
-      title: "Summer Campaign Survey Notice",
-      status: "Archived",
-      targetAudience: "All Employees",
-      publishDate: "Sep 28, 2024",
-      deadline: "Oct 08, 2024",
-      participationRate: "81%",
-      totalInvited: 320,
-      totalResponses: 259,
-      summary:
-        "Archived survey communication linked to the summer campaign participation and general experience feedback.",
-    },
-  ];
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
+function toUiStatus(status) {
+  if (status === "PUBLISHED") return "Published";
+  if (status === "ARCHIVED") return "Archived";
+  return "Draft";
+}
+
+function toUiAudience(audience) {
+  const map = {
+    ALL: "All Employees",
+    EMPLOYEES: "Employees",
+    FUNCTIONAL_ADMIN: "Functional Admin",
+    COMMUNICATOR: "Communicator",
+    SYSTEM_ADMIN: "System Admin",
+  };
+  return map[audience] || audience || "All Employees";
+}
+
+function mapSurvey(row) {
+  return {
+    id: row.id,
+    title: row.title || "Untitled survey",
+    status: toUiStatus(row.status),
+    targetAudience: toUiAudience(row.audience),
+    publishDate: formatDate(row.start_date),
+    deadline: formatDate(row.end_date),
+    participationRate: "N/A",
+    totalInvited: "N/A",
+    totalResponses: Number(row.total_responses || 0),
+    summary: row.question || "—",
+  };
+}
 
 export default function ManageSurveys() {
-  const [surveys, setSurveys] = useState(initialSurveys);
-  const [selectedId, setSelectedId] = useState(initialSurveys[0]?.id ?? null);
+  const [surveys, setSurveys] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [responses, setResponses] = useState([]);
+  const [searchText, setSearchText] = useState("");
+  const [audienceFilter, setAudienceFilter] = useState("All audiences");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
+  const [loading, setLoading] = useState(true);
 
   const [modal, setModal] = useState({
     open: false,
@@ -71,10 +65,39 @@ export default function ManageSurveys() {
   const selectedSurvey =
     surveys.find((item) => item.id === (modal.surveyId ?? selectedId)) || null;
 
+  const filteredSurveys = useMemo(() => {
+    return surveys.filter((item) => {
+      const titleOk = item.title.toLowerCase().includes(searchText.trim().toLowerCase());
+      const audienceOk =
+        audienceFilter === "All audiences" || item.targetAudience === audienceFilter;
+      const statusOk =
+        statusFilter === "All statuses" || item.status === statusFilter;
+      return titleOk && audienceOk && statusOk;
+    });
+  }, [surveys, searchText, audienceFilter, statusFilter]);
+
   const totalCount = surveys.length;
   const draftCount = surveys.filter((s) => s.status === "Draft").length;
   const publishedCount = surveys.filter((s) => s.status === "Published").length;
   const archivedCount = surveys.filter((s) => s.status === "Archived").length;
+
+  const loadSurveys = async () => {
+    setLoading(true);
+    try {
+      const res = await apiGet("/surveys?scope=admin");
+      const mapped = (res.data || []).map(mapSurvey);
+      setSurveys(mapped);
+      if (!selectedId && mapped.length) setSelectedId(mapped[0].id);
+    } catch (err) {
+      alert(err.message || "Could not load surveys.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSurveys();
+  }, []);
 
   const closeModal = () => {
     setModal({
@@ -90,23 +113,30 @@ export default function ManageSurveys() {
       type,
       surveyId,
     });
+    if (type === "responses" && surveyId) {
+      apiGet(`/surveys/${surveyId}/responses`)
+        .then((res) => setResponses(res.data || []))
+        .catch(() => setResponses([]));
+    }
   };
 
-  const handlePublish = (id) => {
-    setSurveys((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Published" } : item
-      )
-    );
+  const handlePublish = async (id) => {
+    try {
+      await apiPatch(`/surveys/${id}/status`, { status: "PUBLISHED" });
+      await loadSurveys();
+    } catch (err) {
+      alert(err.message || "Could not publish survey.");
+    }
     closeModal();
   };
 
-  const handleArchive = (id) => {
-    setSurveys((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Archived" } : item
-      )
-    );
+  const handleArchive = async (id) => {
+    try {
+      await apiPatch(`/surveys/${id}/status`, { status: "ARCHIVED" });
+      await loadSurveys();
+    } catch (err) {
+      alert(err.message || "Could not archive survey.");
+    }
     closeModal();
   };
 
@@ -180,22 +210,50 @@ export default function ManageSurveys() {
                   <input
                     type="text"
                     placeholder="Search survey title..."
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
                     className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   />
 
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
+                  <select
+                    value={audienceFilter}
+                    onChange={(e) => setAudienceFilter(e.target.value)}
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
                     <option>All audiences</option>
+                    <option>All Employees</option>
+                    <option>Employees</option>
+                    <option>Functional Admin</option>
+                    <option>Communicator</option>
+                    <option>System Admin</option>
                   </select>
 
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
                     <option>All statuses</option>
+                    <option>Draft</option>
+                    <option>Published</option>
+                    <option>Archived</option>
                   </select>
 
-                  <button className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]">
+                  <button
+                    onClick={() => {
+                      setSearchText("");
+                      setAudienceFilter("All audiences");
+                      setStatusFilter("All statuses");
+                    }}
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
+                  >
                     Reset filters
                   </button>
 
-                  <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold">
+                  <button
+                    onClick={loadSurveys}
+                    className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold"
+                  >
                     Apply filters
                   </button>
                 </div>
@@ -215,7 +273,7 @@ export default function ManageSurveys() {
                     </div>
 
                     <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
-                      {surveys.length} items
+                      {filteredSurveys.length} items
                     </span>
                   </div>
 
@@ -245,7 +303,18 @@ export default function ManageSurveys() {
                       </thead>
 
                       <tbody>
-                        {surveys.map((item) => (
+                        {loading && (
+                          <tr>
+                            <td
+                              colSpan="6"
+                              className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                            >
+                              Loading surveys...
+                            </td>
+                          </tr>
+                        )}
+
+                        {!loading && filteredSurveys.map((item) => (
                           <tr
                             key={item.id}
                             className={`border-t border-[#E5E2DC] align-top ${
@@ -320,7 +389,7 @@ export default function ManageSurveys() {
                           </tr>
                         ))}
 
-                        {surveys.length === 0 && (
+                        {!loading && filteredSurveys.length === 0 && (
                           <tr>
                             <td
                               colSpan="6"
@@ -441,6 +510,10 @@ export default function ManageSurveys() {
     <DetailRow
       label="Total Responses"
       value={selectedSurvey.totalResponses}
+    />
+    <DetailRow
+      label="Fetched Responses"
+      value={responses.length}
     />
 
     <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">

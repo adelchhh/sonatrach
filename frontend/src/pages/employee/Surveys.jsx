@@ -153,19 +153,17 @@ export default function Surveys() {
                   className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
                 />
 
-                <div className="flex justify-end mt-4">
-                  <button
-                    onClick={() => handleSubmit(s.id)}
-                    disabled={submitting === s.id}
-                    className="px-5 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-semibold disabled:opacity-60"
-                  >
-                    {submitting === s.id
-                      ? "Submitting..."
-                      : s.my_response
-                      ? "Update answer"
-                      : "Submit answer"}
-                  </button>
-                </div>
+                {!s.my_response && (
+                  <div className="flex justify-end mt-4">
+                    <button
+                      onClick={() => handleSubmit(s.id)}
+                      disabled={submitting === s.id}
+                      className="px-5 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-semibold disabled:opacity-60"
+                    >
+                      {submitting === s.id ? "Submitting..." : "Submit answer"}
+                    </button>
+                  </div>
+                )}
               </section>
             ))}
           </div>
