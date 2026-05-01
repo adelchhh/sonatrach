@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 
-const API_URL = "http://127.0.0.1:8001/api";
+const API_URL = "http://127.0.0.1:8000/api";
 
 export default function ManageFunctionalAdmins() {
   const [functionalAdmins, setFunctionalAdmins] = useState([]);

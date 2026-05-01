@@ -19,7 +19,10 @@ class NotificationController extends Controller
 
         $rows = DB::table('notifications as n')
             ->leftJoin('activities as a', 'a.id', '=', 'n.activity_id')
-            ->where('n.user_id', $userId)
+            ->where(function ($query) use ($userId) {
+                $query->where('n.user_id', $userId)
+                      ->orWhereNull('n.user_id');
+            })
             ->select('n.*', 'a.title as activity_title')
             ->orderBy('n.created_at', 'desc')
             ->limit(200)
@@ -52,51 +55,32 @@ class NotificationController extends Controller
     /**
      * Communicator: send a notification to one or multiple recipients.
      */
-    public function send(Request $request)
-    {
-        $data = $request->validate([
-            'title' => ['nullable', 'string', 'max:200'],
-            'message' => ['required', 'string', 'max:5000'],
-            'type' => ['nullable', 'string'],
-            'audience' => ['required', 'string', 'in:ALL,EMPLOYEES,FUNCTIONAL_ADMIN,COMMUNICATOR,SYSTEM_ADMIN'],
-            'activity_id' => ['nullable', 'integer', 'exists:activities,id'],
-            'session_id' => ['nullable', 'integer', 'exists:activity_sessions,id'],
-        ]);
+/**
+ * Communicator: send one global notification to all employees.
+ */
+public function send(Request $request)
+{
+    $data = $request->validate([
+        'title' => ['required', 'string', 'max:200'],
+        'message' => ['required', 'string', 'max:5000'],
+    ]);
 
-        // Resolve recipients
-        $recipients = DB::table('users');
-        if ($data['audience'] !== 'ALL') {
-            $role = DB::table('roles')->where('name', $data['audience'])->first();
-            if ($role) {
-                $recipients->join('user_roles', 'user_roles.user_id', '=', 'users.id')
-                    ->where('user_roles.role_id', $role->id);
-            }
-        }
-        $recipientIds = $recipients->pluck('users.id')->unique();
+    $now = now();
 
-        $now = now();
-        $rows = $recipientIds->map(function ($uid) use ($data, $now) {
-            return [
-                'user_id' => $uid,
-                'title' => $data['title'] ?? null,
-                'message' => $data['message'],
-                'type' => $data['type'] ?? 'GENERAL',
-                'is_read' => 0,
-                'activity_id' => $data['activity_id'] ?? null,
-                'session_id' => $data['session_id'] ?? null,
-                'created_at' => $now,
-            ];
-        })->toArray();
+    DB::table('notifications')->insert([
+        'user_id' => null,
+        'title' => $data['title'],
+        'message' => $data['message'],
+        'type' => 'GENERAL',
+        'is_read' => 0,
+        'created_at' => $now,
+    ]);
 
-        if (!empty($rows)) {
-            DB::table('notifications')->insert($rows);
-        }
-
-        return response()->json([
-            'success' => true,
-            'sent_count' => count($rows),
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Notification sent to all employees',
+    ]);
+}
 
     /**
      * Communicator: list all sent notifications grouped by message+timestamp.

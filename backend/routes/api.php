@@ -18,8 +18,10 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\IdeaController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AnnouncementController;
 
 // ----- AUTH -----
+
 Route::post('/login', [AuthController::class, 'login']);
 
 // ----- ACTIVITIES (public list / show + admin write) -----
@@ -95,14 +97,7 @@ Route::get('/me/participations', [EmployeeController::class, 'myParticipations']
 
 // ----- SURVEYS -----
 Route::get('/surveys', [SurveyController::class, 'index']);
-Route::post('/surveys', [SurveyController::class, 'store']);
-Route::get('/surveys/{id}', [SurveyController::class, 'show']);
-Route::put('/surveys/{id}', [SurveyController::class, 'update']);
-Route::patch('/surveys/{id}/status', [SurveyController::class, 'updateStatus']);
-Route::delete('/surveys/{id}', [SurveyController::class, 'destroy']);
-Route::get('/surveys/{id}/responses', [SurveyController::class, 'responses']);
 Route::post('/surveys/{id}/respond', [SurveyController::class, 'respond']);
-
 
 // ----- IDEAS -----
 Route::get('/me/ideas', [IdeaController::class, 'myIdeas']);
@@ -119,20 +114,39 @@ Route::get('/notifications/sent', [NotificationController::class, 'adminList']);
 
 // ----- DASHBOARD -----
 Route::get('/dashboard', [DashboardController::class, 'index']);
+Route::prefix('api')->group(function () {
 
-// ----- SYSTEM / ROLES -----
-Route::get('/system/roles/functional-admins', [SystemRoleController::class, 'functionalAdmins']);
-Route::get('/system/roles/communicators', [SystemRoleController::class, 'communicators']);
-Route::get('/system/roles/system-admins', [SystemRoleController::class, 'systemAdmins']);
-Route::get('/system/employees/search', [SystemRoleController::class, 'searchEmployee']);
+    // ===== SYSTEM =====
+    Route::get('/system/roles/functional-admins', [SystemRoleController::class, 'functionalAdmins']);
+    Route::get('/system/roles/communicators', [SystemRoleController::class, 'communicators']);
+    Route::get('/system/roles/system-admins', [SystemRoleController::class, 'systemAdmins']);
+    Route::get('/system/employees/search', [SystemRoleController::class, 'searchEmployee']);
 
-Route::post('/system/users/{userId}/roles/functional-admin', [SystemRoleController::class, 'assignFunctionalAdmin']);
-Route::delete('/system/users/{userId}/roles/functional-admin', [SystemRoleController::class, 'removeFunctionalAdmin']);
+    Route::post('/system/users/{userId}/roles/functional-admin', [SystemRoleController::class, 'assignFunctionalAdmin']);
+    Route::delete('/system/users/{userId}/roles/functional-admin', [SystemRoleController::class, 'removeFunctionalAdmin']);
 
-Route::post('/system/users/{userId}/roles/communicator', [SystemRoleController::class, 'assignCommunicator']);
-Route::delete('/system/users/{userId}/roles/communicator', [SystemRoleController::class, 'removeCommunicator']);
+    Route::post('/system/users/{userId}/roles/communicator', [SystemRoleController::class, 'assignCommunicator']);
+    Route::delete('/system/users/{userId}/roles/communicator', [SystemRoleController::class, 'removeCommunicator']);
 
-Route::post('/system/users/{userId}/roles/system-admin', [SystemRoleController::class, 'assignSystemAdmin']);
-Route::delete('/system/users/{userId}/roles/system-admin', [SystemRoleController::class, 'removeSystemAdmin']);
+    Route::post('/system/users/{userId}/roles/system-admin', [SystemRoleController::class, 'assignSystemAdmin']);
+    Route::delete('/system/users/{userId}/roles/system-admin', [SystemRoleController::class, 'removeSystemAdmin']);
 
-Route::get('/system/audit-logs', [SystemRoleController::class, 'auditLogs']);
+    Route::get('/system/audit-logs', [SystemRoleController::class, 'auditLogs']);
+
+
+    // ===== COMMUNICATOR =====
+    Route::get('/announcements', [AnnouncementController::class, 'publicIndex']);
+    Route::get('/announcements/{id}', [AnnouncementController::class, 'publicShow']);
+
+    Route::get('/communicator/announcements', [AnnouncementController::class, 'communicatorIndex']);
+    Route::post('/communicator/announcements', [AnnouncementController::class, 'store']);
+    Route::delete('/communicator/announcements/{id}', [AnnouncementController::class, 'destroy']);
+    Route::patch('/communicator/announcements/{id}/publish', [AnnouncementController::class, 'publish']);
+
+    Route::get('/ideas', [IdeaController::class, 'index']);
+    Route::patch('/ideas/{id}/moderate', [IdeaController::class, 'moderate']);
+
+    Route::get('/notifications/sent', [NotificationController::class, 'adminList']);
+    Route::post('/notifications', [NotificationController::class, 'send']);
+
+});

@@ -1,60 +1,53 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { Link } from "react-router-dom";
-
-const initialAnnouncements = [
-  {
-    id: 1,
-    title: "Winter Activities Registration Open",
-    category: "Campaign",
-    audience: "All Employees",
-    publishDate: "Oct 15, 2024",
-    status: "Published",
-    summary:
-      "Registrations are now open for winter activities. Employees can browse the catalog and submit requests before the deadline.",
-  },
-  {
-    id: 2,
-    title: "Important Update for Omra Participants",
-    category: "Information",
-    audience: "Selected Participants",
-    publishDate: "Oct 18, 2024",
-    status: "Draft",
-    summary:
-      "Participants selected for Omra must complete their document uploads before the end of the week.",
-  },
-  {
-    id: 3,
-    title: "Draw Results Published",
-    category: "Results",
-    audience: "Applicants",
-    publishDate: "Oct 10, 2024",
-    status: "Published",
-    summary:
-      "The latest draw results are now available in the employee dashboard. Applicants can check their status directly.",
-  },
-  {
-    id: 4,
-    title: "Family Stay Reminder",
-    category: "Reminder",
-    audience: "Families",
-    publishDate: "Oct 08, 2024",
-    status: "Archived",
-    summary:
-      "Reminder to complete final confirmations for the family stay campaign before seats are reassigned.",
-  },
-];
+import { publishAnnouncement } from "../../services/announcementService";
+import {
+  getCommunicatorAnnouncements,
+  deleteAnnouncement,
+} from "../../services/announcementService";
 
 export default function ManageAnnouncements() {
-  const [announcements, setAnnouncements] = useState(initialAnnouncements);
-  const [selectedId, setSelectedId] = useState(initialAnnouncements[0]?.id ?? null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [modal, setModal] = useState({
     open: false,
-    type: null, // details | publish | archive | export
+    type: null,
     announcementId: null,
   });
+
+  useEffect(() => {
+    loadAnnouncements();
+  }, []);
+
+  async function loadAnnouncements() {
+    try {
+      setLoading(true);
+      const data = await getCommunicatorAnnouncements();
+      setAnnouncements(data);
+      setSelectedId(data[0]?.id ?? null);
+    } catch (err) {
+      setError(err.message || "Failed to load announcements");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePublish(id) {
+    try {
+      const updated = await publishAnnouncement(id);
+  
+      setAnnouncements((prev) =>
+        prev.map((item) => (item.id === id ? updated : item))
+      );
+    } catch (err) {
+      setError(err.message || "Failed to publish announcement");
+    }
+  }
 
   const selectedAnnouncement =
     announcements.find(
@@ -62,43 +55,29 @@ export default function ManageAnnouncements() {
     ) || null;
 
   const totalCount = announcements.length;
-  const draftCount = announcements.filter((a) => a.status === "Draft").length;
-  const publishedCount = announcements.filter((a) => a.status === "Published").length;
-  const archivedCount = announcements.filter((a) => a.status === "Archived").length;
+  const draftCount = announcements.filter((a) => a.status === "DRAFT").length;
+  const publishedCount = announcements.filter((a) => a.status === "PUBLISHED").length;
+  const archivedCount = announcements.filter((a) => a.status === "ARCHIVED").length;
 
   const closeModal = () => {
-    setModal({
-      open: false,
-      type: null,
-      announcementId: null,
-    });
+    setModal({ open: false, type: null, announcementId: null });
   };
 
   const openModal = (type, announcementId = selectedId) => {
-    setModal({
-      open: true,
-      type,
-      announcementId,
-    });
+    setModal({ open: true, type, announcementId });
   };
 
-  const handlePublish = (id) => {
-    setAnnouncements((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Published" } : item
-      )
-    );
-    closeModal();
-  };
-
-  const handleArchive = (id) => {
-    setAnnouncements((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Archived" } : item
-      )
-    );
-    closeModal();
-  };
+  async function handleDelete(id) {
+    try {
+      await deleteAnnouncement(id);
+      const next = announcements.filter((item) => item.id !== id);
+      setAnnouncements(next);
+      setSelectedId(next[0]?.id ?? null);
+      closeModal();
+    } catch (err) {
+      setError(err.message || "Failed to delete announcement");
+    }
+  }
 
   return (
     <>
@@ -110,7 +89,6 @@ export default function ManageAnnouncements() {
 
           <main className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
-              {/* Header */}
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <p className="text-sm font-semibold text-[#ED8D31] mb-2">
@@ -126,77 +104,36 @@ export default function ManageAnnouncements() {
                 </div>
 
                 <Link
-  to="/dashboard/communicator/announcements/create"
-  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
->
-  Create Announcement
-</Link>
+                  to="/dashboard/communicator/announcements/create"
+                  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
+                >
+                  Create Announcement
+                </Link>
               </div>
 
-              {/* Stats */}
+              {error && (
+                <div className="rounded-[16px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard
-                  title="Total Announcements"
-                  value={totalCount}
-                  subtitle="All communication posts"
-                />
-                <StatCard
-                  title="Drafts"
-                  value={draftCount}
-                  subtitle="Not yet visible to employees"
-                />
-                <StatCard
-                  title="Published"
-                  value={publishedCount}
-                  subtitle="Currently visible announcements"
-                />
-                <StatCard
-                  title="Archived"
-                  value={archivedCount}
-                  subtitle="Past communication items"
-                />
+                <StatCard title="Total Announcements" value={totalCount} subtitle="All communication posts" />
+                <StatCard title="Drafts" value={draftCount} subtitle="Not yet visible to employees" />
+                <StatCard title="Published" value={publishedCount} subtitle="Currently visible announcements" />
+                <StatCard title="Archived" value={archivedCount} subtitle="Past communication items" />
               </div>
 
-              {/* Filters */}
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                 <h2 className="text-[24px] font-bold text-[#2F343B]">
                   Announcement Filters
                 </h2>
                 <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                  Search by title and filter announcements by category, audience, or status.
+                  Backend connected. Filters can be added later if needed.
                 </p>
-
-                <div className="flex flex-wrap gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search announcement title..."
-                    className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                  />
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All categories</option>
-                  </select>
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All audiences</option>
-                  </select>
-
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All statuses</option>
-                  </select>
-
-                  <button className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]">
-                    Reset filters
-                  </button>
-
-                  <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold">
-                    Apply filters
-                  </button>
-                </div>
               </section>
 
               <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
-                {/* Table */}
                 <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
                   <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
                     <div>
@@ -217,102 +154,88 @@ export default function ManageAnnouncements() {
                     <table className="w-full min-w-[1050px]">
                       <thead className="bg-[#FBFAF8]">
                         <tr>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Title
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Category
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Audience
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Publish Date
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Status
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Actions
-                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Title</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Publish Date</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Document</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Status</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Actions</th>
                         </tr>
                       </thead>
 
                       <tbody>
-                        {announcements.map((item) => (
-                          <tr
-                            key={item.id}
-                            className={`border-t border-[#E5E2DC] align-top ${
-                              selectedId === item.id ? "bg-[#FCFBF9]" : ""
-                            }`}
-                          >
-                            <td className="px-5 py-5">
-                              <button
-                                onClick={() => setSelectedId(item.id)}
-                                className="text-left"
-                              >
-                                <p className="font-semibold text-[#2F343B] text-sm">
-                                  {item.title}
-                                </p>
-                                <p className="text-xs text-[#7A8088] mt-1 max-w-[320px]">
-                                  {item.summary}
-                                </p>
-                              </button>
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.category}
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.audience}
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.publishDate}
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <StatusBadge status={item.status} />
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => openModal("details", item.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                                >
-                                  View details
-                                </button>
-
-                                {item.status === "Draft" && (
-                                  <button
-                                    onClick={() => openModal("publish", item.id)}
-                                    className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium"
-                                  >
-                                    Publish
-                                  </button>
-                                )}
-
-                                {item.status !== "Archived" && (
-                                  <button
-                                    onClick={() => openModal("archive", item.id)}
-                                    className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                                  >
-                                    Archive
-                                  </button>
-                                )}
-                              </div>
+                        {loading ? (
+                          <tr>
+                            <td colSpan="5" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                              Loading announcements...
                             </td>
                           </tr>
-                        ))}
-
-                        {announcements.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan="6"
-                              className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                        ) : (
+                          announcements.map((item) => (
+                            <tr
+                              key={item.id}
+                              className={`border-t border-[#E5E2DC] align-top ${
+                                selectedId === item.id ? "bg-[#FCFBF9]" : ""
+                              }`}
                             >
+                              <td className="px-5 py-5">
+                                <button onClick={() => setSelectedId(item.id)} className="text-left">
+                                  <p className="font-semibold text-[#2F343B] text-sm">
+                                    {item.title}
+                                  </p>
+                                  <p className="text-xs text-[#7A8088] mt-1 max-w-[320px]">
+                                    {shortText(item.content)}
+                                  </p>
+                                </button>
+                              </td>
+
+                              <td className="px-5 py-5 text-sm text-[#7A8088]">
+                                {formatDate(item)}
+                              </td>
+
+                              <td className="px-5 py-5 text-sm text-[#7A8088]">
+                                {item.document_path ? "Attached" : "None"}
+                              </td>
+
+                              <td className="px-5 py-5">
+                                <StatusBadge status={item.status} />
+                              </td>
+
+                              <td className="px-5 py-5">
+  <div className="flex flex-wrap gap-2">
+
+    <button
+      onClick={() => openModal("details", item.id)}
+      className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
+    >
+      View details
+    </button>
+
+    {/* ✅ ADD THIS */}
+    {item.status === "DRAFT" && (
+      <button
+        onClick={() => handlePublish(item.id)}
+        className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm"
+      >
+        Publish
+      </button>
+    )}
+
+    <button
+      onClick={() => openModal("delete", item.id)}
+      className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm"
+    >
+      Delete
+    </button>
+
+  </div>
+</td>
+                            </tr>
+                          ))
+                        )}
+
+                        {!loading && announcements.length === 0 && (
+                          <tr>
+                            <td colSpan="5" className="px-5 py-10 text-center text-sm text-[#7A8088]">
                               No announcements available.
                             </td>
                           </tr>
@@ -322,7 +245,6 @@ export default function ManageAnnouncements() {
                   </div>
                 </section>
 
-                {/* Right panel */}
                 <div className="space-y-5">
                   <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                     <h3 className="text-[24px] font-bold text-[#2F343B]">
@@ -350,9 +272,9 @@ export default function ManageAnnouncements() {
                     {selectedAnnouncement && (
                       <div className="space-y-3">
                         <SummaryRow label="Title" value={selectedAnnouncement.title} />
-                        <SummaryRow label="Category" value={selectedAnnouncement.category} />
-                        <SummaryRow label="Audience" value={selectedAnnouncement.audience} />
                         <SummaryRow label="Status" value={selectedAnnouncement.status} />
+                        <SummaryRow label="Date" value={formatDate(selectedAnnouncement)} />
+                        <SummaryRow label="Document" value={selectedAnnouncement.document_path ? "Attached" : "None"} />
                       </div>
                     )}
                   </section>
@@ -366,43 +288,39 @@ export default function ManageAnnouncements() {
       {modal.open && modal.type === "details" && selectedAnnouncement && (
         <ModalShell title="Announcement Details" onClose={closeModal}>
           <DetailRow label="Title" value={selectedAnnouncement.title} />
-          <DetailRow label="Category" value={selectedAnnouncement.category} />
-          <DetailRow label="Audience" value={selectedAnnouncement.audience} />
-          <DetailRow label="Publish Date" value={selectedAnnouncement.publishDate} />
+          <DetailRow label="Publish Date" value={formatDate(selectedAnnouncement)} />
           <DetailRow label="Status" value={selectedAnnouncement.status} />
+          <DetailRow label="Document" value={selectedAnnouncement.document_name || "No document"} />
 
           <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
-            <p className="text-sm font-semibold text-[#2F343B] mb-2">
-              Summary
-            </p>
-            <p className="text-sm text-[#7A8088] leading-[170%]">
-              {selectedAnnouncement.summary}
+            <p className="text-sm font-semibold text-[#2F343B] mb-2">Content</p>
+            <p className="text-sm text-[#7A8088] leading-[170%] whitespace-pre-line">
+              {selectedAnnouncement.content}
             </p>
           </div>
         </ModalShell>
       )}
 
-      {modal.open && modal.type === "publish" && selectedAnnouncement && (
+      {modal.open && modal.type === "delete" && selectedAnnouncement && (
         <ConfirmModal
-          title="Publish Announcement"
-          message={`Do you want to publish "${selectedAnnouncement.title}" for ${selectedAnnouncement.audience}?`}
-          confirmLabel="Publish"
+          title="Delete Announcement"
+          message={`Do you want to delete "${selectedAnnouncement.title}"?`}
+          confirmLabel="Delete"
           onCancel={closeModal}
-          onConfirm={() => handlePublish(selectedAnnouncement.id)}
-        />
-      )}
-
-      {modal.open && modal.type === "archive" && selectedAnnouncement && (
-        <ConfirmModal
-          title="Archive Announcement"
-          message={`Do you want to archive "${selectedAnnouncement.title}"?`}
-          confirmLabel="Archive"
-          onCancel={closeModal}
-          onConfirm={() => handleArchive(selectedAnnouncement.id)}
+          onConfirm={() => handleDelete(selectedAnnouncement.id)}
         />
       )}
     </>
   );
+}
+
+function formatDate(item) {
+  return item.publish_date || item.created_at?.slice(0, 10) || "-";
+}
+
+function shortText(text, max = 120) {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "..." : text;
 }
 
 function StatCard({ title, value, subtitle }) {
@@ -426,9 +344,9 @@ function SummaryRow({ label, value }) {
 
 function StatusBadge({ status }) {
   const styles = {
-    Draft: "bg-[#FFF4D6] text-[#B98900]",
-    Published: "bg-[#D4F4DD] text-[#2D7A4A]",
-    Archived: "bg-[#F1F0EC] text-[#7A8088]",
+    DRAFT: "bg-[#FFF4D6] text-[#B98900]",
+    PUBLISHED: "bg-[#D4F4DD] text-[#2D7A4A]",
+    ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
   };
 
   return (
@@ -445,10 +363,7 @@ function ModalShell({ title, children, onClose }) {
         <h2 className="text-xl font-bold text-[#2F343B] mb-4">{title}</h2>
         <div className="space-y-3 mb-6">{children}</div>
         <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]"
-          >
+          <button onClick={onClose} className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]">
             Close
           </button>
         </div>
@@ -457,13 +372,7 @@ function ModalShell({ title, children, onClose }) {
   );
 }
 
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}) {
+function ConfirmModal({ title, message, confirmLabel, onCancel, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
@@ -471,17 +380,11 @@ function ConfirmModal({
         <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">{message}</p>
 
         <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-          >
+          <button onClick={onCancel} className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm">
             Cancel
           </button>
 
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-          >
+          <button onClick={onConfirm} className="px-4 py-2 rounded-[12px] bg-red-600 text-white text-sm font-medium">
             {confirmLabel}
           </button>
         </div>
@@ -495,7 +398,7 @@ function DetailRow({ label, value }) {
     <div className="flex justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
       <span className="text-sm text-[#7A8088]">{label}</span>
       <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value}
+        {value || "-"}
       </span>
     </div>
   );
