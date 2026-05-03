@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AuditLogger;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -95,12 +97,45 @@ class IdeaController extends Controller
             'moderated_by' => ['required', 'integer', 'exists:users,id'],
         ]);
 
+        $idea = DB::table('ideas')->where('id', $id)->first();
+        if (!$idea) {
+            return response()->json(['success' => false, 'message' => 'Idea not found'], 404);
+        }
+
         DB::table('ideas')->where('id', $id)->update([
             'status' => $data['status'],
             'moderator_response' => $data['moderator_response'] ?? null,
             'moderated_by' => $data['moderated_by'],
             'moderated_at' => now(),
         ]);
+
+        // Audit log
+        AuditLogger::log(
+            $data['moderated_by'],
+            'IDEA_' . $data['status'],
+            'ideas',
+            $id,
+            'Idea #' . $id,
+            ['response' => $data['moderator_response'] ?? null],
+            $request
+        );
+
+        // Notify the author
+        $msgs = [
+            'ACCEPTED' => "Your idea has been accepted! 🎉",
+            'ARCHIVED' => "Your idea has been archived.",
+            'UNDER_REVIEW' => "Your idea is being re-evaluated.",
+        ];
+        $msg = $msgs[$data['status']] ?? '';
+        if (!empty($data['moderator_response'])) {
+            $msg .= " Note: " . $data['moderator_response'];
+        }
+        NotificationService::push(
+            $idea->user_id,
+            $msg,
+            'GENERAL',
+            'Idea moderation update'
+        );
 
         return response()->json([
             'success' => true,

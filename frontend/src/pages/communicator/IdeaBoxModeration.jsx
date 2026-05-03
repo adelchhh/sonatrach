@@ -1,119 +1,97 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiGet, apiPatch, getCurrentUserId } from "../../api";
 
-const initialIdeas = [
-  {
-    id: 1,
-    title: "Family Activity Calendar Mobile View",
-    author: "Amina B.",
-    department: "HR",
-    submitDate: "Oct 21, 2024",
-    status: "Pending",
-    feedback: "",
-    summary:
-      "Suggestion to provide a simpler mobile-friendly calendar for family and children activity planning.",
-  },
-  {
-    id: 2,
-    title: "Activity Reminder by SMS",
-    author: "Karim M.",
-    department: "Production",
-    submitDate: "Oct 18, 2024",
-    status: "Reviewed",
-    feedback:
-      "Thank you for your suggestion. The idea has been reviewed and recorded for internal consideration.",
-    summary:
-      "Proposal to send SMS reminders before registration deadlines and activity confirmation dates.",
-  },
-  {
-    id: 3,
-    title: "More Regional Family Events",
-    author: "Nadia S.",
-    department: "Finance",
-    submitDate: "Oct 16, 2024",
-    status: "Pending",
-    feedback: "",
-    summary:
-      "Employees requested more family-oriented regional events outside the main site zones.",
-  },
-  {
-    id: 4,
-    title: "Digital Participation Certificate",
-    author: "Yacine T.",
-    department: "Operations",
-    submitDate: "Oct 10, 2024",
-    status: "Archived",
-    feedback:
-      "The proposal has been archived after internal review.",
-    summary:
-      "Idea to provide downloadable digital certificates for employees who join social activities.",
-  },
-];
+const STATUS_STYLES = {
+  UNDER_REVIEW: "bg-[#FFF4D6] text-[#B98900]",
+  ACCEPTED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
+};
+
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString();
+}
 
 export default function IdeaBoxModeration() {
-  const [ideas, setIdeas] = useState(initialIdeas);
-  const [selectedId, setSelectedId] = useState(initialIdeas[0]?.id ?? null);
+  const [ideas, setIdeas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+  const [actingOn, setActingOn] = useState(null);
+  const [filters, setFilters] = useState({ search: "", status: "all", category: "all" });
+  const [modal, setModal] = useState({ open: false, type: null, idea: null });
+  const [response, setResponse] = useState("");
 
-  const [modal, setModal] = useState({
-    open: false,
-    type: null, // details | reply | archive
-    ideaId: null,
-  });
+  const moderatorId = getCurrentUserId();
 
-  const [replyMessage, setReplyMessage] = useState("");
+  const load = () => {
+    setLoading(true);
+    setPageError(null);
+    apiGet("/ideas")
+      .then((res) => setIdeas(res.data || []))
+      .catch((err) => setPageError(err.message || "Could not load ideas."))
+      .finally(() => setLoading(false));
+  };
 
-  const selectedIdea =
-    ideas.find((item) => item.id === (modal.ideaId ?? selectedId)) || null;
+  useEffect(() => {
+    load();
+  }, []);
 
-  const totalCount = ideas.length;
-  const pendingCount = ideas.filter((idea) => idea.status === "Pending").length;
-  const reviewedCount = ideas.filter((idea) => idea.status === "Reviewed").length;
-  const archivedCount = ideas.filter((idea) => idea.status === "Archived").length;
+  const filtered = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    return ideas.filter((i) => {
+      if (filters.status !== "all" && i.status !== filters.status) return false;
+      if (filters.category !== "all" && i.category !== filters.category) return false;
+      if (q) {
+        const hay = [
+          i.content,
+          i.author_first_name,
+          i.author_last_name,
+          i.employee_number,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [ideas, filters]);
+
+  const stats = {
+    total: ideas.length,
+    review: ideas.filter((i) => i.status === "UNDER_REVIEW").length,
+    accepted: ideas.filter((i) => i.status === "ACCEPTED").length,
+    archived: ideas.filter((i) => i.status === "ARCHIVED").length,
+  };
 
   const closeModal = () => {
-    setModal({
-      open: false,
-      type: null,
-      ideaId: null,
-    });
-    setReplyMessage("");
+    setModal({ open: false, type: null, idea: null });
+    setResponse("");
   };
 
-  const openModal = (type, ideaId = selectedId) => {
-    const idea = ideas.find((item) => item.id === ideaId);
-
-    setModal({
-      open: true,
-      type,
-      ideaId,
-    });
-
-    setReplyMessage(idea?.feedback || "");
-  };
-
-  const handleReply = (id) => {
-    setIdeas((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              feedback: replyMessage,
-              status: "Reviewed",
-            }
-          : item
-      )
-    );
-    closeModal();
-  };
-
-  const handleArchive = (id) => {
-    setIdeas((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Archived" } : item
-      )
-    );
-    closeModal();
+  const handleModerate = async () => {
+    if (!moderatorId) {
+      alert("You must be logged in to moderate.");
+      return;
+    }
+    setActingOn(modal.idea.id);
+    try {
+      await apiPatch(`/ideas/${modal.idea.id}/moderate`, {
+        status: modal.type === "accept" ? "ACCEPTED" : "ARCHIVED",
+        moderator_response: response.trim() || null,
+        moderated_by: moderatorId,
+      });
+      closeModal();
+      load();
+    } catch (err) {
+      alert(err.message || "Could not moderate.");
+    } finally {
+      setActingOn(null);
+    }
   };
 
   return (
@@ -126,449 +104,232 @@ export default function IdeaBoxModeration() {
 
           <main className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
-              {/* Header */}
-              <div className="flex justify-between items-start gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                    Communicator tools
-                  </p>
-                  <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                    Idea Box Moderation
-                  </h1>
-                  <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
-                    Review employee-submitted ideas, provide internal feedback when needed,
-                    and archive suggestions after moderation.
-                  </p>
-                </div>
-
-                <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors">
-                  Export Ideas
-                </button>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard
-                  title="Total Ideas"
-                  value={totalCount}
-                  subtitle="All submitted suggestions"
-                />
-                <StatCard
-                  title="Pending"
-                  value={pendingCount}
-                  subtitle="Awaiting review"
-                />
-                <StatCard
-                  title="Reviewed"
-                  value={reviewedCount}
-                  subtitle="Already checked by communicator"
-                />
-                <StatCard
-                  title="Archived"
-                  value={archivedCount}
-                  subtitle="Closed suggestions"
-                />
-              </div>
-
-              {/* Filters */}
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Idea Filters
-                </h2>
-                <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                  Search by title and filter by status or department.
+              <div>
+                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                  Idea moderation
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                  Review ideas submitted by employees, accept good ones with a
+                  response, or archive duplicates and out-of-scope suggestions.
                 </p>
+              </div>
 
+              {pageError && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {pageError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard title="Total" value={stats.total} />
+                <StatCard title="Under review" value={stats.review} />
+                <StatCard title="Accepted" value={stats.accepted} />
+                <StatCard title="Archived" value={stats.archived} />
+              </div>
+
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
                 <div className="flex flex-wrap gap-3">
                   <input
                     type="text"
-                    placeholder="Search idea title..."
+                    value={filters.search}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, search: e.target.value }))
+                    }
+                    placeholder="Search content, author..."
                     className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   />
 
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All statuses</option>
+                  <select
+                    value={filters.status}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, status: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="UNDER_REVIEW">Under review</option>
+                    <option value="ACCEPTED">Accepted</option>
+                    <option value="ARCHIVED">Archived</option>
                   </select>
 
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All departments</option>
+                  <select
+                    value={filters.category}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, category: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">All categories</option>
+                    <option value="ACTIVITIES">Activities</option>
+                    <option value="SERVICES">Services</option>
+                    <option value="COMMUNICATION">Communication</option>
+                    <option value="WORKPLACE">Workplace</option>
+                    <option value="WELLBEING">Wellbeing</option>
                   </select>
 
-                  <button className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]">
-                    Reset filters
-                  </button>
-
-                  <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold">
-                    Apply filters
+                  <button
+                    onClick={() =>
+                      setFilters({ search: "", status: "all", category: "all" })
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
+                  >
+                    Reset
                   </button>
                 </div>
               </section>
 
-              <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
-                {/* Table */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                    <div>
-                      <h3 className="text-[24px] font-bold text-[#2F343B]">
-                        Idea Moderation List
-                      </h3>
-                      <p className="text-sm text-[#7A8088] mt-1">
-                        Review submitted ideas and manage their moderation status.
-                      </p>
-                    </div>
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                {loading && (
+                  <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                    Loading ideas...
+                  </p>
+                )}
 
-                    <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
-                      {ideas.length} items
-                    </span>
-                  </div>
+                {!loading && filtered.length === 0 && (
+                  <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                    No ideas match the filters.
+                  </p>
+                )}
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1100px]">
-                      <thead className="bg-[#FBFAF8]">
-                        <tr>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Idea
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Author
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Department
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Submit Date
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Status
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {ideas.map((item) => (
-                          <tr
-                            key={item.id}
-                            className={`border-t border-[#E5E2DC] align-top ${
-                              selectedId === item.id ? "bg-[#FCFBF9]" : ""
+                <div className="divide-y divide-[#E5E2DC]">
+                  {filtered.map((i) => (
+                    <div key={i.id} className="px-5 py-5">
+                      <div className="flex justify-between items-start gap-3 mb-3 flex-wrap">
+                        <div>
+                          <p className="font-semibold text-[#2F343B] text-sm">
+                            {i.author_first_name} {i.author_last_name}
+                          </p>
+                          <p className="text-xs text-[#7A8088] mt-1">
+                            Matricule {i.employee_number} · Submitted{" "}
+                            {formatDate(i.submitted_at)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#F1F0EC] text-[#7A8088]">
+                            {i.category}
+                          </span>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              STATUS_STYLES[i.status] || ""
                             }`}
                           >
-                            <td className="px-5 py-5">
-                              <button
-                                onClick={() => setSelectedId(item.id)}
-                                className="text-left"
-                              >
-                                <p className="font-semibold text-[#2F343B] text-sm">
-                                  {item.title}
-                                </p>
-                                <p className="text-xs text-[#7A8088] mt-1 max-w-[340px]">
-                                  {item.summary}
-                                </p>
-                              </button>
-                            </td>
+                            {i.status}
+                          </span>
+                        </div>
+                      </div>
 
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.author}
-                            </td>
+                      <p className="text-sm text-[#2F343B] leading-[170%]">
+                        {i.content}
+                      </p>
 
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.department}
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.submitDate}
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <StatusBadge status={item.status} />
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => openModal("details", item.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                                >
-                                  View idea
-                                </button>
-
-                                {item.status !== "Archived" && (
-                                  <button
-                                    onClick={() => openModal("reply", item.id)}
-                                    className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                                  >
-                                    Reply
-                                  </button>
-                                )}
-
-                                {item.status !== "Archived" && (
-                                  <button
-                                    onClick={() => openModal("archive", item.id)}
-                                    className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                                  >
-                                    Archive
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-
-                        {ideas.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan="6"
-                              className="px-5 py-10 text-center text-sm text-[#7A8088]"
-                            >
-                              No ideas available.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                {/* Right panel */}
-                <div className="space-y-5">
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Moderation summary
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Current distribution of idea moderation statuses.
-                    </p>
-
-                    <div className="space-y-3">
-                      <SummaryRow label="Pending" value={pendingCount} />
-                      <SummaryRow label="Reviewed" value={reviewedCount} />
-                      <SummaryRow label="Archived" value={archivedCount} />
-                    </div>
-                  </section>
-
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Selected idea
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Quick summary of the currently selected employee suggestion.
-                    </p>
-
-                    {selectedId &&
-                      ideas.find((item) => item.id === selectedId) && (
-                        <div className="space-y-3">
-                          <SummaryRow
-                            label="Title"
-                            value={ideas.find((item) => item.id === selectedId).title}
-                          />
-                          <SummaryRow
-                            label="Author"
-                            value={ideas.find((item) => item.id === selectedId).author}
-                          />
-                          <SummaryRow
-                            label="Department"
-                            value={
-                              ideas.find((item) => item.id === selectedId).department
-                            }
-                          />
-                          <SummaryRow
-                            label="Status"
-                            value={ideas.find((item) => item.id === selectedId).status}
-                          />
+                      {i.moderator_response && (
+                        <div className="mt-3 rounded-[12px] bg-[#F9F8F6] px-3 py-2 text-sm">
+                          <p className="text-xs text-[#7A8088] uppercase font-semibold mb-1">
+                            Moderator response{" "}
+                            {i.moderator_first_name &&
+                              `· ${i.moderator_first_name} ${i.moderator_last_name}`}
+                          </p>
+                          <p className="text-[#2F343B]">
+                            {i.moderator_response}
+                          </p>
                         </div>
                       )}
-                  </section>
+
+                      {i.status === "UNDER_REVIEW" && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          <button
+                            onClick={() => {
+                              setResponse("");
+                              setModal({ open: true, type: "accept", idea: i });
+                            }}
+                            disabled={actingOn === i.id}
+                            className="px-3 py-1.5 rounded-lg bg-[#2D7A4A] text-white text-sm font-medium disabled:opacity-60"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => {
+                              setResponse("");
+                              setModal({ open: true, type: "archive", idea: i });
+                            }}
+                            disabled={actingOn === i.id}
+                            className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#7A8088] text-sm font-medium disabled:opacity-60"
+                          >
+                            Archive
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </section>
             </div>
           </main>
         </div>
       </div>
 
-      {modal.open && modal.type === "details" && selectedIdea && (
-        <ModalShell title="Idea Details" onClose={closeModal}>
-          <DetailRow label="Title" value={selectedIdea.title} />
-          <DetailRow label="Author" value={selectedIdea.author} />
-          <DetailRow label="Department" value={selectedIdea.department} />
-          <DetailRow label="Submit Date" value={selectedIdea.submitDate} />
-          <DetailRow label="Status" value={selectedIdea.status} />
+      {modal.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[460px] shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
+              {modal.type === "accept" ? "Accept idea" : "Archive idea"}
+            </h2>
 
-          <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
-            <p className="text-sm font-semibold text-[#2F343B] mb-2">
-              Idea Summary
+            <p className="text-sm text-[#7A8088] mb-3 line-clamp-3">
+              {modal.idea?.content}
             </p>
-            <p className="text-sm text-[#7A8088] leading-[170%]">
-              {selectedIdea.summary}
-            </p>
-          </div>
 
-          {selectedIdea.feedback && (
-            <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
-              <p className="text-sm font-semibold text-[#2F343B] mb-2">
-                Feedback
-              </p>
-              <p className="text-sm text-[#7A8088] leading-[170%]">
-                {selectedIdea.feedback}
-              </p>
+            <p className="text-xs font-semibold text-[#2F343B] mb-2">
+              Response to the employee (optional)
+            </p>
+
+            <textarea
+              value={response}
+              onChange={(e) => setResponse(e.target.value)}
+              rows={3}
+              placeholder="Thanks for your suggestion..."
+              className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+            />
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={closeModal}
+                disabled={actingOn === modal.idea?.id}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm disabled:opacity-60"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleModerate}
+                disabled={actingOn === modal.idea?.id}
+                className={`px-4 py-2 rounded-[12px] text-white text-sm font-medium disabled:opacity-60 ${
+                  modal.type === "accept" ? "bg-[#2D7A4A]" : "bg-[#7A8088]"
+                }`}
+              >
+                {actingOn === modal.idea?.id
+                  ? "Submitting..."
+                  : `Confirm ${modal.type}`}
+              </button>
             </div>
-          )}
-        </ModalShell>
-      )}
-
-      {modal.open && modal.type === "reply" && selectedIdea && (
-        <ReplyModal
-          title="Write Feedback"
-          message={replyMessage}
-          setMessage={setReplyMessage}
-          onCancel={closeModal}
-          onConfirm={() => handleReply(selectedIdea.id)}
-        />
-      )}
-
-      {modal.open && modal.type === "archive" && selectedIdea && (
-        <ConfirmModal
-          title="Archive Idea"
-          message={`Do you want to archive "${selectedIdea.title}"?`}
-          confirmLabel="Archive"
-          onCancel={closeModal}
-          onConfirm={() => handleArchive(selectedIdea.id)}
-        />
+          </div>
+        </div>
       )}
     </>
   );
 }
 
-function StatCard({ title, value, subtitle }) {
+function StatCard({ title, value }) {
   return (
     <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
       <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
       <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-      <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-bold text-[#2F343B] text-right">{value}</span>
-    </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const styles = {
-    Pending: "bg-[#FFF4D6] text-[#B98900]",
-    Reviewed: "bg-[#E7F0FF] text-[#3563B9]",
-    Archived: "bg-[#F1F0EC] text-[#7A8088]",
-  };
-
-  return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
-      {status}
-    </span>
-  );
-}
-
-function ModalShell({ title, children, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[560px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-4">{title}</h2>
-        <div className="space-y-3 mb-6">{children}</div>
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[430px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-3">{title}</h2>
-        <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">{message}</p>
-
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ReplyModal({ title, message, setMessage, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[560px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-3">{title}</h2>
-        <p className="text-sm text-[#7A8088] mb-4 leading-[170%]">
-          Write internal feedback or a moderation note for this idea.
-        </p>
-
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={6}
-          className="w-full rounded-[14px] border border-[#E5E2DC] bg-[#F9F8F6] px-4 py-3 text-sm text-[#2F343B] outline-none resize-none"
-          placeholder="Write your feedback..."
-        />
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-          >
-            Save Reply
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value}
-      </span>
     </div>
   );
 }

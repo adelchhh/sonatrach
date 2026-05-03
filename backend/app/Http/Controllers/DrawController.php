@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\ActivitySession;
 use App\Models\Draw;
 use App\Models\Registration;
+use App\Services\AuditLogger;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -296,6 +298,65 @@ class DrawController extends Controller
 
             return $drawId;
         });
+
+        // Audit log
+        $activityTitle = DB::table('activities')->where('id', $session->activity_id)->value('title');
+        AuditLogger::log(
+            $data['admin_id'],
+            'DRAW_EXECUTED',
+            'draws',
+            $drawId,
+            'Draw #' . $drawId . ' (' . $activityTitle . ')',
+            [
+                'session_id' => $session->id,
+                'mode' => $data['mode'] ?? 'BY_SITE',
+                'selected_count' => count($assignments),
+                'substitute_count' => count($substituteIds),
+                'waiting_count' => count($waitingIds),
+            ],
+            $request
+        );
+
+        // Notify each affected employee
+        foreach ($assignments as $regId => $ssId) {
+            $userId = DB::table('registrations')->where('id', $regId)->value('user_id');
+            if ($userId) {
+                NotificationService::push(
+                    $userId,
+                    "Congratulations! You've been selected for {$activityTitle}.",
+                    'DRAW',
+                    'You are selected ✨',
+                    $session->activity_id,
+                    $session->id
+                );
+            }
+        }
+        foreach ($substituteIds as $regId) {
+            $userId = DB::table('registrations')->where('id', $regId)->value('user_id');
+            if ($userId) {
+                NotificationService::push(
+                    $userId,
+                    "You are on the substitutes list for {$activityTitle}. You may be called if a selected employee withdraws.",
+                    'DRAW',
+                    'Substitute',
+                    $session->activity_id,
+                    $session->id
+                );
+            }
+        }
+        foreach ($waitingIds as $regId) {
+            $userId = DB::table('registrations')->where('id', $regId)->value('user_id');
+            if ($userId) {
+                NotificationService::push(
+                    $userId,
+                    "You are on the waiting list for {$activityTitle}.",
+                    'DRAW',
+                    'Waiting list',
+                    $session->activity_id,
+                    $session->id
+                );
+            }
+        }
 
         return response()->json([
             'success' => true,

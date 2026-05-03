@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Services\AuditLogger;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -89,6 +91,8 @@ class DocumentController extends Controller
         $doc->validated_at = now();
         $doc->save();
 
+        $this->afterReview($doc, 'VALIDATED', $data['comment'] ?? null, $data['validated_by'] ?? null, $request);
+
         return response()->json(['success' => true, 'data' => $doc->fresh()]);
     }
 
@@ -106,7 +110,45 @@ class DocumentController extends Controller
         $doc->validated_at = now();
         $doc->save();
 
+        $this->afterReview($doc, 'REJECTED', $data['comment'], $data['validated_by'] ?? null, $request);
+
         return response()->json(['success' => true, 'data' => $doc->fresh()]);
+    }
+
+    private function afterReview(Document $doc, string $newStatus, ?string $comment, ?int $adminId, Request $request): void
+    {
+        AuditLogger::log(
+            $adminId,
+            'DOCUMENT_' . $newStatus,
+            'documents',
+            $doc->document_id,
+            $doc->file_name,
+            ['comment' => $comment],
+            $request
+        );
+
+        $reg = DB::table('registrations')->where('id', $doc->registration_id)->first();
+        if (!$reg) return;
+
+        if ($newStatus === 'VALIDATED') {
+            NotificationService::push(
+                $reg->user_id,
+                "Your document \"{$doc->file_name}\" has been validated.",
+                'DOCUMENT',
+                'Document validated',
+                null,
+                $reg->session_id
+            );
+        } else {
+            NotificationService::push(
+                $reg->user_id,
+                "Your document \"{$doc->file_name}\" was rejected. Reason: " . ($comment ?? '—'),
+                'DOCUMENT',
+                'Document rejected',
+                null,
+                $reg->session_id
+            );
+        }
     }
 
     /**

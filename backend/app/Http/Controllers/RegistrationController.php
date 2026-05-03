@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Registration;
+use App\Services\AuditLogger;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -144,9 +146,9 @@ class RegistrationController extends Controller
     /**
      * Validate the registration (admin-side eligibility approval).
      */
-    public function validateRegistration($id)
+    public function validateRegistration(Request $request, $id)
     {
-        return $this->changeStatus($id, 'VALIDATED', null);
+        return $this->changeStatus($id, 'VALIDATED', null, $request);
     }
 
     /**
@@ -158,7 +160,7 @@ class RegistrationController extends Controller
             'reason' => ['required', 'string', 'max:255'],
         ]);
 
-        return $this->changeStatus($id, 'REJECTED', $data['reason']);
+        return $this->changeStatus($id, 'REJECTED', $data['reason'], $request);
     }
 
     /**
@@ -171,10 +173,10 @@ class RegistrationController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        return $this->changeStatus($id, $data['status'], $data['reason'] ?? null);
+        return $this->changeStatus($id, $data['status'], $data['reason'] ?? null, $request);
     }
 
-    private function changeStatus($id, string $newStatus, ?string $reason)
+    private function changeStatus($id, string $newStatus, ?string $reason, ?Request $request = null)
     {
         $registration = Registration::findOrFail($id);
         $oldStatus = $registration->status;
@@ -214,6 +216,44 @@ class RegistrationController extends Controller
                 'changed_at' => now(),
             ]);
         });
+
+        // Audit log
+        $adminId = (int) ($request?->input('admin_id') ?? $request?->query('admin_id'));
+        AuditLogger::log(
+            $adminId ?: null,
+            'REGISTRATION_' . $newStatus,
+            'registrations',
+            $registration->id,
+            'Registration #' . $registration->id,
+            ['old_status' => $oldStatus, 'new_status' => $newStatus, 'reason' => $reason],
+            $request
+        );
+
+        // Notify the employee
+        $messages = [
+            'VALIDATED' => "Your registration has been validated and is now eligible for the draw.",
+            'REJECTED' => "Your registration was rejected. Reason: " . ($reason ?? 'no reason provided'),
+            'SELECTED' => "Congratulations! You have been selected.",
+            'WAITING_LIST' => "You are on the waiting list for this session.",
+            'CONFIRMED' => "Your participation is confirmed.",
+            'CANCELLED' => "Your registration was cancelled.",
+            'WITHDRAWN' => "Your registration is now marked as withdrawn.",
+        ];
+        $msg = $messages[$newStatus] ?? "Your registration status changed to {$newStatus}.";
+        $type = match ($newStatus) {
+            'SELECTED', 'WAITING_LIST' => 'DRAW',
+            'CONFIRMED' => 'CONFIRMATION',
+            'WITHDRAWN' => 'WITHDRAWAL',
+            default => 'GENERAL',
+        };
+        NotificationService::push(
+            $registration->user_id,
+            $msg,
+            $type,
+            'Registration update',
+            null,
+            $registration->session_id
+        );
 
         return response()->json([
             'success' => true,

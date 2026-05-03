@@ -1,103 +1,118 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { Link } from "react-router-dom";
+import { apiGet, apiPatch, apiDelete, getCurrentUserId } from "../../api";
 
-const initialAnnouncements = [
-  {
-    id: 1,
-    title: "Winter Activities Registration Open",
-    category: "Campaign",
-    audience: "All Employees",
-    publishDate: "Oct 15, 2024",
-    status: "Published",
-    summary:
-      "Registrations are now open for winter activities. Employees can browse the catalog and submit requests before the deadline.",
-  },
-  {
-    id: 2,
-    title: "Important Update for Omra Participants",
-    category: "Information",
-    audience: "Selected Participants",
-    publishDate: "Oct 18, 2024",
-    status: "Draft",
-    summary:
-      "Participants selected for Omra must complete their document uploads before the end of the week.",
-  },
-  {
-    id: 3,
-    title: "Draw Results Published",
-    category: "Results",
-    audience: "Applicants",
-    publishDate: "Oct 10, 2024",
-    status: "Published",
-    summary:
-      "The latest draw results are now available in the employee dashboard. Applicants can check their status directly.",
-  },
-  {
-    id: 4,
-    title: "Family Stay Reminder",
-    category: "Reminder",
-    audience: "Families",
-    publishDate: "Oct 08, 2024",
-    status: "Archived",
-    summary:
-      "Reminder to complete final confirmations for the family stay campaign before seats are reassigned.",
-  },
-];
+const TYPE_STYLES = {
+  OFFICIAL: "bg-[#FFE6CC] text-[#A95A1B]",
+  GENERAL: "bg-[#F1F0EC] text-[#7A8088]",
+  REMINDER: "bg-[#FFF4D6] text-[#B98900]",
+  EVENT: "bg-[#F2B54A] text-white",
+  HEALTH: "bg-[#D4F4DD] text-[#2D7A4A]",
+  SOCIAL: "bg-[#DAE7FB] text-[#2A52BE]",
+  SURVEY: "bg-[#F7E6CC] text-[#A9651E]",
+};
+
+const STATUS_STYLES = {
+  DRAFT: "bg-[#FFF4D6] text-[#B98900]",
+  PUBLISHED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
+};
+
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
 
 export default function ManageAnnouncements() {
-  const [announcements, setAnnouncements] = useState(initialAnnouncements);
-  const [selectedId, setSelectedId] = useState(initialAnnouncements[0]?.id ?? null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState(null);
+  const [actingOn, setActingOn] = useState(null);
 
-  const [modal, setModal] = useState({
-    open: false,
-    type: null, // details | publish | archive | export
-    announcementId: null,
-  });
+  const [filters, setFilters] = useState({ search: "", status: "all", type: "all" });
+  const [modal, setModal] = useState({ open: false, type: null, id: null });
 
-  const selectedAnnouncement =
-    announcements.find(
-      (item) => item.id === (modal.announcementId ?? selectedId)
-    ) || null;
+  const userId = getCurrentUserId();
 
-  const totalCount = announcements.length;
-  const draftCount = announcements.filter((a) => a.status === "Draft").length;
-  const publishedCount = announcements.filter((a) => a.status === "Published").length;
-  const archivedCount = announcements.filter((a) => a.status === "Archived").length;
+  const load = () => {
+    setLoading(true);
+    setPageError(null);
+    apiGet("/admin/announcements")
+      .then((res) => setAnnouncements(res.data || []))
+      .catch((err) => setPageError(err.message || "Could not load announcements."))
+      .finally(() => setLoading(false));
+  };
 
-  const closeModal = () => {
-    setModal({
-      open: false,
-      type: null,
-      announcementId: null,
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    return announcements.filter((a) => {
+      if (filters.status !== "all" && a.status !== filters.status) return false;
+      if (filters.type !== "all" && a.type !== filters.type) return false;
+      if (q) {
+        const hay = [a.title, a.content].filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
     });
+  }, [announcements, filters]);
+
+  const stats = {
+    total: announcements.length,
+    drafts: announcements.filter((a) => a.status === "DRAFT").length,
+    published: announcements.filter((a) => a.status === "PUBLISHED").length,
+    archived: announcements.filter((a) => a.status === "ARCHIVED").length,
   };
 
-  const openModal = (type, announcementId = selectedId) => {
-    setModal({
-      open: true,
-      type,
-      announcementId,
-    });
+  const closeModal = () => setModal({ open: false, type: null, id: null });
+
+  const handlePublish = async (id) => {
+    setActingOn(id);
+    try {
+      await apiPatch(`/admin/announcements/${id}/publish`);
+      load();
+    } catch (err) {
+      alert(err.message || "Could not publish.");
+    } finally {
+      setActingOn(null);
+    }
   };
 
-  const handlePublish = (id) => {
-    setAnnouncements((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Published" } : item
-      )
-    );
-    closeModal();
+  const handleArchive = async (id) => {
+    setActingOn(id);
+    try {
+      await apiPatch(`/admin/announcements/${id}/archive`);
+      load();
+    } catch (err) {
+      alert(err.message || "Could not archive.");
+    } finally {
+      setActingOn(null);
+    }
   };
 
-  const handleArchive = (id) => {
-    setAnnouncements((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "Archived" } : item
-      )
-    );
-    closeModal();
+  const confirmDelete = async () => {
+    setActingOn(modal.id);
+    try {
+      await apiDelete(`/admin/announcements/${modal.id}`);
+      closeModal();
+      load();
+    } catch (err) {
+      alert(err.message || "Could not delete.");
+      closeModal();
+    } finally {
+      setActingOn(null);
+    }
   };
 
   return (
@@ -110,393 +125,260 @@ export default function ManageAnnouncements() {
 
           <main className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
-              {/* Header */}
               <div className="flex justify-between items-start gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                    Communicateur tools
-                  </p>
                   <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
                     Manage Announcements
                   </h1>
-                  <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
-                    Create, publish, and archive employee-facing announcements
-                    related to activities, draw results, reminders, and updates.
+                  <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                    Create, publish and archive official notes broadcast to
+                    employees.
                   </p>
                 </div>
 
                 <Link
-  to="/dashboard/communicator/announcements/create"
-  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
->
-  Create Announcement
-</Link>
+                  to="/dashboard/communicator/announcements/create"
+                  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold inline-block"
+                >
+                  + New announcement
+                </Link>
               </div>
 
-              {/* Stats */}
+              {pageError && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {pageError}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard
-                  title="Total Announcements"
-                  value={totalCount}
-                  subtitle="All communication posts"
-                />
-                <StatCard
-                  title="Drafts"
-                  value={draftCount}
-                  subtitle="Not yet visible to employees"
-                />
-                <StatCard
-                  title="Published"
-                  value={publishedCount}
-                  subtitle="Currently visible announcements"
-                />
-                <StatCard
-                  title="Archived"
-                  value={archivedCount}
-                  subtitle="Past communication items"
-                />
+                <StatCard title="Total" value={stats.total} />
+                <StatCard title="Published" value={stats.published} />
+                <StatCard title="Drafts" value={stats.drafts} />
+                <StatCard title="Archived" value={stats.archived} />
               </div>
 
-              {/* Filters */}
               <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Announcement Filters
-                </h2>
-                <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                  Search by title and filter announcements by category, audience, or status.
-                </p>
-
                 <div className="flex flex-wrap gap-3">
                   <input
                     type="text"
-                    placeholder="Search announcement title..."
+                    value={filters.search}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, search: e.target.value }))
+                    }
+                    placeholder="Search title, content..."
                     className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
                   />
 
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All categories</option>
+                  <select
+                    value={filters.type}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, type: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">All types</option>
+                    {Object.keys(TYPE_STYLES).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
                   </select>
 
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All audiences</option>
+                  <select
+                    value={filters.status}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, status: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="PUBLISHED">Published</option>
+                    <option value="ARCHIVED">Archived</option>
                   </select>
 
-                  <select className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none">
-                    <option>All statuses</option>
-                  </select>
-
-                  <button className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]">
-                    Reset filters
-                  </button>
-
-                  <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold">
-                    Apply filters
+                  <button
+                    onClick={() =>
+                      setFilters({ search: "", status: "all", type: "all" })
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
+                  >
+                    Reset
                   </button>
                 </div>
               </section>
 
-              <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
-                {/* Table */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                    <div>
-                      <h3 className="text-[24px] font-bold text-[#2F343B]">
-                        Announcement List
-                      </h3>
-                      <p className="text-sm text-[#7A8088] mt-1">
-                        Review published, draft, and archived announcements.
-                      </p>
-                    </div>
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1100px]">
+                    <thead className="bg-[#FBFAF8]">
+                      <tr>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Title
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Type
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Audience
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Published
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Status
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
 
-                    <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
-                      {announcements.length} items
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1050px]">
-                      <thead className="bg-[#FBFAF8]">
+                    <tbody>
+                      {loading && (
                         <tr>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Title
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Category
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Audience
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Publish Date
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Status
-                          </th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {announcements.map((item) => (
-                          <tr
-                            key={item.id}
-                            className={`border-t border-[#E5E2DC] align-top ${
-                              selectedId === item.id ? "bg-[#FCFBF9]" : ""
-                            }`}
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
                           >
-                            <td className="px-5 py-5">
-                              <button
-                                onClick={() => setSelectedId(item.id)}
-                                className="text-left"
-                              >
-                                <p className="font-semibold text-[#2F343B] text-sm">
-                                  {item.title}
-                                </p>
-                                <p className="text-xs text-[#7A8088] mt-1 max-w-[320px]">
-                                  {item.summary}
-                                </p>
-                              </button>
-                            </td>
+                            Loading announcements...
+                          </td>
+                        </tr>
+                      )}
 
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.category}
-                            </td>
+                      {!loading && filtered.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            No announcements yet.
+                          </td>
+                        </tr>
+                      )}
 
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.audience}
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-[#7A8088]">
-                              {item.publishDate}
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <StatusBadge status={item.status} />
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => openModal("details", item.id)}
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                                >
-                                  View details
-                                </button>
-
-                                {item.status === "Draft" && (
-                                  <button
-                                    onClick={() => openModal("publish", item.id)}
-                                    className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium"
-                                  >
-                                    Publish
-                                  </button>
-                                )}
-
-                                {item.status !== "Archived" && (
-                                  <button
-                                    onClick={() => openModal("archive", item.id)}
-                                    className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-                                  >
-                                    Archive
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-
-                        {announcements.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan="6"
-                              className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                      {filtered.map((a) => (
+                        <tr key={a.id} className="border-t border-[#E5E2DC] align-top">
+                          <td className="px-5 py-5">
+                            <p className="font-semibold text-[#2F343B] text-sm">
+                              {a.title}
+                            </p>
+                            <p className="text-xs text-[#7A8088] mt-1 line-clamp-2 max-w-[400px]">
+                              {a.content}
+                            </p>
+                          </td>
+                          <td className="px-5 py-5">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                TYPE_STYLES[a.type] || ""
+                              }`}
                             >
-                              No announcements available.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                {/* Right panel */}
-                <div className="space-y-5">
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Status summary
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Current distribution of announcement statuses.
-                    </p>
-
-                    <div className="space-y-3">
-                      <SummaryRow label="Drafts" value={draftCount} />
-                      <SummaryRow label="Published" value={publishedCount} />
-                      <SummaryRow label="Archived" value={archivedCount} />
-                    </div>
-                  </section>
-
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Selected announcement
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Quick summary of the currently selected communication item.
-                    </p>
-
-                    {selectedAnnouncement && (
-                      <div className="space-y-3">
-                        <SummaryRow label="Title" value={selectedAnnouncement.title} />
-                        <SummaryRow label="Category" value={selectedAnnouncement.category} />
-                        <SummaryRow label="Audience" value={selectedAnnouncement.audience} />
-                        <SummaryRow label="Status" value={selectedAnnouncement.status} />
-                      </div>
-                    )}
-                  </section>
+                              {a.type}
+                            </span>
+                          </td>
+                          <td className="px-5 py-5 text-sm text-[#7A8088]">
+                            {a.audience}
+                          </td>
+                          <td className="px-5 py-5 text-sm text-[#7A8088]">
+                            {formatDate(a.published_at)}
+                          </td>
+                          <td className="px-5 py-5">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                STATUS_STYLES[a.status] || ""
+                              }`}
+                            >
+                              {a.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-5">
+                            <div className="flex flex-wrap gap-2">
+                              {a.status === "DRAFT" && (
+                                <button
+                                  onClick={() => handlePublish(a.id)}
+                                  disabled={actingOn === a.id}
+                                  className="px-3 py-1.5 rounded-lg bg-[#2D7A4A] text-white text-sm font-medium disabled:opacity-60"
+                                >
+                                  Publish
+                                </button>
+                              )}
+                              {a.status === "PUBLISHED" && (
+                                <button
+                                  onClick={() => handleArchive(a.id)}
+                                  disabled={actingOn === a.id}
+                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
+                                >
+                                  Archive
+                                </button>
+                              )}
+                              <button
+                                onClick={() =>
+                                  setModal({
+                                    open: true,
+                                    type: "delete",
+                                    id: a.id,
+                                  })
+                                }
+                                className="px-3 py-1.5 rounded-lg border border-red-200 text-sm bg-white text-red-600"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              </section>
             </div>
           </main>
         </div>
       </div>
 
-      {modal.open && modal.type === "details" && selectedAnnouncement && (
-        <ModalShell title="Announcement Details" onClose={closeModal}>
-          <DetailRow label="Title" value={selectedAnnouncement.title} />
-          <DetailRow label="Category" value={selectedAnnouncement.category} />
-          <DetailRow label="Audience" value={selectedAnnouncement.audience} />
-          <DetailRow label="Publish Date" value={selectedAnnouncement.publishDate} />
-          <DetailRow label="Status" value={selectedAnnouncement.status} />
-
-          <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
-            <p className="text-sm font-semibold text-[#2F343B] mb-2">
-              Summary
+      {modal.open && modal.type === "delete" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
+              Delete announcement
+            </h2>
+            <p className="text-sm text-[#7A8088] mb-6">
+              This action cannot be undone.
             </p>
-            <p className="text-sm text-[#7A8088] leading-[170%]">
-              {selectedAnnouncement.summary}
-            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeModal}
+                disabled={actingOn === modal.id}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={actingOn === modal.id}
+                className="px-4 py-2 rounded-[12px] bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
+              >
+                Confirm delete
+              </button>
+            </div>
           </div>
-        </ModalShell>
-      )}
-
-      {modal.open && modal.type === "publish" && selectedAnnouncement && (
-        <ConfirmModal
-          title="Publish Announcement"
-          message={`Do you want to publish "${selectedAnnouncement.title}" for ${selectedAnnouncement.audience}?`}
-          confirmLabel="Publish"
-          onCancel={closeModal}
-          onConfirm={() => handlePublish(selectedAnnouncement.id)}
-        />
-      )}
-
-      {modal.open && modal.type === "archive" && selectedAnnouncement && (
-        <ConfirmModal
-          title="Archive Announcement"
-          message={`Do you want to archive "${selectedAnnouncement.title}"?`}
-          confirmLabel="Archive"
-          onCancel={closeModal}
-          onConfirm={() => handleArchive(selectedAnnouncement.id)}
-        />
+        </div>
       )}
     </>
   );
 }
 
-function StatCard({ title, value, subtitle }) {
+function StatCard({ title, value }) {
   return (
     <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
       <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
       <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-      <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-bold text-[#2F343B] text-right">{value}</span>
-    </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const styles = {
-    Draft: "bg-[#FFF4D6] text-[#B98900]",
-    Published: "bg-[#D4F4DD] text-[#2D7A4A]",
-    Archived: "bg-[#F1F0EC] text-[#7A8088]",
-  };
-
-  return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
-      {status}
-    </span>
-  );
-}
-
-function ModalShell({ title, children, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[520px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-4">{title}</h2>
-        <div className="space-y-3 mb-6">{children}</div>
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-3">{title}</h2>
-        <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">{message}</p>
-
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value}
-      </span>
     </div>
   );
 }

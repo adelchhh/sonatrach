@@ -1,66 +1,59 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiPost, getCurrentUserId } from "../../api";
 
-const categories = [
-  "Campaign",
-  "Information",
-  "Results",
-  "Reminder",
-  "Event",
-];
-
-const audiences = [
-  "All Employees",
-  "Applicants",
-  "Selected Participants",
-  "Families",
-  "Selected Families",
+const TYPES = ["OFFICIAL", "GENERAL", "REMINDER", "EVENT", "HEALTH", "SOCIAL", "SURVEY"];
+const AUDIENCES = [
+  { value: "ALL", label: "All users" },
+  { value: "EMPLOYEES", label: "Employees only" },
+  { value: "FUNCTIONAL_ADMIN", label: "Functional admins" },
+  { value: "COMMUNICATOR", label: "Communicators" },
+  { value: "SYSTEM_ADMIN", label: "System admins" },
 ];
 
 export default function CreateAnnouncement() {
+  const navigate = useNavigate();
+  const userId = getCurrentUserId();
+
   const [form, setForm] = useState({
     title: "",
-    category: "",
-    audience: "",
-    publishDate: "",
-    summary: "",
     content: "",
-    status: "Draft",
-    hasDocument: false,
-    documentTitle: "",
-    documentName: "",
-    documentNote: "",
-    sendNotification: true,
-    highlightAnnouncement: false,
+    type: "GENERAL",
+    audience: "ALL",
+    attachment_url: "",
+    status: "DRAFT",
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleChange = (field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  const handleSubmit = async (e, publishNow = false) => {
+    e?.preventDefault?.();
+    setError(null);
 
-  const handleSaveDraft = () => {
-    const payload = {
-      ...form,
-      status: "Draft",
-    };
+    if (!form.title.trim() || !form.content.trim()) {
+      setError("Title and content are required.");
+      return;
+    }
 
-    console.log("Save announcement draft:", payload);
-    alert("Announcement draft saved.");
-  };
-
-  const handlePublish = () => {
-    const payload = {
-      ...form,
-      status: "Published",
-    };
-
-    console.log("Publish announcement:", payload);
-    alert("Announcement published.");
+    setSubmitting(true);
+    try {
+      await apiPost("/admin/announcements", {
+        user_id: userId,
+        title: form.title.trim(),
+        content: form.content.trim(),
+        type: form.type,
+        audience: form.audience,
+        attachment_url: form.attachment_url.trim() || null,
+        status: publishNow ? "PUBLISHED" : form.status,
+      });
+      navigate("/dashboard/communicator/announcements");
+    } catch (err) {
+      setError(err.message || "Could not create announcement.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -71,24 +64,108 @@ export default function CreateAnnouncement() {
         <DashboardTopBar />
 
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                  Communicator tools
-                </p>
-                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Create Announcement
-                </h1>
-                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Create a new employee-facing announcement with content,
-                  audience targeting, publication settings, and an optional
-                  official document attachment.
-                </p>
-              </div>
+          <div className="space-y-6 max-w-[900px]">
+            <div className="text-sm text-[#7A8088]">
+              <Link
+                to="/dashboard/communicator/announcements"
+                className="text-[#ED8D31] font-medium"
+              >
+                Announcements
+              </Link>
+              <span className="mx-2">›</span>
+              <span className="text-[#2F343B] font-medium">New announcement</span>
+            </div>
 
-              <div className="flex gap-3 flex-wrap">
+            <div>
+              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                Create announcement
+              </h1>
+              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                Compose a new official note. Save as draft to review later, or
+                publish immediately to make it visible.
+              </p>
+            </div>
+
+            {error && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5 space-y-4">
+                <Field label="Title *">
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, title: e.target.value }))
+                    }
+                    placeholder="e.g., Winter activities are now open"
+                    className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  />
+                </Field>
+
+                <Field label="Content *">
+                  <textarea
+                    value={form.content}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, content: e.target.value }))
+                    }
+                    rows={8}
+                    placeholder="Write the body of the announcement..."
+                    className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+                  />
+                </Field>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Type">
+                    <select
+                      value={form.type}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, type: e.target.value }))
+                      }
+                      className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                    >
+                      {TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Field label="Audience">
+                    <select
+                      value={form.audience}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, audience: e.target.value }))
+                      }
+                      className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                    >
+                      {AUDIENCES.map((a) => (
+                        <option key={a.value} value={a.value}>
+                          {a.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+
+                <Field label="Attachment URL (optional)">
+                  <input
+                    type="text"
+                    value={form.attachment_url}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, attachment_url: e.target.value }))
+                    }
+                    placeholder="https://... (link to PDF, image, etc.)"
+                    className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  />
+                </Field>
+              </section>
+
+              <div className="flex justify-end gap-3">
                 <Link
                   to="/dashboard/communicator/announcements"
                   className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
@@ -97,337 +174,23 @@ export default function CreateAnnouncement() {
                 </Link>
 
                 <button
-                  onClick={handleSaveDraft}
-                  className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors"
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold disabled:opacity-60"
                 >
-                  Save Draft
+                  Save as draft
                 </button>
 
                 <button
-                  onClick={handlePublish}
-                  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
+                  type="button"
+                  onClick={(e) => handleSubmit(e, true)}
+                  disabled={submitting}
+                  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold disabled:opacity-60"
                 >
-                  Publish Announcement
+                  {submitting ? "Saving..." : "Publish now"}
                 </button>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
-              {/* Left side */}
-              <div className="space-y-6">
-                {/* Basic information */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Basic Information
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Define the main identity and visibility of the announcement.
-                    </p>
-                  </div>
-
-                  <div className="p-5 space-y-5">
-                    <Field label="Announcement Title">
-                      <input
-                        type="text"
-                        value={form.title}
-                        onChange={(e) => handleChange("title", e.target.value)}
-                        placeholder="e.g., Winter Activities Registration Open"
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                      />
-                    </Field>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Field label="Category">
-                        <select
-                          value={form.category}
-                          onChange={(e) => handleChange("category", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                        >
-                          <option value="">Select category</option>
-                          {categories.map((category) => (
-                            <option key={category}>{category}</option>
-                          ))}
-                        </select>
-                      </Field>
-
-                      <Field label="Audience">
-                        <select
-                          value={form.audience}
-                          onChange={(e) => handleChange("audience", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                        >
-                          <option value="">Select audience</option>
-                          {audiences.map((audience) => (
-                            <option key={audience}>{audience}</option>
-                          ))}
-                        </select>
-                      </Field>
-
-                      <Field label="Publish Date">
-                        <input
-                          type="date"
-                          value={form.publishDate}
-                          onChange={(e) =>
-                            handleChange("publishDate", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                        />
-                      </Field>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Announcement content */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Announcement Content
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Write the summary and the full message visible to employees.
-                    </p>
-                  </div>
-
-                  <div className="p-5 space-y-5">
-                    <Field label="Short Summary">
-                      <textarea
-                        value={form.summary}
-                        onChange={(e) => handleChange("summary", e.target.value)}
-                        rows={3}
-                        placeholder="Write a short summary that appears in announcement lists..."
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm resize-none"
-                      />
-                    </Field>
-
-                    <Field label="Full Content">
-                      <textarea
-                        value={form.content}
-                        onChange={(e) => handleChange("content", e.target.value)}
-                        rows={8}
-                        placeholder="Write the full announcement content..."
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm resize-none"
-                      />
-                    </Field>
-                  </div>
-                </section>
-
-                {/* Official document */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Official Document Attachment
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Attach an optional official document if the announcement requires one.
-                    </p>
-                  </div>
-
-                  <div className="p-5 space-y-5">
-                    <div className="rounded-[18px] border border-[#E5E2DC] bg-[#FBFAF8] p-4 flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-[#2F343B]">
-                          Attach Official Document
-                        </p>
-                        <p className="text-xs text-[#7A8088] mt-1 leading-[160%]">
-                          Enable this if employees need to read or download an official file.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleChange("hasDocument", !form.hasDocument)
-                        }
-                        className={`relative w-10 h-6 rounded-full transition-colors ${
-                          form.hasDocument ? "bg-[#ED8D31]" : "bg-[#E5E2DC]"
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
-                            form.hasDocument ? "left-5" : "left-1"
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {form.hasDocument && (
-                      <div className="space-y-5">
-                        <Field label="Document Title">
-                          <input
-                            type="text"
-                            value={form.documentTitle}
-                            onChange={(e) =>
-                              handleChange("documentTitle", e.target.value)
-                            }
-                            placeholder="e.g., Official Registration Notice"
-                            className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                          />
-                        </Field>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                            Upload File
-                          </label>
-
-                          <div className="rounded-[18px] border border-dashed border-[#D9D5CE] bg-[#FBFAF8] h-[160px] flex flex-col items-center justify-center text-center px-6">
-                            <div className="w-10 h-10 rounded-full bg-[#F1F0EC] flex items-center justify-center mb-4 text-[#7A8088]">
-                              ⬆
-                            </div>
-                            <p className="text-sm text-[#2F343B] font-medium">
-                              <span className="text-[#ED8D31]">Click to upload</span> or drag and drop
-                            </p>
-                            <p className="text-xs text-[#7A8088] mt-1">
-                              PDF, DOCX, PNG or JPG
-                            </p>
-                          </div>
-
-                          <input
-                            type="text"
-                            value={form.documentName}
-                            onChange={(e) =>
-                              handleChange("documentName", e.target.value)
-                            }
-                            placeholder="Uploaded file name..."
-                            className="w-full mt-3 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                          />
-                        </div>
-
-                        <Field label="Document Note">
-                          <textarea
-                            value={form.documentNote}
-                            onChange={(e) =>
-                              handleChange("documentNote", e.target.value)
-                            }
-                            rows={3}
-                            placeholder="Optional note shown with the attached official document..."
-                            className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm resize-none"
-                          />
-                        </Field>
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                {/* Bottom actions */}
-                <div className="flex justify-end gap-3 flex-wrap">
-                  <Link
-                    to="/dashboard/communicator/announcements"
-                    className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
-                  >
-                    Cancel
-                  </Link>
-
-                  <button
-                    onClick={handleSaveDraft}
-                    className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors"
-                  >
-                    Save Draft
-                  </button>
-
-                  <button
-                    onClick={handlePublish}
-                    className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
-                  >
-                    Publish Announcement
-                  </button>
-                </div>
-              </div>
-
-              {/* Right side */}
-              <div className="space-y-6">
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Publishing & Status
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Set the publication state of the announcement.
-                    </p>
-                  </div>
-
-                  <div className="p-5">
-                    <Field label="Announcement Status">
-                      <select
-                        value={form.status}
-                        onChange={(e) => handleChange("status", e.target.value)}
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
-                      >
-                        <option>Draft</option>
-                        <option>Published</option>
-                        <option>Scheduled</option>
-                        <option>Archived</option>
-                      </select>
-                    </Field>
-                  </div>
-                </section>
-
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Additional Options
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Communication settings for the announcement.
-                    </p>
-                  </div>
-
-                  <div className="p-5 space-y-4">
-                    <ToggleCard
-                      title="Send Notification on Publish"
-                      description="Notify the targeted audience when the announcement is published."
-                      checked={form.sendNotification}
-                      onToggle={() =>
-                        handleChange("sendNotification", !form.sendNotification)
-                      }
-                    />
-
-                    <ToggleCard
-                      title="Highlight as Important"
-                      description="Mark this announcement as an important communication item."
-                      checked={form.highlightAnnouncement}
-                      onToggle={() =>
-                        handleChange(
-                          "highlightAnnouncement",
-                          !form.highlightAnnouncement
-                        )
-                      }
-                    />
-                  </div>
-                </section>
-
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Preview Summary
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      Quick view of the announcement being prepared.
-                    </p>
-                  </div>
-
-                  <div className="p-5 space-y-3">
-                    <SummaryRow label="Title" value={form.title || "Not set"} />
-                    <SummaryRow
-                      label="Category"
-                      value={form.category || "Not selected"}
-                    />
-                    <SummaryRow
-                      label="Audience"
-                      value={form.audience || "Not selected"}
-                    />
-                    <SummaryRow
-                      label="Status"
-                      value={form.status || "Draft"}
-                    />
-                    <SummaryRow
-                      label="Document"
-                      value={form.hasDocument ? "Attached" : "No document"}
-                    />
-                  </div>
-                </section>
-              </div>
-            </div>
+            </form>
           </div>
         </main>
       </div>
@@ -442,44 +205,6 @@ function Field({ label, children }) {
         {label}
       </label>
       {children}
-    </div>
-  );
-}
-
-function ToggleCard({ title, description, checked, onToggle }) {
-  return (
-    <div className="rounded-[18px] border border-[#E5E2DC] bg-[#FBFAF8] p-4 flex items-center justify-between gap-4">
-      <div>
-        <p className="text-sm font-semibold text-[#2F343B]">{title}</p>
-        <p className="text-xs text-[#7A8088] mt-1 leading-[160%]">
-          {description}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={onToggle}
-        className={`relative w-10 h-6 rounded-full transition-colors ${
-          checked ? "bg-[#ED8D31]" : "bg-[#E5E2DC]"
-        }`}
-      >
-        <span
-          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
-            checked ? "left-5" : "left-1"
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value}
-      </span>
     </div>
   );
 }

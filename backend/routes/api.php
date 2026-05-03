@@ -18,6 +18,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\IdeaController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AnnouncementController;
 
 // ----- AUTH -----
 Route::post('/login', [AuthController::class, 'login']);
@@ -96,6 +97,22 @@ Route::get('/me/participations', [EmployeeController::class, 'myParticipations']
 // ----- SURVEYS -----
 Route::get('/surveys', [SurveyController::class, 'index']);
 Route::post('/surveys/{id}/respond', [SurveyController::class, 'respond']);
+// admin
+Route::get('/admin/surveys', [SurveyController::class, 'adminIndex']);
+Route::get('/admin/surveys/{id}', [SurveyController::class, 'show']);
+Route::post('/admin/surveys', [SurveyController::class, 'store']);
+Route::put('/admin/surveys/{id}', [SurveyController::class, 'update']);
+Route::delete('/admin/surveys/{id}', [SurveyController::class, 'destroy']);
+
+// ----- ANNOUNCEMENTS (official_notes) -----
+Route::get('/announcements', [AnnouncementController::class, 'publicIndex']);
+Route::get('/admin/announcements', [AnnouncementController::class, 'index']);
+Route::get('/admin/announcements/{id}', [AnnouncementController::class, 'show']);
+Route::post('/admin/announcements', [AnnouncementController::class, 'store']);
+Route::put('/admin/announcements/{id}', [AnnouncementController::class, 'update']);
+Route::delete('/admin/announcements/{id}', [AnnouncementController::class, 'destroy']);
+Route::patch('/admin/announcements/{id}/publish', [AnnouncementController::class, 'publish']);
+Route::patch('/admin/announcements/{id}/archive', [AnnouncementController::class, 'archive']);
 
 // ----- IDEAS -----
 Route::get('/me/ideas', [IdeaController::class, 'myIdeas']);

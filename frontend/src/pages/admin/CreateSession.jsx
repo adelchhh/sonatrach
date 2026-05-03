@@ -27,8 +27,16 @@ export default function CreateSession() {
     setSubmitting(true);
     setError(null);
     try {
-      await apiPost(`/activities/${id}/sessions`, payload);
-      navigate(`/dashboard/admin/activities/${id}/sessions`);
+      const res = await apiPost(`/activities/${id}/sessions`, payload);
+      const newSessionId = res?.data?.id;
+      if (newSessionId) {
+        // Send admin straight to sites & quotas to finish session setup
+        navigate(
+          `/dashboard/admin/activities/${id}/sessions/${newSessionId}/sites-quotas`
+        );
+      } else {
+        navigate(`/dashboard/admin/activities/${id}/sessions`);
+      }
     } catch (err) {
       setError(err.message || "Could not create session.");
     } finally {
