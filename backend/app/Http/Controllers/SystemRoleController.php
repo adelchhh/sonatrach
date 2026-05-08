@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -38,7 +39,7 @@ class SystemRoleController extends Controller
         ]);
     }
 
-    private function assignRole($userId, $roleName)
+    private function assignRole($userId, $roleName, ?Request $request = null)
     {
         $role = DB::table('roles')->where('name', $roleName)->first();
 
@@ -67,7 +68,18 @@ class SystemRoleController extends Controller
             DB::table('user_roles')->insert([
                 'user_id' => $userId,
                 'role_id' => $role->id,
+                'assigned_by' => $request?->input('assigned_by'),
             ]);
+
+            AuditLogger::log(
+                (int) $request?->input('assigned_by') ?: null,
+                'ROLE_ASSIGNED_' . $roleName,
+                'user_roles',
+                $userId,
+                trim(($user->first_name ?? '') . ' ' . ($user->name ?? '')),
+                ['role' => $roleName],
+                $request
+            );
         }
 
         return response()->json([
@@ -76,7 +88,7 @@ class SystemRoleController extends Controller
         ]);
     }
 
-    private function removeRole($userId, $roleName)
+    private function removeRole($userId, $roleName, ?Request $request = null)
     {
         $role = DB::table('roles')->where('name', $roleName)->first();
 
@@ -100,10 +112,24 @@ class SystemRoleController extends Controller
             }
         }
 
-        DB::table('user_roles')
+        $user = DB::table('users')->where('id', $userId)->first();
+
+        $deleted = DB::table('user_roles')
             ->where('user_id', $userId)
             ->where('role_id', $role->id)
             ->delete();
+
+        if ($deleted > 0 && $user) {
+            AuditLogger::log(
+                (int) $request?->input('removed_by') ?: null,
+                'ROLE_REMOVED_' . $roleName,
+                'user_roles',
+                $userId,
+                trim(($user->first_name ?? '') . ' ' . ($user->name ?? '')),
+                ['role' => $roleName],
+                $request
+            );
+        }
 
         return response()->json([
             'success' => true,
@@ -163,41 +189,76 @@ class SystemRoleController extends Controller
         ]);
     }
 
-    public function assignFunctionalAdmin($userId)
+    public function assignFunctionalAdmin(Request $request, $userId)
     {
-        return $this->assignRole($userId, 'FUNCTIONAL_ADMIN');
+        return $this->assignRole($userId, 'FUNCTIONAL_ADMIN', $request);
     }
 
-    public function removeFunctionalAdmin($userId)
+    public function removeFunctionalAdmin(Request $request, $userId)
     {
-        return $this->removeRole($userId, 'FUNCTIONAL_ADMIN');
+        return $this->removeRole($userId, 'FUNCTIONAL_ADMIN', $request);
     }
 
-    public function assignCommunicator($userId)
+    public function assignCommunicator(Request $request, $userId)
     {
-        return $this->assignRole($userId, 'COMMUNICATOR');
+        return $this->assignRole($userId, 'COMMUNICATOR', $request);
     }
 
-    public function removeCommunicator($userId)
+    public function removeCommunicator(Request $request, $userId)
     {
-        return $this->removeRole($userId, 'COMMUNICATOR');
+        return $this->removeRole($userId, 'COMMUNICATOR', $request);
     }
 
-    public function assignSystemAdmin($userId)
+    public function assignSystemAdmin(Request $request, $userId)
     {
-        return $this->assignRole($userId, 'SYSTEM_ADMIN');
+        return $this->assignRole($userId, 'SYSTEM_ADMIN', $request);
     }
 
-    public function removeSystemAdmin($userId)
+    public function removeSystemAdmin(Request $request, $userId)
     {
-        return $this->removeRole($userId, 'SYSTEM_ADMIN');
+        return $this->removeRole($userId, 'SYSTEM_ADMIN', $request);
     }
 
-    public function auditLogs()
+    public function auditLogs(Request $request)
     {
-        return response()->json([
-            'success' => true,
-            'data' => []
-        ]);
+        $q = DB::table('audit_logs as a')
+            ->leftJoin('users as u', 'u.id', '=', 'a.user_id')
+            ->select(
+                'a.id', 'a.user_id', 'a.action', 'a.target_table',
+                'a.target_id', 'a.target_name', 'a.details',
+                'a.ip_address', 'a.action_date',
+                'u.first_name as user_first_name',
+                'u.name as user_last_name',
+                'u.employee_number'
+            );
+
+        if ($action = $request->query('action')) {
+            $q->where('a.action', 'like', $action . '%');
+        }
+        if ($userId = $request->query('user_id')) {
+            $q->where('a.user_id', $userId);
+        }
+        if ($targetTable = $request->query('target_table')) {
+            $q->where('a.target_table', $targetTable);
+        }
+        if ($from = $request->query('from')) {
+            $q->where('a.action_date', '>=', $from);
+        }
+        if ($to = $request->query('to')) {
+            $q->where('a.action_date', '<=', $to);
+        }
+
+        $rows = $q->orderBy('a.action_date', 'desc')->limit(500)->get();
+
+        // decode details JSON for convenience
+        $rows = $rows->map(function ($r) {
+            if ($r->details) {
+                $decoded = json_decode($r->details, true);
+                $r->details = is_array($decoded) ? $decoded : $r->details;
+            }
+            return $r;
+        });
+
+        return response()->json(['success' => true, 'data' => $rows]);
     }
 }
