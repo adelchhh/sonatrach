@@ -55,9 +55,9 @@ Route::post('/sessions/{sessionId}/register', [EmployeeRegistrationController::c
 // ----- EMPLOYEE DATA -----
 Route::get('/me/documents', [EmployeeController::class, 'myDocuments']);
 
+
 // ================= API PREFIX =================
 Route::prefix('api')->group(function () {
-
     // ===== SYSTEM =====
     Route::get('/system/roles/functional-admins', [SystemRoleController::class, 'functionalAdmins']);
     Route::get('/system/roles/communicators', [SystemRoleController::class, 'communicators']);

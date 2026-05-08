@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\WithdrawalRequest;
 use App\Models\Registration;
+use App\Services\AuditLogger;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -134,6 +136,36 @@ class WithdrawalController extends Controller
                 }
             }
         });
+
+        // Audit log
+        AuditLogger::log(
+            $data['processed_by'] ?? null,
+            'WITHDRAWAL_' . $data['status'],
+            'withdrawal_requests',
+            $w->id,
+            'Withdrawal #' . $w->id,
+            ['admin_comment' => $data['admin_comment'] ?? null, 'reason' => $w->reason],
+            $request
+        );
+
+        // Notify the employee
+        $reg = DB::table('registrations')->where('id', $w->registration_id)->first();
+        if ($reg) {
+            $msgs = [
+                'APPROVED' => "Your withdrawal request was approved. Your registration is now withdrawn.",
+                'REJECTED' => "Your withdrawal request was rejected." . ($data['admin_comment'] ? " Comment: " . $data['admin_comment'] : ''),
+                'PROCESSED' => "Your withdrawal has been fully processed.",
+                'PENDING' => "Your withdrawal request is being reviewed.",
+            ];
+            NotificationService::push(
+                $reg->user_id,
+                $msgs[$data['status']] ?? "Your withdrawal status changed to {$data['status']}.",
+                'WITHDRAWAL',
+                'Withdrawal update',
+                null,
+                $reg->session_id
+            );
+        }
 
         return response()->json(['success' => true, 'data' => $w->fresh()]);
     }

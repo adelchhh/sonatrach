@@ -83,6 +83,9 @@ export default function SessionForm({
               <p className="text-sm text-[#7A8088] mt-1">
                 {t("admin.sessionForm.sessionDatesHint")}
               </p>
+              <p className="text-xs text-[#A95A1B] bg-[#FFF7EC] border border-[#F3D9B0] rounded-lg px-3 py-2 mt-3">
+                ℹ️ Registration deadline must be ≤ start date · End date must be ≥ start date
+              </p>
             </div>
 
             <div className="p-5 space-y-5">

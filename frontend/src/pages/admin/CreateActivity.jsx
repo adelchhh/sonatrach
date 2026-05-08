@@ -79,8 +79,14 @@ export default function CreateActivity() {
       if (imageFile) {
         payload.image = imageFile;
       }
-      await apiPostForm("/activities", payload);
-      navigate("/dashboard/admin/activities");
+      const res = await apiPostForm("/activities", payload);
+      // Redirect to the new activity's sessions page so admin can configure sessions+sites
+      const newId = res?.data?.id;
+      if (newId) {
+        navigate(`/dashboard/admin/activities/${newId}/sessions`);
+      } else {
+        navigate("/dashboard/admin/activities");
+      }
     } catch (err) {
       setError(err.message || "Failed to save activity.");
     } finally {

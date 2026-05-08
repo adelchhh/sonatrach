@@ -202,9 +202,17 @@ export default function ManageSessions() {
                         <tr>
                           <td
                             colSpan="6"
-                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                            className="px-5 py-12 text-center"
                           >
-                            {t("admin.sessions.empty")}
+                            <p className="text-sm text-[#7A8088] mb-4">
+                              {t("admin.sessions.empty")}
+                            </p>
+                            <Link
+                              to={`/dashboard/admin/activities/${id}/sessions/create`}
+                              className="inline-block px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold"
+                            >
+                              {t("admin.sessions.addSession")}
+                            </Link>
                           </td>
                         </tr>
                       )}
