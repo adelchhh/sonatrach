@@ -34,7 +34,7 @@ export default function AuditLogPage() {
   const load = () => {
     setLoading(true);
     setPageError(null);
-    apiGet("/system/audit-logs")
+    apiGet("/api/system/audit-logs")
       .then((res) => setLogs(res.data || []))
       .catch((err) => setPageError(err.message || "Could not load audit logs."))
       .finally(() => setLoading(false));
