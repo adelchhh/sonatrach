@@ -18,12 +18,11 @@ class NotificationController extends Controller
         }
 
         $rows = DB::table('notifications as n')
-            ->leftJoin('activities as a', 'a.id', '=', 'n.activity_id')
             ->where(function ($query) use ($userId) {
                 $query->where('n.user_id', $userId)
                       ->orWhereNull('n.user_id');
             })
-            ->select('n.*', 'a.title as activity_title')
+            ->select('n.*')
             ->orderBy('n.created_at', 'desc')
             ->limit(200)
             ->get();

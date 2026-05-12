@@ -9,9 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class IdeaController extends Controller
 {
-    private array $allowedCategories = [
-        'ACTIVITIES', 'SERVICES', 'COMMUNICATION', 'WORKPLACE', 'WELLBEING',
-    ];
+    /**
+     * Status enum in the friend's schema is PENDING / REVIEWED / ARCHIVED.
+     * No `category` column.
+     */
 
     /**
      * Employee: list my own submitted ideas.
@@ -38,15 +39,15 @@ class IdeaController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
+            'title' => ['nullable', 'string', 'max:255'],
             'content' => ['required', 'string', 'max:2000'],
-            'category' => ['nullable', 'string', 'in:' . implode(',', $this->allowedCategories)],
         ]);
 
         $id = DB::table('ideas')->insertGetId([
             'user_id' => $data['user_id'],
+            'title' => $data['title'] ?? 'Untitled idea',
             'content' => $data['content'],
-            'category' => $data['category'] ?? 'ACTIVITIES',
-            'status' => 'UNDER_REVIEW',
+            'status' => 'PENDING',
             'submitted_at' => now(),
         ]);
 
@@ -76,9 +77,6 @@ class IdeaController extends Controller
         if ($status = $request->query('status')) {
             $q->where('i.status', strtoupper($status));
         }
-        if ($category = $request->query('category')) {
-            $q->where('i.category', strtoupper($category));
-        }
 
         return response()->json([
             'success' => true,
@@ -92,7 +90,7 @@ class IdeaController extends Controller
     public function moderate(Request $request, $id)
     {
         $data = $request->validate([
-            'status' => ['required', 'string', 'in:UNDER_REVIEW,ACCEPTED,ARCHIVED'],
+            'status' => ['required', 'string', 'in:PENDING,REVIEWED,ARCHIVED'],
             'moderator_response' => ['nullable', 'string', 'max:500'],
             'moderated_by' => ['required', 'integer', 'exists:users,id'],
         ]);
@@ -109,7 +107,6 @@ class IdeaController extends Controller
             'moderated_at' => now(),
         ]);
 
-        // Audit log
         AuditLogger::log(
             $data['moderated_by'],
             'IDEA_' . $data['status'],
@@ -120,11 +117,10 @@ class IdeaController extends Controller
             $request
         );
 
-        // Notify the author
         $msgs = [
-            'ACCEPTED' => "Your idea has been accepted! 🎉",
+            'REVIEWED' => "Your idea has been reviewed.",
             'ARCHIVED' => "Your idea has been archived.",
-            'UNDER_REVIEW' => "Your idea is being re-evaluated.",
+            'PENDING' => "Your idea is back under review.",
         ];
         $msg = $msgs[$data['status']] ?? '';
         if (!empty($data['moderator_response'])) {
