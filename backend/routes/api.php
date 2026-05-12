@@ -104,3 +104,63 @@ Route::delete('/system/users/{userId}/roles/system-admin', [SystemRoleController
     Route::get('/notifications/sent', [NotificationController::class, 'adminList']);
     Route::post('/notifications', [NotificationController::class, 'send']);
 });
+
+// =====================================================================
+// RESTORED ROUTES (root level, NOT under /api)
+// These map orphan controller methods that the frontend admin/employee
+// pages rely on. Added without modifying anything above so the
+// communicator/system routes pushed by malak-hdj stay untouched.
+// =====================================================================
+
+// ----- SITES (show) -----
+Route::get('/sites/{id}', [SiteController::class, 'show']);
+
+// ----- SESSION SITES (quotas) -----
+Route::get('/sessions/{sessionId}/sites', [SessionSiteController::class, 'index']);
+Route::post('/sessions/{sessionId}/sites', [SessionSiteController::class, 'store']);
+Route::put('/session-sites/{id}', [SessionSiteController::class, 'update']);
+Route::delete('/session-sites/{id}', [SessionSiteController::class, 'destroy']);
+
+// ----- REGISTRATIONS (admin actions) -----
+Route::get('/registrations/{id}', [RegistrationController::class, 'show']);
+Route::get('/registrations/{id}/history', [RegistrationController::class, 'statusHistory']);
+Route::post('/registrations/{id}/validate', [RegistrationController::class, 'validateRegistration']);
+Route::post('/registrations/{id}/reject', [RegistrationController::class, 'reject']);
+Route::patch('/registrations/{id}/status', [RegistrationController::class, 'updateStatus']);
+Route::post('/registrations/{id}/cancel', [EmployeeRegistrationController::class, 'cancel']);
+
+// ----- DOCUMENTS (admin + upload) -----
+Route::get('/documents', [DocumentController::class, 'index']);
+Route::get('/documents/{id}', [DocumentController::class, 'show']);
+Route::post('/documents/{id}/validate', [DocumentController::class, 'validateDocument']);
+Route::post('/documents/{id}/reject', [DocumentController::class, 'reject']);
+Route::post('/registrations/{registrationId}/documents', [DocumentController::class, 'upload']);
+
+// ----- WITHDRAWALS -----
+Route::get('/withdrawals', [WithdrawalController::class, 'index']);
+Route::post('/withdrawals', [WithdrawalController::class, 'store']);
+Route::patch('/withdrawals/{id}/status', [WithdrawalController::class, 'updateStatus']);
+
+// ----- DRAWS -----
+Route::get('/draws/readiness', [DrawController::class, 'readinessList']);
+Route::get('/draws/history', [DrawController::class, 'history']);
+Route::get('/draws/{drawId}', [DrawController::class, 'show']);
+Route::get('/sessions/{sessionId}/draw-preview', [DrawController::class, 'preview']);
+Route::post('/sessions/{sessionId}/execute-draw', [DrawController::class, 'execute']);
+
+// ----- REPORTS -----
+Route::get('/reports/summary', [ReportController::class, 'summary']);
+
+// ----- EMPLOYEE: my data -----
+Route::get('/me/draw-results', [EmployeeController::class, 'myDrawResults']);
+Route::get('/me/participations', [EmployeeController::class, 'myParticipations']);
+Route::get('/activities/{activityId}/open-sessions', [EmployeeRegistrationController::class, 'openSessionsForActivity']);
+
+// ----- IDEAS (employee submit + list mine) -----
+Route::get('/me/ideas', [IdeaController::class, 'myIdeas']);
+Route::post('/ideas', [IdeaController::class, 'store']);
+
+// ----- NOTIFICATIONS (employee read) -----
+Route::get('/me/notifications', [NotificationController::class, 'myNotifications']);
+Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+Route::patch('/me/notifications/read-all', [NotificationController::class, 'markAllRead']);
