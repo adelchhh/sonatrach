@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
 import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import DrawWheel from "../../components/admin/DrawWheel";
 import { apiGet, apiPost } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
 
@@ -33,10 +34,34 @@ export default function RunDraw() {
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
   const [running, setRunning] = useState(false);
+  const [animating, setAnimating] = useState(false);
   const [results, setResults] = useState(null);
   const [drawDetails, setDrawDetails] = useState(null);
 
   const adminId = getCurrentUserId();
+
+  // Build the ordered list of winners for the wheel reveal (selected → substitutes → waiting list)
+  const winnersForWheel = drawDetails?.results
+    ? [...drawDetails.results]
+        .map((r) => ({
+          user_id: r.registration_id,
+          first_name: r.user_first_name,
+          name: r.user_last_name,
+          employee_number: r.employee_number,
+          site_name: r.site_name,
+          substitute_rank: r.substitute_rank,
+          kind:
+            r.is_selected === 1 || r.is_selected === true
+              ? "selected"
+              : r.is_substitute === 1 || r.is_substitute === true
+              ? "substitute"
+              : "waiting",
+        }))
+        .sort((a, b) => {
+          const order = { selected: 0, substitute: 1, waiting: 2 };
+          return order[a.kind] - order[b.kind];
+        })
+    : [];
 
   const load = () => {
     setLoading(true);
@@ -70,10 +95,12 @@ export default function RunDraw() {
         mode: "BY_SITE",
         draw_location: preview?.session?.draw_location || null,
       });
-      setResults(res.data);
-      // Load full draw details
+      // Load full draw details first
       const detailsRes = await apiGet(`/draws/${res.data.draw_id}`);
+      setResults(res.data);
       setDrawDetails(detailsRes.data);
+      // Start the wheel animation. The summary cards stay hidden until animation completes.
+      setAnimating(true);
     } catch (err) {
       alert(err.message || "Could not run the draw.");
     } finally {
@@ -239,7 +266,19 @@ export default function RunDraw() {
               </>
             )}
 
-            {results && drawDetails && (
+            {/* Cinematic full-screen draw ceremony */}
+            {animating && drawDetails && (
+              <DrawWheel
+                candidates={preview?.eligible_candidates || []}
+                winners={winnersForWheel}
+                running={animating}
+                sessionTitle={preview?.session?.activity_title || "Selection ceremony"}
+                drawId={results?.draw_id}
+                onComplete={() => setAnimating(false)}
+              />
+            )}
+
+            {results && drawDetails && !animating && (
               <>
                 <section className="rounded-[24px] bg-[#D4F4DD] border border-[#9FD9B5] p-6">
                   <h2 className="text-[22px] font-bold text-[#2D7A4A] mb-3">

@@ -111,10 +111,13 @@ class DrawController extends Controller
             ->orderBy('sites.name')
             ->get();
 
-        $eligibleCount = DB::table('registrations')
-            ->where('session_id', $sessionId)
-            ->where('status', 'VALIDATED')
-            ->count();
+        // Eligible candidates with names — used by the front-end wheel animation
+        $eligibleCandidates = DB::table('registrations as r')
+            ->join('users as u', 'u.id', '=', 'r.user_id')
+            ->where('r.session_id', $sessionId)
+            ->where('r.status', 'VALIDATED')
+            ->select('r.id', 'u.id as user_id', 'u.first_name', 'u.name', 'u.employee_number')
+            ->get();
 
         $existingDraw = DB::table('draws')->where('session_id', $sessionId)->first();
 
@@ -123,7 +126,8 @@ class DrawController extends Controller
             'data' => [
                 'session' => $session,
                 'sites' => $sites,
-                'eligible_count' => $eligibleCount,
+                'eligible_count' => $eligibleCandidates->count(),
+                'eligible_candidates' => $eligibleCandidates,
                 'existing_draw' => $existingDraw,
             ],
         ]);
