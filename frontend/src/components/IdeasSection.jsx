@@ -1,3 +1,4 @@
+import { Lightbulb } from "lucide-react";
 import { useT, useLanguage } from "../i18n/LanguageContext";
 
 const FEATURES = {
@@ -65,20 +66,20 @@ export default function IdeasSection() {
   const form = FORM[lang] || FORM.en;
 
   return (
-    <div className="flex justify-center px-4 py-12" id="ideas">
-      <div className="w-full max-w-[1336px]">
-        <div className="grid grid-cols-2 gap-6">
-          <div className="rounded-[28px] border border-[rgba(229,226,220,0.92)] bg-[rgba(255,255,255,0.82)] backdrop-blur-[5px] p-[30px] flex flex-col gap-[13.2px]">
-            <div className="flex items-center gap-2 w-fit px-[14px] py-[6.25px] rounded-full bg-[rgba(255,255,255,0.76)] backdrop-blur-[5px]">
-              <div className="w-[7px] h-[7px] rounded-full bg-[#ED8D31]" />
-              <span className="text-[#50565E] text-[13px] font-semibold leading-[19.5px]">
+    <section className="bg-[#FAFAFA] border-t border-[#E5E5E5] py-16 lg:py-20" id="ideas">
+      <div className="max-w-[1400px] mx-auto px-8 lg:px-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white border border-[#E5E5E5] p-8 lg:p-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#FAFAFA] border border-[#E5E5E5] mb-7">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ED8D31]" />
+              <span className="text-[#0A0A0A] text-[10px] uppercase tracking-[0.2em] font-bold">
                 {t("homeSections.ideasTag")}
               </span>
             </div>
 
             <h2
-              className="text-[#2F343B] font-extrabold leading-[96%] tracking-[-3.24px] max-w-[520px]"
-              style={{ fontSize: "54px" }}
+              className="text-[#0A0A0A] font-bold leading-[1.02] tracking-[-0.025em] max-w-[540px]"
+              style={{ fontSize: "clamp(34px, 4.2vw, 50px)" }}
             >
               {heading.map((line, idx) => (
                 <span key={idx}>
@@ -88,24 +89,24 @@ export default function IdeasSection() {
               ))}
             </h2>
 
-            <p className="text-[#7A8088] text-base font-normal leading-[175%] max-w-[500px]">
+            <p className="text-[#525252] text-[14px] leading-[1.75] max-w-[500px] mt-6">
               {description}
             </p>
 
-            <div className="flex flex-col gap-[14px] pt-4">
+            <div className="space-y-3 mt-8">
               {features.map((f, i) => (
                 <div
                   key={i}
-                  className="flex gap-[14px] px-[40px] py-[18px] rounded-[18px] border border-[rgba(229,226,220,0.86)] bg-[rgba(245,244,241,0.76)]"
+                  className="flex items-start gap-4 bg-[#FAFAFA] border border-[#E5E5E5] hover:border-[#0A0A0A] transition-colors px-6 py-5"
                 >
-                  <div className="w-[42px] h-[42px] flex justify-center items-center flex-shrink-0 rounded-[14px] bg-[rgba(255,255,255,0.92)]">
-                    <span className="text-[#ED8D31] text-xl">💡</span>
+                  <div className="w-10 h-10 flex justify-center items-center flex-shrink-0 bg-[#0A0A0A] text-[#ED8D31]">
+                    <Lightbulb size={18} strokeWidth={1.8} />
                   </div>
-                  <div className="flex flex-col gap-[3px]">
-                    <h3 className="text-[#2F343B] text-base font-bold leading-[120%]">
+                  <div>
+                    <h3 className="text-[#0A0A0A] text-[14px] font-bold tracking-tight leading-tight mb-1">
                       {f.title}
                     </h3>
-                    <p className="text-[#7A8088] text-sm font-normal leading-[160%]">
+                    <p className="text-[#525252] text-[12px] leading-[1.65]">
                       {f.desc}
                     </p>
                   </div>
@@ -114,48 +115,48 @@ export default function IdeasSection() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-[rgba(229,226,220,0.92)] bg-[rgba(255,255,255,0.82)] backdrop-blur-[5px] p-[30px]">
-            <div className="rounded-[24px] border border-[rgba(229,226,220,0.90)] bg-[rgba(255,255,255,0.96)] p-6 flex flex-col gap-[13.5px] relative min-h-[420px]">
-              <div className="flex flex-col gap-2">
-                <label className="text-[#2F343B] text-[13px] font-semibold leading-[19.5px]">
+          <div className="bg-white border border-[#E5E5E5] p-8 lg:p-10 flex flex-col">
+            <div className="flex-1 space-y-5">
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
                   {form.category}
                 </label>
-                <div className="flex items-center gap-2 px-[14px] py-[12px] rounded-[14px] border border-[#E5E2DC] bg-[#F5F4F1] min-h-[48px]">
-                  <span className="text-[#7A8088] text-sm">
+                <div className="px-4 py-3 bg-[#FAFAFA] border border-[#E5E5E5] min-h-[48px] flex items-center">
+                  <span className="text-[#A3A3A3] text-[13px]">
                     {form.categoryPlaceholder}
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[#2F343B] text-[13px] font-semibold leading-[19.5px]">
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
                   {form.title}
                 </label>
-                <div className="flex items-center gap-2 px-[14px] py-[12px] rounded-[14px] border border-[#E5E2DC] bg-[#F5F4F1] min-h-[48px]">
-                  <span className="text-[#7A8088] text-sm">
+                <div className="px-4 py-3 bg-[#FAFAFA] border border-[#E5E5E5] min-h-[48px] flex items-center">
+                  <span className="text-[#A3A3A3] text-[13px]">
                     {form.titlePlaceholder}
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[#2F343B] text-[13px] font-semibold leading-[19.5px]">
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
                   {form.description}
                 </label>
-                <div className="flex items-start gap-2 px-[14px] py-[11.5px] rounded-[14px] border border-[#E5E2DC] bg-[#F5F4F1] min-h-[130px]">
-                  <span className="text-[#7A8088] text-sm leading-[165%] pt-1">
+                <div className="px-4 py-3 bg-[#FAFAFA] border border-[#E5E5E5] min-h-[140px]">
+                  <span className="text-[#A3A3A3] text-[13px] leading-[1.65]">
                     {form.descriptionPlaceholder}
                   </span>
                 </div>
               </div>
-
-              <button className="flex items-center justify-center min-h-[46px] px-[18px] rounded-lg bg-[#ED8D31] text-white text-sm font-medium hover:bg-[#d47d29] transition-colors absolute bottom-6 left-6 right-6">
-                {form.submit}
-              </button>
             </div>
+
+            <button className="mt-7 w-full inline-flex items-center justify-center px-6 py-3.5 bg-[#ED8D31] text-black text-[12px] uppercase tracking-[0.15em] font-bold hover:bg-[#fa9d40] transition-colors">
+              {form.submit}
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

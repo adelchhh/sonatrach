@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, apiDelete } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  DataPanel,
+  Modal,
+  Button,
+  Alert,
+  TextField,
+} from "../../components/ui/Studio";
 
 export default function ManageSite() {
   const t = useT();
@@ -12,28 +22,18 @@ export default function ManageSite() {
   const [formError, setFormError] = useState(null);
   const [pageError, setPageError] = useState(null);
 
-  const [form, setForm] = useState({
-    name: "",
-    address: "",
-  });
-
-  const [modal, setModal] = useState({
-    open: false,
-    siteId: null,
-  });
-
-  const selectedSite = sites.find((site) => site.id === modal.siteId);
+  const [form, setForm] = useState({ name: "", address: "" });
+  const [modal, setModal] = useState({ open: false, siteId: null });
+  const selectedSite = sites.find((s) => s.id === modal.siteId);
 
   const loadSites = () => {
     setLoading(true);
     setPageError(null);
     apiGet("/sites")
-      .then((res) => {
-        setSites(res.data || []);
-      })
-      .catch((err) => {
-        setPageError(err.message || "Failed to load sites");
-      })
+      .then((res) => setSites(res.data || []))
+      .catch((err) =>
+        setPageError(err.message || "Impossible de charger les sites.")
+      )
       .finally(() => setLoading(false));
   };
 
@@ -44,12 +44,10 @@ export default function ManageSite() {
   const handleAddSite = async (e) => {
     e.preventDefault();
     setFormError(null);
-
     if (!form.name.trim()) {
-      setFormError("Site name is required.");
+      setFormError("Le nom du site est obligatoire.");
       return;
     }
-
     setSubmitting(true);
     try {
       await apiPost("/sites", {
@@ -59,15 +57,13 @@ export default function ManageSite() {
       setForm({ name: "", address: "" });
       loadSites();
     } catch (err) {
-      setFormError(err.message || "Could not create site.");
+      setFormError(err.message || "Création du site impossible.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const closeModal = () => {
-    setModal({ open: false, siteId: null });
-  };
+  const closeModal = () => setModal({ open: false, siteId: null });
 
   const handleDeleteSite = async () => {
     try {
@@ -75,7 +71,7 @@ export default function ManageSite() {
       closeModal();
       loadSites();
     } catch (err) {
-      alert(err.message || "Could not delete site.");
+      alert(err.message || "Suppression impossible.");
       closeModal();
     }
   };
@@ -94,250 +90,177 @@ export default function ManageSite() {
   ).length;
 
   return (
-    <>
-      <div className="flex h-screen bg-[#F7F7F5]">
-        <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("admin.site.adminTools")}
+        title={t("admin.site.title")}
+        subtitle={t("admin.site.subtitle")}
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Sites" },
+        ]}
+      />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardTopBar />
+      <PageBody>
+        {pageError && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {pageError}
+          </Alert>
+        )}
 
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                  {t("admin.site.adminTools")}
-                </p>
-                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  {t("admin.site.title")}
-                </h1>
-                <p className="text-[#7A8088] text-sm mt-2 max-w-[720px] leading-[170%]">
-                  {t("admin.site.subtitle")}
-                </p>
-              </div>
+        <StatBar>
+          <StatCell label={t("admin.site.statTotal")} value={totalSites} sub="Référencés" />
+          <StatCell
+            label={t("admin.site.statInUse")}
+            value={sitesInUse}
+            sub="Sites actifs sur sessions"
+            accent={sitesInUse > 0}
+          />
+          <StatCell label={t("admin.site.statActivities")} value={totalActivities} sub="Activités liées" />
+          <StatCell label={t("admin.site.statSessions")} value={totalSessions} sub="Sessions liées" />
+        </StatBar>
 
-              {pageError && (
-                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                  {pageError}
-                </div>
+        <div className="grid grid-cols-1 xl:grid-cols-[1.65fr_1fr] gap-6">
+          <DataPanel
+            title={t("admin.site.existing")}
+            subtitle={t("admin.site.existingHint")}
+            badge={`${sites.length}`}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
+                <thead className="bg-[#0A0A0A]">
+                  <tr>
+                    {[
+                      t("admin.site.col.site"),
+                      t("admin.site.col.address"),
+                      t("admin.site.col.activities"),
+                      t("admin.site.col.sessions"),
+                      t("admin.site.col.action"),
+                    ].map((h, i) => (
+                      <th
+                        key={i}
+                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                        {t("admin.site.loading")}
+                      </td>
+                    </tr>
+                  ) : sites.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                        {t("admin.site.empty")}
+                      </td>
+                    </tr>
+                  ) : (
+                    sites.map((site) => (
+                      <tr
+                        key={site.id}
+                        className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors"
+                      >
+                        <td className="px-6 py-4 text-[14px] font-bold text-[#0A0A0A]">
+                          {site.name}
+                        </td>
+                        <td className="px-6 py-4 text-[12px] text-[#525252]">
+                          {site.address || "—"}
+                        </td>
+                        <td className="px-6 py-4 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
+                          {site.activities_count}
+                        </td>
+                        <td className="px-6 py-4 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
+                          {site.sessions_count}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() =>
+                              setModal({ open: true, siteId: site.id })
+                            }
+                          >
+                            {t("common.delete")}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </DataPanel>
+
+          <DataPanel
+            title={t("admin.site.addNew")}
+            subtitle={t("admin.site.addNewHint")}
+          >
+            <form onSubmit={handleAddSite} className="p-6 space-y-5">
+              {formError && (
+                <Alert tone="danger" title={t("sg.error")}>
+                  {formError}
+                </Alert>
               )}
 
-              {/* Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard label={t("admin.site.statTotal")} value={totalSites} />
-                <StatCard label={t("admin.site.statInUse")} value={sitesInUse} />
-                <StatCard label={t("admin.site.statActivities")} value={totalActivities} />
-                <StatCard label={t("admin.site.statSessions")} value={totalSessions} />
-              </div>
+              <TextField
+                label={t("admin.site.siteName")}
+                value={form.name}
+                onChange={(v) => setForm((p) => ({ ...p, name: v }))}
+                placeholder={t("admin.site.siteNamePlaceholder")}
+                required
+              />
 
-              <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
-                {/* Sites list */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-6 py-5 border-b border-[#E5E2DC]">
-                    <h2 className="text-[22px] font-bold text-[#2F343B]">
-                      {t("admin.site.existing")}
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1">
-                      {t("admin.site.existingHint")}
-                    </p>
-                  </div>
+              <TextField
+                label={t("admin.site.address")}
+                value={form.address}
+                onChange={(v) => setForm((p) => ({ ...p, address: v }))}
+                placeholder={t("admin.site.addressPlaceholder")}
+              />
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[760px]">
-                      <thead>
-                        <tr className="text-left bg-[#F9F8F6]">
-                          <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            {t("admin.site.col.site")}
-                          </th>
-                          <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            {t("admin.site.col.address")}
-                          </th>
-                          <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            {t("admin.site.col.activities")}
-                          </th>
-                          <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            {t("admin.site.col.sessions")}
-                          </th>
-                          <th className="px-6 py-4 text-xs font-semibold text-[#7A8088] uppercase tracking-wide">
-                            {t("admin.site.col.action")}
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {loading && (
-                          <tr>
-                            <td
-                              colSpan="5"
-                              className="px-6 py-10 text-center text-sm text-[#7A8088]"
-                            >
-                              {t("admin.site.loading")}
-                            </td>
-                          </tr>
-                        )}
-
-                        {!loading && sites.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan="5"
-                              className="px-6 py-10 text-center text-sm text-[#7A8088]"
-                            >
-                              {t("admin.site.empty")}
-                            </td>
-                          </tr>
-                        )}
-
-                        {!loading &&
-                          sites.map((site) => (
-                            <tr
-                              key={site.id}
-                              className="border-t border-[#E5E2DC] hover:bg-[#FCFBF9]"
-                            >
-                              <td className="px-6 py-4">
-                                <p className="font-semibold text-[#2F343B] text-sm">
-                                  {site.name}
-                                </p>
-                              </td>
-
-                              <td className="px-6 py-4 text-sm text-[#7A8088]">
-                                {site.address || "—"}
-                              </td>
-
-                              <td className="px-6 py-4 text-sm text-[#2F343B] font-medium">
-                                {site.activities_count}
-                              </td>
-
-                              <td className="px-6 py-4 text-sm text-[#2F343B] font-medium">
-                                {site.sessions_count}
-                              </td>
-
-                              <td className="px-6 py-4">
-                                <button
-                                  onClick={() =>
-                                    setModal({
-                                      open: true,
-                                      siteId: site.id,
-                                    })
-                                  }
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm font-medium text-[#C95454] hover:bg-[#FFF5F5] transition-colors"
-                                >
-                                  {t("common.delete")}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                {/* Add site form */}
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6 h-fit">
-                  <h2 className="text-[22px] font-bold text-[#2F343B] mb-2">
-                    {t("admin.site.addNew")}
-                  </h2>
-                  <p className="text-sm text-[#7A8088] mb-5 leading-[170%]">
-                    {t("admin.site.addNewHint")}
-                  </p>
-
-                  <form onSubmit={handleAddSite} className="space-y-4">
-                    {formError && (
-                      <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">
-                        {formError}
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                        {t("admin.site.siteName")} <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={form.name}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, name: e.target.value }))
-                        }
-                        placeholder={t("admin.site.siteNamePlaceholder")}
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm text-[#2F343B] placeholder:text-[#7A8088] outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                        {t("admin.site.address")}
-                      </label>
-                      <input
-                        type="text"
-                        value={form.address}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, address: e.target.value }))
-                        }
-                        placeholder={t("admin.site.addressPlaceholder")}
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm text-[#2F343B] placeholder:text-[#7A8088] outline-none"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white font-semibold text-sm hover:bg-[#d97d26] transition-colors disabled:opacity-60"
-                    >
-                      {submitting ? t("admin.site.adding") : t("admin.site.addBtn")}
-                    </button>
-                  </form>
-                </section>
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>
-
-      {/* Delete confirmation modal */}
-      {modal.open && selectedSite && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
-            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              {t("admin.site.deleteTitle")}
-            </h2>
-
-            <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">
-              {t("admin.site.deleteText", { name: selectedSite.name })}
-              {Number(selectedSite.sessions_count) > 0 && (
-                <>
-                  <br />
-                  <span className="text-red-600 font-medium">
-                    {t("admin.site.deleteWarn", { count: selectedSite.sessions_count })}
-                  </span>
-                </>
-              )}
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={submitting}
               >
-                {t("common.cancel")}
-              </button>
-
-              <button
-                onClick={handleDeleteSite}
-                className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
-              >
-                {t("common.confirm")}
-              </button>
-            </div>
-          </div>
+                {submitting ? t("admin.site.adding") : t("admin.site.addBtn")}
+              </Button>
+            </form>
+          </DataPanel>
         </div>
-      )}
-    </>
-  );
-}
+      </PageBody>
 
-function StatCard({ label, value }) {
-  return (
-    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
-      <p className="text-sm font-semibold text-[#7A8088] mb-2">{label}</p>
-      <p className="text-3xl font-extrabold text-[#2F343B]">{value}</p>
-    </div>
+      <Modal
+        open={modal.open && !!selectedSite}
+        onClose={closeModal}
+        title={t("admin.site.deleteTitle")}
+        description={
+          selectedSite
+            ? t("admin.site.deleteText", { name: selectedSite.name })
+            : ""
+        }
+        footer={
+          <>
+            <Button variant="outline" size="md" onClick={closeModal}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="danger" size="md" onClick={handleDeleteSite}>
+              {t("common.confirm")}
+            </Button>
+          </>
+        }
+      >
+        {selectedSite && Number(selectedSite.sessions_count) > 0 && (
+          <Alert tone="warn" title="Attention">
+            {t("admin.site.deleteWarn", { count: selectedSite.sessions_count })}
+          </Alert>
+        )}
+      </Modal>
+    </PageShell>
   );
 }

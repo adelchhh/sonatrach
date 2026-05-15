@@ -1,36 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import toast from "react-hot-toast";
 import { apiGet, apiPost, getCurrentUserId } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  DataPanel,
+  StatusPill,
+  Modal,
+  Button,
+  Alert,
+  TextArea,
+  EmptyState,
+} from "../../components/ui/Studio";
 
-const STATUS_LABEL = {
-  PENDING: "Pending validation",
-  VALIDATED: "Validated — awaiting draw",
-  REJECTED: "Rejected",
-  SELECTED: "Selected ✨",
-  WAITING_LIST: "Waiting list",
-  CONFIRMED: "Confirmed",
-  WITHDRAWN: "Withdrawn",
-  CANCELLED: "Cancelled",
-};
-
-const STATUS_STYLES = {
-  PENDING: "bg-[#FFF4D6] text-[#B98900]",
-  VALIDATED: "bg-[#E2F4D9] text-[#3D7B22]",
-  REJECTED: "bg-[#FBE1E1] text-[#A93B3B]",
-  SELECTED: "bg-[#DAE7FB] text-[#2A52BE]",
-  WAITING_LIST: "bg-[#F7E6CC] text-[#A9651E]",
-  CONFIRMED: "bg-[#D4F4DD] text-[#2D7A4A]",
-  WITHDRAWN: "bg-[#F1F0EC] text-[#7A8088]",
-  CANCELLED: "bg-[#F1F0EC] text-[#7A8088]",
+const STATUS_TONE = {
+  PENDING: "warn",
+  VALIDATED: "info",
+  REJECTED: "danger",
+  SELECTED: "accent",
+  WAITING_LIST: "warn",
+  CONFIRMED: "success",
+  WITHDRAWN: "neutral",
+  CANCELLED: "neutral",
 };
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -38,6 +41,7 @@ function formatDate(value) {
 }
 
 export default function MyRequests() {
+  const t = useT();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -50,17 +54,30 @@ export default function MyRequests() {
 
   const userId = getCurrentUserId();
 
+  const STATUS_LABEL = {
+    PENDING: t("statuses.PENDING"),
+    VALIDATED: t("statuses.VALIDATED"),
+    REJECTED: t("statuses.REJECTED"),
+    SELECTED: t("statuses.SELECTED"),
+    WAITING_LIST: t("statuses.WAITING_LIST"),
+    CONFIRMED: t("statuses.CONFIRMED"),
+    WITHDRAWN: t("statuses.WITHDRAWN"),
+    CANCELLED: t("statuses.CANCELLED"),
+  };
+
   const load = () => {
     if (!userId) {
       setLoading(false);
-      setPageError("Please log in to see your requests.");
+      setPageError("Veuillez vous connecter pour voir vos demandes.");
       return;
     }
     setLoading(true);
     setPageError(null);
     apiGet(`/me/registrations?user_id=${userId}`)
       .then((res) => setRequests(res.data || []))
-      .catch((err) => setPageError(err.message || "Could not load requests."))
+      .catch((err) =>
+        setPageError(err.message || t("sg.error"))
+      )
       .finally(() => setLoading(false));
   };
 
@@ -83,17 +100,17 @@ export default function MyRequests() {
   }, [requests]);
 
   const handleCancel = async (registrationId) => {
-    if (!window.confirm("Cancel this registration? This cannot be undone.")) {
+    if (!window.confirm(t("sg.confirmCancelRegistration")))
       return;
-    }
     setActingOn(registrationId);
     try {
       await apiPost(`/registrations/${registrationId}/cancel`, {
         user_id: userId,
       });
+      toast.success(t("sg.registrationCancelled"));
       load();
     } catch (err) {
-      alert(err.message || "Could not cancel.");
+      toast.error(err.message || t("sg.error"));
     } finally {
       setActingOn(null);
     }
@@ -101,7 +118,7 @@ export default function MyRequests() {
 
   const submitWithdraw = async () => {
     if (!withdrawReason.trim()) {
-      alert("Please provide a reason.");
+      toast.error(t("sg.confirmReason"));
       return;
     }
     setActingOn(withdrawModal.registrationId);
@@ -112,273 +129,235 @@ export default function MyRequests() {
       });
       setWithdrawModal({ open: false, registrationId: null });
       setWithdrawReason("");
+      toast.success(t("sg.withdrawalSent"));
       load();
     } catch (err) {
-      alert(err.message || "Could not submit withdrawal.");
+      toast.error(err.message || t("sg.error"));
     } finally {
       setActingOn(null);
     }
   };
 
   return (
-    <>
-      <div className="flex h-screen bg-[#F7F7F5]">
-        <DashboardSidebar />
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardTopBar />
-
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  My Requests
-                </h1>
-                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Track all your activity registrations, see draw outcomes and
-                  withdraw if needed.
-                </p>
-              </div>
-
-              {pageError && (
-                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                  {pageError}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard title="Total requests" value={stats.total} />
-                <StatCard title="In progress" value={stats.pending} />
-                <StatCard title="Selected / Confirmed" value={stats.selected} />
-                <StatCard title="Closed" value={stats.closed} />
-              </div>
-
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                  <h2 className="text-[24px] font-bold text-[#2F343B]">
-                    All my registrations
-                  </h2>
-                  <Link
-                    to="/dashboard/catalog"
-                    className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-semibold"
-                  >
-                    + Register to a new activity
-                  </Link>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1100px]">
-                    <thead className="bg-[#FBFAF8]">
-                      <tr>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Activity / Session
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Submitted
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          My choices
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Status
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Reference
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {loading && (
-                        <tr>
-                          <td
-                            colSpan="6"
-                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
-                          >
-                            Loading your requests...
-                          </td>
-                        </tr>
-                      )}
-
-                      {!loading && requests.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan="6"
-                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
-                          >
-                            You haven't registered for any activity yet.{" "}
-                            <Link
-                              to="/dashboard/catalog"
-                              className="text-[#ED8D31] font-semibold"
-                            >
-                              Browse the catalog
-                            </Link>
-                            .
-                          </td>
-                        </tr>
-                      )}
-
-                      {requests.map((r) => (
-                        <tr
-                          key={r.id}
-                          className="border-t border-[#E5E2DC] align-top"
-                        >
-                          <td className="px-5 py-5">
-                            <p className="font-semibold text-[#2F343B] text-sm">
-                              {r.activity_title}
-                            </p>
-                            <p className="text-xs text-[#7A8088] mt-1">
-                              {formatDate(r.start_date)} →{" "}
-                              {formatDate(r.end_date)}
-                            </p>
-                          </td>
-
-                          <td className="px-5 py-5 text-sm text-[#7A8088]">
-                            {formatDate(r.registered_at)}
-                          </td>
-
-                          <td className="px-5 py-5 text-sm text-[#2F343B]">
-                            {r.choices && r.choices.length > 0 ? (
-                              <ul className="space-y-1">
-                                {r.choices.map((c) => (
-                                  <li key={c.session_site_id}>
-                                    #{c.choice_order} {c.site_name}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <span className="text-[#7A8088] italic">
-                                No site selected
-                              </span>
-                            )}
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <StatusBadge status={r.status} />
-                            {r.rejection_reason && (
-                              <p
-                                className="text-xs text-red-600 mt-1 max-w-[180px]"
-                                title={r.rejection_reason}
-                              >
-                                {r.rejection_reason}
-                              </p>
-                            )}
-                          </td>
-
-                          <td className="px-5 py-5 text-xs text-[#7A8088]">
-                            {r.reference_number || "—"}
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <div className="flex flex-wrap gap-2">
-                              {["PENDING", "VALIDATED"].includes(r.status) && (
-                                <button
-                                  onClick={() => handleCancel(r.id)}
-                                  disabled={actingOn === r.id}
-                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-sm text-[#A93B3B] disabled:opacity-60"
-                                >
-                                  Cancel
-                                </button>
-                              )}
-
-                              {["SELECTED", "CONFIRMED"].includes(r.status) && (
-                                <button
-                                  onClick={() =>
-                                    setWithdrawModal({
-                                      open: true,
-                                      registrationId: r.id,
-                                    })
-                                  }
-                                  disabled={actingOn === r.id}
-                                  className="px-3 py-1.5 rounded-lg bg-[#A93B3B] text-white text-sm disabled:opacity-60"
-                                >
-                                  Withdraw
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </main>
-        </div>
-      </div>
-
-      {withdrawModal.open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() =>
-            setWithdrawModal({ open: false, registrationId: null })
-          }
-        >
-          <div
-            className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg"
-            onClick={(e) => e.stopPropagation()}
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.myArea")}
+        title={t("sg.myRequests")}
+        subtitle=""
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: t("sg.myRequests") },
+        ]}
+        actions={
+          <Button
+            to="/dashboard/catalog"
+            variant="primary"
+            size="md"
+            icon={<span className="text-[14px] leading-none">＋</span>}
           >
-            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Request Withdrawal
-            </h2>
+            {t("sg.newRecord")}
+          </Button>
+        }
+      />
 
-            <p className="text-sm text-[#7A8088] mb-4">
-              Your withdrawal request will be reviewed by an admin. Provide a
-              reason.
-            </p>
+      <PageBody>
+        {pageError && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {pageError}
+          </Alert>
+        )}
 
-            <textarea
-              value={withdrawReason}
-              onChange={(e) => setWithdrawReason(e.target.value)}
-              rows={4}
-              placeholder="e.g., Family emergency, work conflict..."
-              className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
-            />
+        <StatBar>
+          <StatCell label={t("sg.myRequests")} value={stats.total} sub={t("sg.total")} />
+          <StatCell
+            label={t("sg.inProgress")}
+            value={stats.pending}
+            sub={t("sg.pending")}
+            accent={stats.pending > 0}
+          />
+          <StatCell
+            label={t("sg.selected")}
+            value={stats.selected}
+            sub=""
+          />
+          <StatCell label={t("statuses.WITHDRAWN")} value={stats.closed} sub="" />
+        </StatBar>
 
-            <div className="flex justify-end gap-3 mt-5">
-              <button
-                onClick={() =>
-                  setWithdrawModal({ open: false, registrationId: null })
-                }
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={submitWithdraw}
-                disabled={actingOn === withdrawModal.registrationId}
-                className="px-4 py-2 rounded-[12px] bg-[#A93B3B] text-white text-sm disabled:opacity-60"
-              >
-                Submit withdrawal
-              </button>
+        <DataPanel
+          title={t("sg.myRequests")}
+          subtitle=""
+          badge={`${requests.length}`}
+        >
+          {loading ? (
+            <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
+              {t("sg.loading")}
             </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
+          ) : requests.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                icon="📄"
+                title={t("sg.emptyRegistrations")}
+                description=""
+                action={
+                  <Button to="/dashboard/catalog" variant="primary" size="md">
+                    {t("hero.browseCatalog")}
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1100px]">
+                <thead className="bg-[#0A0A0A]">
+                  <tr>
+                    {[
+                      t("admin.registrations.col.activitySession"),
+                      t("admin.registrations.col.submitted"),
+                      t("admin.registrations.details.siteChoices"),
+                      t("common.status"),
+                      t("admin.registrations.col.reference") === "admin.registrations.col.reference" ? "Reference" : t("admin.registrations.col.reference"),
+                      t("common.actions"),
+                    ].map((h, i) => (
+                      <th
+                        key={i}
+                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
+                    >
+                      <td className="px-6 py-5">
+                        <p className="text-[#0A0A0A] text-[14px] font-bold leading-tight">
+                          {r.activity_title}
+                        </p>
+                        <p className="text-[#737373] text-[11px] mt-1 tabular-nums uppercase tracking-wider">
+                          {formatDate(r.start_date)} → {formatDate(r.end_date)}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
+                        {formatDate(r.registered_at)}
+                      </td>
+                      <td className="px-6 py-5 text-[12px] text-[#0A0A0A]">
+                        {r.choices && r.choices.length > 0 ? (
+                          <ul className="space-y-1">
+                            {r.choices.map((c) => (
+                              <li
+                                key={c.session_site_id}
+                                className="flex items-baseline gap-2"
+                              >
+                                <span className="text-[#A3A3A3] tabular-nums font-bold">
+                                  {String(c.choice_order).padStart(2, "0")}
+                                </span>
+                                <span>{c.site_name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-[#A3A3A3] italic">
+                            {t("activityDetail.noSiteSelected")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-5">
+                        <StatusPill
+                          tone={STATUS_TONE[r.status] || "neutral"}
+                          label={STATUS_LABEL[r.status] || r.status}
+                        />
+                        {r.rejection_reason && (
+                          <p
+                            className="text-[11px] text-[#9F1F1F] mt-2 max-w-[200px]"
+                            title={r.rejection_reason}
+                          >
+                            {r.rejection_reason}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-6 py-5 text-[11px] font-mono tabular-nums text-[#737373]">
+                        {r.reference_number || "—"}
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap gap-2">
+                          {["PENDING", "VALIDATED"].includes(r.status) && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => handleCancel(r.id)}
+                              disabled={actingOn === r.id}
+                            >
+                              {t("common.cancel")}
+                            </Button>
+                          )}
+                          {["SELECTED", "CONFIRMED"].includes(r.status) && (
+                            <Button
+                              size="sm"
+                              variant="dark"
+                              onClick={() =>
+                                setWithdrawModal({
+                                  open: true,
+                                  registrationId: r.id,
+                                })
+                              }
+                              disabled={actingOn === r.id}
+                            >
+                              {t("statuses.WITHDRAWN")}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DataPanel>
+      </PageBody>
 
-function StatCard({ title, value }) {
-  return (
-    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
-      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
-      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-    </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
-  const label = STATUS_LABEL[status] || status;
-  return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
-      {label}
-    </span>
+      <Modal
+        open={withdrawModal.open}
+        onClose={() =>
+          setWithdrawModal({ open: false, registrationId: null })
+        }
+        title={t("statuses.WITHDRAWN")}
+        description=""
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() =>
+                setWithdrawModal({ open: false, registrationId: null })
+              }
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="dark"
+              size="md"
+              onClick={submitWithdraw}
+              disabled={actingOn === withdrawModal.registrationId}
+            >
+              {t("common.submit")}
+            </Button>
+          </>
+        }
+      >
+        <TextArea
+          label={t("admin.withdrawals.col.reason") === "admin.withdrawals.col.reason" ? "Motif" : t("admin.withdrawals.col.reason")}
+          value={withdrawReason}
+          onChange={setWithdrawReason}
+          placeholder=""
+          rows={4}
+          required
+        />
+      </Modal>
+    </PageShell>
   );
 }

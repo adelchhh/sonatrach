@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { Search, Bell, LogOut } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { getCurrentUser } from "../../api";
 
@@ -12,117 +13,100 @@ export default function DashboardTopBar() {
     navigate("/login");
   };
 
-  const initial =
-    (user?.first_name || user?.name || "?").charAt(0).toUpperCase();
+  const initial = (user?.first_name || user?.name || "?")
+    .charAt(0)
+    .toUpperCase();
   const displayName = user
     ? `${user.first_name || ""} ${(user.name || "").charAt(0)}.`.trim()
     : "—";
   const role = user?.roles?.[0] || "";
-  const roleLabel = role
-    ? t(`statuses.${role}`) === `statuses.${role}`
-      ? role
-      : t(`statuses.${role}`)
-    : "";
+  const roleTr = role ? t(`statuses.${role}`) : "";
+  const roleLabel =
+    roleTr && roleTr !== `statuses.${role}` ? roleTr : role || "";
 
   return (
-    <header className="h-[60px] bg-white border-b border-[#E5E2DC] flex items-center px-6 gap-4 sticky top-0 z-40">
-      <div className="flex-1 max-w-[360px]">
-        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-[#E5E2DC] bg-[#F5F4F1]">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="7" cy="7" r="4.5" stroke="#7A8088" strokeWidth="1.33333" />
-            <path
-              d="M10.5 10.5L13.5 13.5"
-              stroke="#7A8088"
-              strokeWidth="1.33333"
-              strokeLinecap="round"
-            />
-          </svg>
-
+    <header className="h-[60px] bg-white border-b border-[#E5E5E5] flex items-center px-6 lg:px-8 gap-5 sticky top-0 z-40">
+      {/* Search */}
+      <div className="flex-1 max-w-[420px]">
+        <div className="flex items-center gap-2.5 px-3 py-2 bg-[#FAFAFA] border border-[#E5E5E5] focus-within:border-[#0A0A0A] focus-within:bg-white transition-colors">
+          <Search size={14} strokeWidth={2} className="text-[#737373]" />
           <input
             type="text"
             placeholder={t("dashboard.topbar.searchPlaceholder")}
-            className="bg-transparent text-sm text-[#2F343B] placeholder:text-[#7A8088] outline-none w-full"
+            className="bg-transparent text-[13px] text-[#0A0A0A] placeholder:text-[#A3A3A3] outline-none w-full"
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-4 ml-auto">
-        <div className="flex min-h-[42px] p-1 items-center gap-1 rounded-full border border-[#E5E2DC] bg-[rgba(255,255,255,0.88)]">
+      <div className="flex items-center gap-3 ml-auto">
+        {/* Lang switch */}
+        <div className="flex items-center border border-[#E5E5E5] overflow-hidden">
           <button
             type="button"
             onClick={() => setLang("en")}
-            className={`flex h-8 min-w-[38px] px-[11.5px] justify-center items-center rounded-full transition-colors ${
-              lang === "en" ? "bg-[#ED8D31]" : ""
+            className={`px-3 h-8 text-[10px] uppercase tracking-[0.15em] font-bold transition-colors ${
+              lang === "en"
+                ? "bg-[#0A0A0A] text-white"
+                : "text-[#737373] hover:text-[#0A0A0A]"
             }`}
           >
-            <span
-              className={`text-xs font-semibold ${
-                lang === "en" ? "text-white" : "text-[#7A8088]"
-              }`}
-            >
-              EN
-            </span>
+            EN
           </button>
-
           <button
             type="button"
             onClick={() => setLang("fr")}
-            className={`flex h-8 min-w-[38px] px-[10.7px] justify-center items-center rounded-full transition-colors ${
-              lang === "fr" ? "bg-[#ED8D31]" : ""
+            className={`px-3 h-8 text-[10px] uppercase tracking-[0.15em] font-bold transition-colors border-l border-[#E5E5E5] ${
+              lang === "fr"
+                ? "bg-[#0A0A0A] text-white"
+                : "text-[#737373] hover:text-[#0A0A0A]"
             }`}
           >
-            <span
-              className={`text-xs font-semibold ${
-                lang === "fr" ? "text-white" : "text-[#7A8088]"
-              }`}
-            >
-              FR
-            </span>
+            FR
           </button>
         </div>
 
+        {/* Notifications */}
         <button
           type="button"
           onClick={() => navigate("/dashboard/notifications")}
-          className="relative w-9 h-9 flex items-center justify-center rounded-xl border border-[#E5E2DC] bg-white hover:bg-[#F5F4F1] transition-colors"
+          className="relative w-9 h-9 flex items-center justify-center bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] transition-colors"
           title={t("dashboard.sidebar.notifications")}
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path
-              d="M9 1.5C6.1 1.5 3.75 3.85 3.75 6.75v.75L2.25 10.5v.75h13.5v-.75L14.25 7.5v-.75C14.25 3.85 11.9 1.5 9 1.5z"
-              stroke="#2F343B"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M6.75 11.25v.75A2.25 2.25 0 0 0 11.25 12v-.75"
-              stroke="#2F343B"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <Bell size={14} strokeWidth={2} className="text-[#0A0A0A]" />
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#ED8D31]" />
         </button>
 
+        {/* Logout */}
         <button
           type="button"
           onClick={handleLogout}
-          className="hidden sm:inline-flex items-center px-3 h-9 rounded-xl border border-[#E5E2DC] bg-white text-sm text-[#2F343B] hover:bg-[#F5F4F1] transition-colors"
+          className="hidden md:inline-flex items-center gap-2 px-3.5 h-9 bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] text-[10px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] transition-colors"
           title={t("common.logout")}
         >
+          <LogOut size={13} strokeWidth={2} />
           {t("common.logout")}
         </button>
 
-        <div className="flex items-center gap-2.5">
+        {/* Profile */}
+        <div className="flex items-center gap-3 pl-3 border-l border-[#E5E5E5]">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-[#2F343B] leading-tight">
+            <p className="text-[12px] font-bold text-[#0A0A0A] leading-tight">
               {displayName}
             </p>
-            <p className="text-xs text-[#7A8088] leading-tight">{roleLabel}</p>
+            {roleLabel && (
+              <p className="text-[10px] uppercase tracking-[0.15em] font-medium text-[#737373] leading-tight mt-0.5">
+                {roleLabel}
+              </p>
+            )}
           </div>
-
-          <div className="w-9 h-9 rounded-full bg-[#ED8D31] flex items-center justify-center overflow-hidden flex-shrink-0">
-            <span className="text-white text-sm font-bold">{initial}</span>
+          <div
+            className="w-9 h-9 flex items-center justify-center text-white text-[13px] font-black"
+            style={{
+              background:
+                "linear-gradient(135deg, #ED8D31 0%, #B5560F 100%)",
+            }}
+          >
+            {initial}
           </div>
         </div>
       </div>

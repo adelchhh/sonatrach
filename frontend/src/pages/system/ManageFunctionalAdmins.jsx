@@ -1,240 +1,271 @@
 import { useEffect, useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { API_BASE_URL } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  DataPanel,
+  StatusPill,
+  Modal,
+  Button,
+  Alert,
+  TextField,
+} from "../../components/ui/Studio";
 
-const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = `${API_BASE_URL}/api`;
 
 export default function ManageFunctionalAdmins() {
-  const [functionalAdmins, setFunctionalAdmins] = useState([]);
+  const t = useT();
+  const [admins, setAdmins] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [foundEmployee, setFoundEmployee] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [removeModal, setRemoveModal] = useState({ open: false, id: null });
 
-  const loadFunctionalAdmins = async () => {
+  const load = async () => {
     try {
+      setLoading(true);
       const res = await fetch(`${API_URL}/system/roles/functional-admins`);
       const data = await res.json();
-      setFunctionalAdmins(data.data || []);
+      setAdmins(data.data || []);
     } catch (err) {
-      console.error(err);
-      setError("Could not load functional admins");
+      setError("Impossible de charger les administrateurs.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadFunctionalAdmins();
+    load();
   }, []);
 
   const handleSearch = async () => {
     setError("");
     setFoundEmployee(null);
-
     if (!searchValue.trim()) {
-      setError("Please enter employee number or user ID");
+      setError("Saisissez un matricule ou un identifiant.");
       return;
     }
-
     try {
       const res = await fetch(
         `${API_URL}/system/employees/search?query=${searchValue}`
       );
-
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.message || "Employee not found");
+        setError(data.message || "Collaborateur introuvable.");
         return;
       }
-
       setFoundEmployee(data.data);
-    } catch (err) {
-      console.error(err);
-      setError("Search failed");
+    } catch {
+      setError("La recherche a échoué.");
     }
   };
 
   const handleAssign = async () => {
     if (!foundEmployee) return;
-
     try {
       const res = await fetch(
         `${API_URL}/system/users/${foundEmployee.id}/roles/functional-admin`,
-        {
-          method: "POST",
-        }
+        { method: "POST" }
       );
-
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.message || "Could not assign role");
+        setError(data.message || "Attribution impossible.");
         return;
       }
-
       setFoundEmployee(null);
       setSearchValue("");
-      await loadFunctionalAdmins();
-    } catch (err) {
-      console.error(err);
-      setError("Could not assign role");
+      await load();
+    } catch {
+      setError("Attribution impossible.");
     }
   };
 
-  const handleRemove = async (id) => {
+  const handleRemove = async () => {
     try {
       const res = await fetch(
-        `${API_URL}/system/users/${id}/roles/functional-admin`,
-        {
-          method: "DELETE",
-        }
+        `${API_URL}/system/users/${removeModal.id}/roles/functional-admin`,
+        { method: "DELETE" }
       );
-
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.message || "Could not remove role");
+        setError(data.message || "Retrait impossible.");
         return;
       }
-
-      await loadFunctionalAdmins();
-    } catch (err) {
-      console.error(err);
-      setError("Could not remove role");
+      setRemoveModal({ open: false, id: null });
+      await load();
+    } catch {
+      setError("Retrait impossible.");
     }
   };
 
+  const activeCount = admins.filter((a) => a.active).length;
+
   return (
-    <div className="flex h-screen bg-[#F7F7F5]">
-      <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.systemAdmin")}
+        title="Administrateurs fonctionnels"
+        subtitle="Recherchez un collaborateur par matricule et attribuez-lui le rôle d'administrateur fonctionnel."
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Administrateurs fonctionnels" },
+        ]}
+      />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardTopBar />
+      <PageBody>
+        {error && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {error}
+          </Alert>
+        )}
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div>
-            <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-              System admin tools
-            </p>
+        <StatBar>
+          <StatCell label="Total" value={admins.length} sub="Comptes attribués" />
+          <StatCell label="Actifs" value={activeCount} sub="Connexions valides" accent={activeCount > 0} />
+          <StatCell label="Inactifs" value={admins.length - activeCount} sub="Suspendus" />
+        </StatBar>
 
-            <h1 className="text-[36px] font-extrabold text-[#2F343B]">
-              Manage Functional Admins
-            </h1>
-
-            <p className="text-[#7A8088] text-sm mt-2">
-              Search an employee by employee number or user ID and assign the Functional Admin role.
-            </p>
-          </div>
-
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-            <h2 className="text-[22px] font-bold text-[#2F343B] mb-4">
-              Assign Functional Admin Role
-            </h2>
-
-            <div className="flex gap-3">
-              <input
-                value={searchValue}
-                onChange={(e) => {
-                  setSearchValue(e.target.value);
-                  setFoundEmployee(null);
-                  setError("");
-                }}
-                placeholder="Enter employee number, e.g. 002016"
-                className="flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none"
-              />
-
-              <button
-                onClick={handleSearch}
-                className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white hover:bg-[#F7F7F5]"
-              >
-                Search
-              </button>
+        <DataPanel
+          title="Attribuer le rôle"
+          subtitle="Saisissez le matricule du collaborateur à promouvoir"
+        >
+          <div className="p-6 space-y-5">
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <TextField
+                  label="Matricule"
+                  value={searchValue}
+                  onChange={(v) => {
+                    setSearchValue(v);
+                    setFoundEmployee(null);
+                    setError("");
+                  }}
+                  placeholder="ex : 002016"
+                />
+              </div>
+              <Button variant="dark" size="md" onClick={handleSearch}>
+                Rechercher
+              </Button>
             </div>
-
-            {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
 
             {foundEmployee && (
-              <div className="mt-4 flex justify-between items-center border border-[#E5E2DC] bg-[#FBFAF8] p-4 rounded-[14px]">
+              <div className="bg-[#FFF7E8] border border-[#ED8D31] p-4 flex justify-between items-center gap-4">
                 <div>
-                  <p className="font-semibold text-[#2F343B]">
-                    {foundEmployee.name} {foundEmployee.first_name}
+                  <p className="text-[14px] font-bold text-[#0A0A0A]">
+                    {foundEmployee.first_name} {foundEmployee.name}
                   </p>
-
-                  <p className="text-xs text-[#7A8088]">
-                    {foundEmployee.employee_number} · {foundEmployee.email}
+                  <p className="text-[11px] text-[#737373] mt-1 tabular-nums">
+                    Matricule {foundEmployee.employee_number} · {foundEmployee.email}
                   </p>
                 </div>
-
-                <button
-                  onClick={handleAssign}
-                  className="px-4 py-2 bg-[#ED8D31] text-white rounded-[10px]"
-                >
-                  Add Role
-                </button>
+                <Button variant="primary" size="md" onClick={handleAssign}>
+                  Attribuer le rôle
+                </Button>
               </div>
             )}
-          </section>
+          </div>
+        </DataPanel>
 
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-            <div className="px-5 py-4 border-b">
-              <h2 className="font-bold text-lg text-[#2F343B]">
-                Current Functional Admins
-              </h2>
-            </div>
-
-            {loading ? (
-              <div className="p-6 text-[#7A8088]">Loading...</div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-[#FBFAF8] text-xs text-gray-500">
+        <DataPanel
+          title="Administrateurs fonctionnels actuels"
+          subtitle="Comptes disposant du rôle"
+          badge={`${admins.length}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-[#0A0A0A]">
+                <tr>
+                  {["Nom", "Matricule", "Email", "Statut", "Action"].map(
+                    (h, i) => (
+                      <th
+                        key={i}
+                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
+                      >
+                        {h}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
                   <tr>
-                    <th className="px-5 py-3 text-left">Name</th>
-                    <th className="px-5 py-3 text-left">Employee Number</th>
-                    <th className="px-5 py-3 text-left">Email</th>
-                    <th className="px-5 py-3 text-left">Status</th>
-                    <th className="px-5 py-3 text-left">Action</th>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Chargement…
+                    </td>
                   </tr>
-                </thead>
-
-                <tbody>
-                  {functionalAdmins.map((admin) => (
-                    <tr key={admin.id} className="border-t">
-                      <td className="px-5 py-4">
-                        {admin.name} {admin.first_name}
+                ) : admins.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Aucun administrateur fonctionnel.
+                    </td>
+                  </tr>
+                ) : (
+                  admins.map((admin) => (
+                    <tr
+                      key={admin.id}
+                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors"
+                    >
+                      <td className="px-6 py-4 text-[14px] font-bold text-[#0A0A0A]">
+                        {admin.first_name} {admin.name}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-6 py-4 text-[12px] font-mono tabular-nums text-[#525252]">
                         {admin.employee_number}
                       </td>
-                      <td className="px-5 py-4">{admin.email}</td>
-                      <td className="px-5 py-4">
-                        {admin.active ? "Active" : "Inactive"}
+                      <td className="px-6 py-4 text-[12px] text-[#525252]">
+                        {admin.email}
                       </td>
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() => handleRemove(admin.id)}
-                          className="text-red-500 font-semibold"
+                      <td className="px-6 py-4">
+                        <StatusPill
+                          tone={admin.active ? "success" : "neutral"}
+                          label={admin.active ? "Actif" : "Inactif"}
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() =>
+                            setRemoveModal({ open: true, id: admin.id })
+                          }
                         >
-                          Remove
-                        </button>
+                          Retirer
+                        </Button>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </DataPanel>
+      </PageBody>
 
-                  {functionalAdmins.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="text-center py-6 text-gray-400">
-                        No functional admins yet
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
-          </section>
-        </main>
-      </div>
-    </div>
+      <Modal
+        open={removeModal.open}
+        onClose={() => setRemoveModal({ open: false, id: null })}
+        title="Retirer le rôle"
+        description="Confirmer le retrait du rôle d'administrateur fonctionnel ?"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => setRemoveModal({ open: false, id: null })}
+            >
+              Annuler
+            </Button>
+            <Button variant="danger" size="md" onClick={handleRemove}>
+              Retirer
+            </Button>
+          </>
+        }
+      />
+    </PageShell>
   );
 }

@@ -1,10 +1,20 @@
 import { useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createAnnouncement } from "../../services/announcementService";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  DataPanel,
+  Button,
+  Alert,
+  TextField,
+  TextArea,
+} from "../../components/ui/Studio";
 
 export default function CreateAnnouncement() {
+  const t = useT();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -13,21 +23,14 @@ export default function CreateAnnouncement() {
     hasDocument: false,
     document: null,
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const submitAnnouncement = async (status) => {
     setLoading(true);
     setError("");
-
     try {
       await createAnnouncement({
         title: form.title,
@@ -35,236 +38,172 @@ export default function CreateAnnouncement() {
         status,
         document: form.hasDocument ? form.document : null,
       });
-
       navigate("/dashboard/communicator/announcements");
     } catch (err) {
-      setError(err.message || "Failed to create announcement");
+      setError(err.message || "Création impossible.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveDraft = () => {
-    submitAnnouncement("DRAFT");
-  };
-
-  const handlePublish = () => {
-    submitAnnouncement("PUBLISHED");
-  };
-
   return (
-    <>
-      <div className="flex h-screen bg-[#F7F7F5]">
-        <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.communication")}
+        title="Créer une annonce"
+        subtitle="Rédigez une nouvelle communication interne avec titre, contenu et document optionnel."
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          {
+            label: "Annonces",
+            to: "/dashboard/communicator/announcements",
+          },
+          { label: "Nouvelle" },
+        ]}
+        actions={
+          <Button
+            to="/dashboard/communicator/announcements"
+            variant="outline"
+            size="md"
+          >
+            ← Retour
+          </Button>
+        }
+      />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardTopBar />
+      <PageBody>
+        {error && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {error}
+          </Alert>
+        )}
 
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div className="flex justify-between items-start gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                    Communicateur tools
-                  </p>
-                  <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                    Create Announcement
-                  </h1>
-                  <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
-                    Create a new employee-facing announcement with title,
-                    content, publication date, and an optional document.
-                  </p>
-                </div>
-
-                <Link
-                  to="/dashboard/communicator/announcements"
-                  className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors"
-                >
-                  Back
-                </Link>
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
+          <div className="space-y-6">
+            <DataPanel
+              title="Informations principales"
+              subtitle="Titre et contenu de l'annonce"
+            >
+              <div className="p-6 space-y-5">
+                <TextField
+                  label="Titre"
+                  value={form.title}
+                  onChange={(v) => update("title", v)}
+                  placeholder="Saisissez le titre de l'annonce…"
+                  required
+                />
+                <TextArea
+                  label="Contenu"
+                  value={form.content}
+                  onChange={(v) => update("content", v)}
+                  placeholder="Rédigez le message complet pour les collaborateurs…"
+                  rows={10}
+                  required
+                />
               </div>
+            </DataPanel>
 
-              {error && (
-                <div className="rounded-[16px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-                  {error}
+            <DataPanel
+              title="Document attaché (optionnel)"
+              subtitle="PDF, Word ou image"
+            >
+              <div className="p-6 space-y-5">
+                <div className="bg-[#FAFAFA] border border-[#E5E5E5] p-4 flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-[14px] font-bold text-[#0A0A0A]">
+                      Joindre un document
+                    </p>
+                    <p className="text-[11px] text-[#737373] mt-1 leading-[1.55]">
+                      Activez pour téléverser un PDF, un fichier Word ou une
+                      image.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => update("hasDocument", !form.hasDocument)}
+                    className={`relative w-11 h-6 transition-colors ${
+                      form.hasDocument ? "bg-[#0A0A0A]" : "bg-[#E5E5E5]"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 bg-white transition-all ${
+                        form.hasDocument ? "left-[22px]" : "left-0.5"
+                      }`}
+                    />
+                  </button>
                 </div>
-              )}
 
-              <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
-                <div className="space-y-6">
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Basic Information
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-5">
-                      Add the main information for this announcement.
-                    </p>
-
-                    <div className="space-y-5">
-                      <Field label="Announcement title">
-                        <input
-                          type="text"
-                          value={form.title}
-                          onChange={(e) =>
-                            handleChange("title", e.target.value)
-                          }
-                          placeholder="Enter announcement title..."
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                        />
-                      </Field>
-
-                  
-                    </div>
-                  </section>
-
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Announcement Content
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-5">
-                      Write the full message that employees will read.
-                    </p>
-
-                    <Field label="Content">
-                      <textarea
-                        value={form.content}
-                        onChange={(e) =>
-                          handleChange("content", e.target.value)
-                        }
-                        placeholder="Write announcement content..."
-                        rows={10}
-                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
-                      />
-                    </Field>
-                  </section>
-
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h2 className="text-[24px] font-bold text-[#2F343B]">
-                      Optional Document
-                    </h2>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-5">
-                      Attach a document only if this announcement needs one.
-                    </p>
-
-                    <div className="rounded-[18px] border border-[#E5E2DC] bg-[#FBFAF8] p-4 flex items-center justify-between gap-4 mb-5">
-                      <div>
-                        <p className="text-sm font-semibold text-[#2F343B]">
-                          Add document
-                        </p>
-                        <p className="text-xs text-[#7A8088] mt-1">
-                          Enable this option to upload a PDF, Word file, or
-                          image.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleChange("hasDocument", !form.hasDocument)
-                        }
-                        className={`relative w-10 h-6 rounded-full transition-colors ${
-                          form.hasDocument ? "bg-[#ED8D31]" : "bg-[#E5E2DC]"
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
-                            form.hasDocument ? "left-5" : "left-1"
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {form.hasDocument && (
-                      <Field label="Upload document">
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                          onChange={(e) =>
-                            handleChange("document", e.target.files[0])
-                          }
-                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                        />
-
-                        {form.document && (
-                          <p className="text-xs text-[#7A8088] mt-2">
-                            Selected: {form.document.name}
-                          </p>
-                        )}
-                      </Field>
+                {form.hasDocument && (
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
+                      Fichier
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                      onChange={(e) => update("document", e.target.files[0])}
+                      className="w-full text-[12px] text-[#0A0A0A] file:mr-3 file:bg-[#0A0A0A] file:text-white file:px-4 file:py-2 file:border-0 file:text-[11px] file:uppercase file:tracking-wider file:font-bold file:cursor-pointer hover:file:bg-black"
+                    />
+                    {form.document && (
+                      <p className="text-[11px] text-[#737373] mt-2">
+                        Sélectionné : {form.document.name}
+                      </p>
                     )}
-                  </section>
-                </div>
-
-                <div className="space-y-5">
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Preview summary
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Quick summary before saving or publishing.
-                    </p>
-
-                    <div className="space-y-3">
-                      <SummaryRow label="Title" value={form.title || "Not set"} />
-                      <SummaryRow
-                        label="Document"
-                        value={form.hasDocument ? "Attached" : "None"}
-                      />
-                    </div>
-                  </section>
-
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Actions
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Save as draft or publish directly to employees.
-                    </p>
-
-                    <div className="space-y-3">
-                      <button
-                        onClick={handleSaveDraft}
-                        disabled={loading}
-                        className="w-full px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors disabled:opacity-60"
-                      >
-                        {loading ? "Saving..." : "Save Draft"}
-                      </button>
-
-                      <button
-                        onClick={handlePublish}
-                        disabled={loading}
-                        className="w-full px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors disabled:opacity-60"
-                      >
-                        {loading ? "Publishing..." : "Publish Announcement"}
-                      </button>
-                    </div>
-                  </section>
-                </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </main>
-        </div>
-      </div>
-    </>
-  );
-}
+            </DataPanel>
+          </div>
 
-function Field({ label, children }) {
-  return (
-    <div>
-      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-        {label}
-      </label>
-      {children}
-    </div>
+          <div className="space-y-6">
+            <DataPanel title="Aperçu" subtitle="Résumé avant publication">
+              <div className="p-6 space-y-2">
+                <SummaryRow label="Titre" value={form.title || "Non défini"} />
+                <SummaryRow
+                  label="Document"
+                  value={form.hasDocument ? "Attaché" : "Aucun"}
+                />
+                <SummaryRow
+                  label="Caractères"
+                  value={`${form.content.length}`}
+                />
+              </div>
+            </DataPanel>
+
+            <DataPanel title="Actions" subtitle="Brouillon ou publication directe">
+              <div className="p-6 space-y-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => submitAnnouncement("DRAFT")}
+                  disabled={loading}
+                >
+                  {loading ? "Enregistrement…" : "Sauvegarder en brouillon"}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => submitAnnouncement("PUBLISHED")}
+                  disabled={loading}
+                >
+                  {loading ? "Publication…" : "Publier maintenant"}
+                </Button>
+              </div>
+            </DataPanel>
+          </div>
+        </div>
+      </PageBody>
+    </PageShell>
   );
 }
 
 function SummaryRow({ label, value }) {
   return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-bold text-[#2F343B] text-right">
+    <div className="flex items-baseline justify-between gap-4 py-2.5 border-b border-[#F5F5F5] last:border-b-0">
+      <span className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#737373]">
+        {label}
+      </span>
+      <span className="text-[13px] font-bold text-[#0A0A0A] text-right truncate">
         {value}
       </span>
     </div>

@@ -1,33 +1,44 @@
 import { useEffect, useMemo, useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, getCurrentUserId } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  DataPanel,
+  StatusPill,
+  Button,
+  Alert,
+  TextArea,
+  Select,
+} from "../../components/ui/Studio";
 
 const CATEGORY_OPTIONS = [
-  { value: "ACTIVITIES", label: "Activities" },
+  { value: "ACTIVITIES", label: "Activités" },
   { value: "SERVICES", label: "Services" },
   { value: "COMMUNICATION", label: "Communication" },
-  { value: "WORKPLACE", label: "Workplace" },
-  { value: "WELLBEING", label: "Wellbeing" },
+  { value: "WORKPLACE", label: "Lieu de travail" },
+  { value: "WELLBEING", label: "Bien-être" },
 ];
 
-const STATUS_LABEL = {
-  UNDER_REVIEW: "Under review",
-  ACCEPTED: "Accepted ✨",
-  ARCHIVED: "Archived",
+const STATUS_TONE = {
+  UNDER_REVIEW: "warn",
+  ACCEPTED: "success",
+  ARCHIVED: "neutral",
 };
-
-const STATUS_STYLES = {
-  UNDER_REVIEW: "bg-[#FFF4D6] text-[#B98900]",
-  ACCEPTED: "bg-[#D4F4DD] text-[#2D7A4A]",
-  ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
+const STATUS_LABEL_FR = {
+  UNDER_REVIEW: "En cours d'examen",
+  ACCEPTED: "Acceptée",
+  ARCHIVED: "Archivée",
 };
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -35,6 +46,7 @@ function formatDate(value) {
 }
 
 export default function IdeaBox() {
+  const t = useT();
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -49,13 +61,15 @@ export default function IdeaBox() {
   const load = () => {
     if (!userId) {
       setLoading(false);
-      setPageError("Please log in.");
+      setPageError("Veuillez vous connecter.");
       return;
     }
     setLoading(true);
     apiGet(`/me/ideas?user_id=${userId}`)
       .then((res) => setIdeas(res.data || []))
-      .catch((err) => setPageError(err.message || "Could not load ideas."))
+      .catch((err) =>
+        setPageError(err.message || "Impossible de charger vos idées.")
+      )
       .finally(() => setLoading(false));
   };
 
@@ -76,12 +90,10 @@ export default function IdeaBox() {
     e.preventDefault();
     setFormError(null);
     setSuccess(null);
-
     if (!form.content.trim()) {
-      setFormError("Please describe your idea.");
+      setFormError("Veuillez décrire votre idée.");
       return;
     }
-
     setSubmitting(true);
     try {
       await apiPost("/ideas", {
@@ -90,183 +102,131 @@ export default function IdeaBox() {
         category: form.category,
       });
       setForm({ category: "ACTIVITIES", content: "" });
-      setSuccess("Thanks! Your idea has been submitted for review.");
+      setSuccess("Merci ! Votre idée a bien été transmise au comité.");
       load();
     } catch (err) {
-      setFormError(err.message || "Could not submit your idea.");
+      setFormError(err.message || "Soumission impossible.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex h-screen bg-[#F7F7F5]">
-      <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.myArea")}
+        title="Boîte à idées"
+        subtitle="Proposez des améliorations pour les activités, services et bien-être Sonatrach. Le comité de communication examine chaque idée."
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Boîte à idées" },
+        ]}
+      />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardTopBar />
+      <PageBody>
+        {pageError && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {pageError}
+          </Alert>
+        )}
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                Idea Box
-              </h1>
-              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                Share suggestions to improve Sonatrach activities and services.
-                The communication team reviews all ideas.
-              </p>
-            </div>
+        <StatBar>
+          <StatCell label="Mes idées" value={stats.total} sub="Soumises" />
+          <StatCell label="En examen" value={stats.review} sub="Avis du comité" />
+          <StatCell label="Acceptées" value={stats.accepted} sub="Validées" accent={stats.accepted > 0} />
+        </StatBar>
 
-            {pageError && (
-              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                {pageError}
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.65fr] gap-6">
+          <DataPanel
+            title="Soumettre une nouvelle idée"
+            subtitle="Soyez précis : les suggestions concrètes sont plus faciles à évaluer"
+          >
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              {success && (
+                <Alert tone="success" title="Idée transmise">
+                  {success}
+                </Alert>
+              )}
+              {formError && (
+                <Alert tone="danger" title={t("sg.error")}>
+                  {formError}
+                </Alert>
+              )}
+              <Select
+                label="Catégorie"
+                value={form.category}
+                onChange={(v) => setForm((p) => ({ ...p, category: v }))}
+                options={CATEGORY_OPTIONS}
+              />
+              <div>
+                <TextArea
+                  label="Votre idée"
+                  value={form.content}
+                  onChange={(v) => setForm((p) => ({ ...p, content: v }))}
+                  placeholder="Décrivez votre idée, pourquoi elle est utile, et comment l'implémenter…"
+                  rows={6}
+                  required
+                />
+                <p className="text-[11px] text-[#A3A3A3] mt-1.5 tabular-nums text-right">
+                  {form.content.length} / 2000
+                </p>
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={submitting}
+              >
+                {submitting ? "Envoi…" : "Transmettre l'idée"}
+              </Button>
+            </form>
+          </DataPanel>
+
+          <DataPanel title="Mes idées transmises" badge={`${ideas.length}`}>
+            {loading ? (
+              <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                Chargement…
+              </div>
+            ) : ideas.length === 0 ? (
+              <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                Aucune idée transmise pour le moment.
+              </div>
+            ) : (
+              <div className="divide-y divide-[#E5E5E5]">
+                {ideas.map((i) => (
+                  <div key={i.id} className="px-6 py-5">
+                    <div className="flex justify-between items-start gap-3 mb-3">
+                      <span className="px-2.5 py-1 bg-[#F5F5F5] text-[#525252] text-[10px] uppercase tracking-[0.15em] font-bold">
+                        {i.category}
+                      </span>
+                      <StatusPill
+                        tone={STATUS_TONE[i.status] || "neutral"}
+                        label={STATUS_LABEL_FR[i.status] || i.status}
+                      />
+                    </div>
+                    <p className="text-[13px] text-[#0A0A0A] leading-[1.7]">
+                      {i.content}
+                    </p>
+                    <p className="text-[11px] text-[#A3A3A3] mt-3 uppercase tracking-wider tabular-nums">
+                      Soumise le {formatDate(i.submitted_at)}
+                    </p>
+                    {i.moderator_response && (
+                      <div className="mt-4 bg-[#FAFAFA] border-l-2 border-[#0A0A0A] px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#737373] mb-1.5">
+                          Réponse du comité
+                        </p>
+                        <p className="text-[12px] text-[#0A0A0A] leading-[1.6]">
+                          {i.moderator_response}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard title="My ideas" value={stats.total} />
-              <StatCard title="Under review" value={stats.review} />
-              <StatCard title="Accepted" value={stats.accepted} />
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-[1fr_2fr] gap-6">
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6 h-fit">
-                <h2 className="text-[22px] font-bold text-[#2F343B] mb-2">
-                  Submit a new idea
-                </h2>
-                <p className="text-sm text-[#7A8088] mb-4">
-                  Be specific. Concrete suggestions are easier to evaluate.
-                </p>
-
-                {success && (
-                  <div className="rounded-[12px] border border-green-200 bg-green-50 text-green-700 px-3 py-2 text-sm mb-3">
-                    {success}
-                  </div>
-                )}
-
-                {formError && (
-                  <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm mb-3">
-                    {formError}
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                      Category
-                    </label>
-                    <select
-                      value={form.category}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, category: e.target.value }))
-                      }
-                      className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                    >
-                      {CATEGORY_OPTIONS.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                      Your idea *
-                    </label>
-                    <textarea
-                      value={form.content}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, content: e.target.value }))
-                      }
-                      rows={6}
-                      placeholder="Describe your idea, why it matters, and how you'd implement it..."
-                      maxLength={2000}
-                      className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
-                    />
-                    <p className="text-xs text-[#7A8088] mt-1">
-                      {form.content.length} / 2000
-                    </p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold disabled:opacity-60"
-                  >
-                    {submitting ? "Submitting..." : "Submit idea"}
-                  </button>
-                </form>
-              </section>
-
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                  <h2 className="text-[22px] font-bold text-[#2F343B]">
-                    My submitted ideas
-                  </h2>
-                </div>
-
-                {loading && (
-                  <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
-                    Loading...
-                  </p>
-                )}
-
-                {!loading && ideas.length === 0 && (
-                  <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
-                    No ideas yet. Submit your first one!
-                  </p>
-                )}
-
-                <div className="divide-y divide-[#E5E2DC]">
-                  {ideas.map((i) => (
-                    <div key={i.id} className="px-5 py-4">
-                      <div className="flex justify-between items-start gap-3 mb-2">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#F1F0EC] text-[#7A8088]">
-                          {i.category}
-                        </span>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            STATUS_STYLES[i.status] || ""
-                          }`}
-                        >
-                          {STATUS_LABEL[i.status] || i.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-[#2F343B] leading-[170%]">
-                        {i.content}
-                      </p>
-                      <p className="text-xs text-[#7A8088] mt-2">
-                        Submitted {formatDate(i.submitted_at)}
-                      </p>
-                      {i.moderator_response && (
-                        <div className="mt-3 rounded-[12px] bg-[#F9F8F6] px-3 py-2 text-sm">
-                          <p className="text-xs text-[#7A8088] uppercase font-semibold mb-1">
-                            Moderator response
-                          </p>
-                          <p className="text-[#2F343B]">
-                            {i.moderator_response}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value }) {
-  return (
-    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
-      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
-      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-    </div>
+          </DataPanel>
+        </div>
+      </PageBody>
+    </PageShell>
   );
 }

@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sonatrach — Plateforme socio-activités · Documentation fonctionnelle</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 18mm 24mm 18mm;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Helvetica Neue", "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #0A0A0A;
+    line-height: 1.55;
+    font-size: 10.5pt;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ─── COVER ─────────────────────────────── */
+  .cover {
+    page-break-after: always;
+    height: 252mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    padding: 12mm 8mm;
+  }
+  .cover::before {
+    content: "";
+    position: absolute;
+    left: 8mm; right: 8mm; top: 12mm;
+    height: 2px;
+    background: #ED8D31;
+  }
+  .cover .top {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 18mm;
+  }
+  .cover .logo {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, #ED8D31 0%, #B5560F 100%);
+    color: white;
+    font-weight: 900;
+    font-size: 30pt;
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: -0.04em;
+  }
+  .cover .brand {
+    font-weight: 900;
+    letter-spacing: 0.28em;
+    font-size: 14pt;
+    color: #0A0A0A;
+  }
+  .cover .center {
+    margin-top: 50mm;
+  }
+  .cover .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.45em;
+    font-size: 9pt;
+    font-weight: 800;
+    color: #ED8D31;
+    margin-bottom: 14mm;
+  }
+  .cover h1 {
+    font-size: 38pt;
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+    margin: 0 0 8mm 0;
+    max-width: 150mm;
+  }
+  .cover .subtitle {
+    font-size: 13pt;
+    color: #525252;
+    max-width: 130mm;
+    line-height: 1.6;
+  }
+  .cover .bottom {
+    border-top: 1px solid #E5E5E5;
+    padding-top: 7mm;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .cover .bottom .meta {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 8pt;
+    font-weight: 700;
+    color: #737373;
+    line-height: 1.7;
+  }
+  .cover .bottom .conf {
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    font-size: 8pt;
+    font-weight: 800;
+    color: #0A0A0A;
+    background: #ED8D31;
+    padding: 4px 10px;
+  }
+
+  /* ─── TOC ────────────────────────────────── */
+  .toc {
+    page-break-after: always;
+  }
+  .toc h2 {
+    font-size: 22pt;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    margin: 0 0 4mm 0;
+  }
+  .toc .toc-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    font-size: 8pt;
+    font-weight: 800;
+    color: #ED8D31;
+    margin-bottom: 6mm;
+  }
+  .toc-list {
+    margin-top: 10mm;
+    border-top: 1px solid #0A0A0A;
+  }
+  .toc-list .entry {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 4mm 0;
+    border-bottom: 1px solid #E5E5E5;
+  }
+  .toc-list .entry-num {
+    color: #ED8D31;
+    font-weight: 800;
+    font-size: 9pt;
+    letter-spacing: 0.1em;
+    min-width: 18mm;
+  }
+  .toc-list .entry-label {
+    flex: 1;
+    font-size: 11pt;
+    font-weight: 600;
+    color: #0A0A0A;
+  }
+  .toc-list .entry-page {
+    font-variant-numeric: tabular-nums;
+    color: #737373;
+    font-size: 9pt;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── SECTIONS ──────────────────────────── */
+  section.chapter {
+    page-break-before: always;
+  }
+  .chapter-header {
+    display: flex; align-items: baseline; gap: 8mm;
+    border-bottom: 1px solid #0A0A0A;
+    padding-bottom: 5mm;
+    margin-bottom: 8mm;
+  }
+  .chapter-num {
+    font-size: 9pt;
+    font-weight: 800;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: #ED8D31;
+    font-variant-numeric: tabular-nums;
+  }
+  .chapter h1 {
+    font-size: 26pt;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    font-weight: 700;
+    margin: 0;
+  }
+  .chapter .lede {
+    font-size: 12pt;
+    color: #525252;
+    line-height: 1.7;
+    max-width: 160mm;
+    margin-bottom: 8mm;
+  }
+  h2 {
+    font-size: 14pt;
+    letter-spacing: -0.012em;
+    font-weight: 700;
+    margin: 8mm 0 3mm 0;
+    color: #0A0A0A;
+  }
+  h2::before {
+    content: "▮ ";
+    color: #ED8D31;
+    margin-right: 3px;
+  }
+  h3 {
+    font-size: 11pt;
+    font-weight: 700;
+    margin: 5mm 0 2mm 0;
+    color: #0A0A0A;
+  }
+  p { margin: 0 0 3mm 0; }
+  ul { margin: 0 0 4mm 0; padding-left: 6mm; }
+  ul li {
+    margin-bottom: 1.5mm;
+    line-height: 1.55;
+  }
+  ul li::marker {
+    color: #ED8D31;
+    font-weight: 800;
+  }
+
+  /* Feature box */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+    margin: 4mm 0;
+  }
+  .feature {
+    border: 1px solid #E5E5E5;
+    border-left: 3px solid #ED8D31;
+    padding: 4mm 5mm;
+    page-break-inside: avoid;
+  }
+  .feature .title {
+    font-size: 10pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.5mm;
+  }
+  .feature .desc {
+    font-size: 9.5pt;
+    color: #525252;
+    line-height: 1.55;
+  }
+
+  /* Big info row */
+  .info-block {
+    background: #FAFAFA;
+    border-left: 3px solid #0A0A0A;
+    padding: 4mm 6mm;
+    margin: 4mm 0;
+  }
+  .info-block.warn {
+    background: #FFF7E8;
+    border-left-color: #ED8D31;
+  }
+  .info-block .label {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 8.5pt;
+    font-weight: 800;
+    color: #737373;
+    margin-bottom: 1.5mm;
+  }
+  .info-block .content {
+    font-size: 10pt;
+    line-height: 1.65;
+    color: #0A0A0A;
+  }
+
+  /* Steps */
+  .steps {
+    counter-reset: step;
+    margin: 4mm 0;
+  }
+  .steps .step {
+    display: flex;
+    gap: 5mm;
+    margin-bottom: 3mm;
+    page-break-inside: avoid;
+  }
+  .steps .step::before {
+    counter-increment: step;
+    content: counter(step, decimal-leading-zero);
+    color: #ED8D31;
+    font-weight: 800;
+    font-size: 10pt;
+    letter-spacing: 0.05em;
+    min-width: 10mm;
+    font-variant-numeric: tabular-nums;
+  }
+  .steps .step .body {
+    flex: 1;
+  }
+  .steps .step .body strong {
+    color: #0A0A0A;
+  }
+
+  /* Code-like block */
+  pre.code {
+    background: #0A0A0A;
+    color: #ED8D31;
+    padding: 4mm 5mm;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
+    font-size: 9pt;
+    line-height: 1.55;
+    border-left: 3px solid #ED8D31;
+    margin: 4mm 0;
+    overflow: hidden;
+    white-space: pre-wrap;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4mm 0;
+    font-size: 9.5pt;
+  }
+  thead {
+    background: #0A0A0A;
+    color: white;
+  }
+  th {
+    text-align: left;
+    padding: 3mm 4mm;
+    font-size: 8.5pt;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  td {
+    padding: 3mm 4mm;
+    border-bottom: 1px solid #E5E5E5;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.role {
+    font-weight: 700;
+    white-space: nowrap;
+    color: #0A0A0A;
+  }
+
+  /* Role chip */
+  .role-chip {
+    display: inline-block;
+    padding: 1mm 3mm;
+    font-size: 8pt;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: #0A0A0A;
+    color: white;
+    margin-right: 2mm;
+  }
+  .role-chip.orange {
+    background: #ED8D31;
+    color: #0A0A0A;
+  }
+
+  /* End strip */
+  .colophon {
+    margin-top: 14mm;
+    padding-top: 6mm;
+    border-top: 1px solid #E5E5E5;
+    display: flex; justify-content: space-between;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-weight: 700;
+    color: #737373;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════ COVER ════════════ -->
+<div class="cover">
+  <div>
+    <div class="top">
+      <div class="logo">S</div>
+      <div class="brand">SONATRACH</div>
+    </div>
+    <div class="center">
+      <p class="eyebrow">Direction Centrale Capital Humain · Plateforme socio-activités</p>
+      <h1>Documentation fonctionnelle de la plateforme</h1>
+      <p class="subtitle">Vue d'ensemble des fonctionnalités, des rôles utilisateurs et de la logique du tirage au sort.</p>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="meta">
+      Édition mai 2026<br/>
+      Version 2.6 · Build interne<br/>
+      Sonatrach SpA — DCCH
+    </div>
+    <div class="conf">Document interne</div>
+  </div>
+</div>
+
+<!-- ════════════ TOC ════════════ -->
+<div class="toc">
+  <p class="toc-eyebrow">Sommaire</p>
+  <h2>Table des matières</h2>
+
+  <div class="toc-list">
+    <div class="entry"><span class="entry-num">§ 01</span><span class="entry-label">Vue d'ensemble — à quoi sert le site</span><span class="entry-page">03</span></div>
+    <div class="entry"><span class="entry-num">§ 02</span><span class="entry-label">Rôles & autorisations</span><span class="entry-page">04</span></div>
+    <div class="entry"><span class="entry-num">§ 03</span><span class="entry-label">Espace Collaborateur (Employé)</span><span class="entry-page">05</span></div>
+    <div class="entry"><span class="entry-num">§ 04</span><span class="entry-label">Administrateur fonctionnel</span><span class="entry-page">07</span></div>
+    <div class="entry"><span class="entry-num">§ 05</span><span class="entry-label">Communicant</span><span class="entry-page">10</span></div>
+    <div class="entry"><span class="entry-num">§ 06</span><span class="entry-label">Administrateur système</span><span class="entry-page">11</span></div>
+    <div class="entry"><span class="entry-num">§ 07</span><span class="entry-label">Logique du tirage au sort</span><span class="entry-page">12</span></div>
+    <div class="entry"><span class="entry-num">§ 08</span><span class="entry-label">Sécurité, audit et notifications</span><span class="entry-page">14</span></div>
+    <div class="entry"><span class="entry-num">§ 09</span><span class="entry-label">Glossaire des statuts</span><span class="entry-page">15</span></div>
+  </div>
+</div>
+
+<!-- ════════════ § 01 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 01</span>
+    <h1>Vue d'ensemble — à quoi sert le site</h1>
+  </div>
+  <p class="lede">
+    La plateforme socio-activités est l'outil numérique central de la Direction Capital Humain de Sonatrach pour gérer la vie sociale et culturelle des collaborateurs et de leurs familles. Elle remplace les processus papier et tableurs par un système intégré, traçable et équitable.
+  </p>
+
+  <h2>Le site permet de…</h2>
+  <ul>
+    <li><strong>Publier des activités</strong> sociales, sportives, culturelles et familiales proposées par le comité Sonatrach.</li>
+    <li><strong>Organiser l'inscription en ligne</strong> des collaborateurs aux sessions d'activités.</li>
+    <li><strong>Exécuter des tirages au sort transparents et auditables</strong> lorsque la demande dépasse les places disponibles.</li>
+    <li><strong>Suivre la validation administrative</strong> des dossiers et la collecte des pièces justificatives.</li>
+    <li><strong>Diffuser des annonces officielles</strong> et animer des sondages internes auprès des collaborateurs.</li>
+    <li><strong>Recueillir les idées</strong> et propositions des employés via une boîte à idées modérée.</li>
+    <li><strong>Tenir un journal d'audit complet</strong> de toutes les actions sensibles pour le contrôle interne.</li>
+  </ul>
+
+  <div class="info-block">
+    <p class="label">Acteurs</p>
+    <p class="content">
+      Près de <strong>50 000 collaborateurs</strong> du groupe Sonatrach et leurs familles ont vocation à utiliser la plateforme. Elle est administrée par la <strong>Direction Centrale Capital Humain</strong> et le comité socio-activités.
+    </p>
+  </div>
+
+  <h2>Activités proposées</h2>
+  <p>Le catalogue actuel couvre plusieurs catégories :</p>
+  <ul>
+    <li><strong>SPORT</strong> — tournois, courses, événements sportifs inter-sites</li>
+    <li><strong>FAMILLE</strong> — sorties, colonies de vacances pour enfants</li>
+    <li><strong>SÉJOUR</strong> — bungalows, locations balnéaires</li>
+    <li><strong>NATURE</strong> — camps de toile, randonnées</li>
+    <li><strong>SPIRITUEL</strong> — pèlerinages et omra</li>
+    <li><strong>VOYAGE</strong> — séjours organisés internationaux</li>
+    <li><strong>LOISIRS</strong> — événements culturels divers</li>
+  </ul>
+</section>
+
+<!-- ════════════ § 02 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 02</span>
+    <h1>Rôles et autorisations</h1>
+  </div>
+  <p class="lede">
+    La plateforme distingue quatre rôles aux responsabilités strictement séparées. Un même utilisateur peut cumuler plusieurs rôles (par exemple un administrateur fonctionnel est aussi un collaborateur).
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Rôle</th>
+        <th>Mission principale</th>
+        <th>Périmètre</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="role"><span class="role-chip">Employé</span></td>
+        <td>Consulter le catalogue, s'inscrire à des activités, suivre ses demandes et fournir ses documents.</td>
+        <td>Son propre dossier</td>
+      </tr>
+      <tr>
+        <td class="role"><span class="role-chip orange">Admin fonctionnel</span></td>
+        <td>Gérer le catalogue, créer les sessions, valider les inscriptions et exécuter les tirages au sort.</td>
+        <td>Toutes les activités</td>
+      </tr>
+      <tr>
+        <td class="role"><span class="role-chip">Communicant</span></td>
+        <td>Diffuser les annonces, animer les sondages, modérer les idées des collaborateurs.</td>
+        <td>Communication interne</td>
+      </tr>
+      <tr>
+        <td class="role"><span class="role-chip">Admin système</span></td>
+        <td>Attribuer / retirer les rôles, consulter le journal d'audit complet de la plateforme.</td>
+        <td>Gouvernance technique</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-block warn">
+    <p class="label">Principe d'autorisation</p>
+    <p class="content">
+      Chaque route du site vérifie le rôle de l'utilisateur connecté. Un employé ne peut pas accéder aux pages d'administration ; un communicant ne peut pas exécuter de tirage ; seul un administrateur système peut attribuer ou retirer des rôles.
+    </p>
+  </div>
+</section>
+
+<!-- ════════════ § 03 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 03</span>
+    <h1>Espace Collaborateur (Employé)</h1>
+  </div>
+  <p class="lede">
+    Chaque collaborateur dispose d'un espace personnel pour découvrir les activités, s'y inscrire et suivre l'avancement de ses demandes.
+  </p>
+
+  <h2>Ce qu'un employé peut faire</h2>
+  <div class="feature-grid">
+    <div class="feature">
+      <p class="title">Parcourir le catalogue</p>
+      <p class="desc">Consulter toutes les activités publiées, filtrer par catégorie, lire la fiche détaillée d'une activité.</p>
+    </div>
+    <div class="feature">
+      <p class="title">S'inscrire à une session</p>
+      <p class="desc">Choisir une session ouverte, ordonner ses préférences de sites (jusqu'à 3 choix), confirmer l'inscription.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Suivre ses demandes</p>
+      <p class="desc">Voir l'état de chaque inscription en temps réel (En attente, Validée, Sélectionné, Substitut, Liste d'attente, Rejetée).</p>
+    </div>
+    <div class="feature">
+      <p class="title">Annuler une inscription</p>
+      <p class="desc">Retirer librement une inscription PENDING ou VALIDATED tant que le tirage n'a pas eu lieu.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Demander un retrait</p>
+      <p class="desc">Après sélection, soumettre une demande de retrait motivée — examinée par l'administration.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Téléverser ses documents</p>
+      <p class="desc">Uploader les pièces justificatives demandées (passeport, certificat médical…) au format PDF, JPG, PNG, DOC. Limite 10 Mo.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Consulter les résultats de tirage</p>
+      <p class="desc">Voir l'issue de chaque tirage auquel il a participé : sélectionné, substitut avec rang, ou non retenu.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Recevoir les notifications</p>
+      <p class="desc">Centre de notifications filtrable par type : tirage, document, confirmation, sondage, annonce.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Répondre aux sondages</p>
+      <p class="desc">Participer aux consultations internes — questions à choix multiple ou texte libre.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Proposer une idée</p>
+      <p class="desc">Soumettre des suggestions au comité via la boîte à idées (catégorie + description ≤ 2000 caractères).</p>
+    </div>
+    <div class="feature">
+      <p class="title">Consulter son historique</p>
+      <p class="desc">Retrouver toutes les activités passées avec son évaluation et ses certificats de participation à télécharger.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Accéder aux annonces publiques</p>
+      <p class="desc">Lire les communications officielles diffusées par le comité de communication.</p>
+    </div>
+  </div>
+
+  <h2>Ce qu'un employé ne peut pas faire</h2>
+  <ul>
+    <li>Modifier une activité ou créer une session.</li>
+    <li>Voir ou approuver les inscriptions d'autres collaborateurs.</li>
+    <li>Lancer un tirage au sort.</li>
+    <li>Publier une annonce ou un sondage.</li>
+    <li>Attribuer un rôle administrateur.</li>
+  </ul>
+</section>
+
+<!-- ════════════ § 04 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 04</span>
+    <h1>Administrateur fonctionnel</h1>
+  </div>
+  <p class="lede">
+    L'administrateur fonctionnel pilote l'ensemble de la chaîne activité — création, validation, tirage, suivi des retraits et reporting.
+  </p>
+
+  <h2>Gestion des activités</h2>
+  <ul>
+    <li><strong>Créer</strong> une nouvelle activité (titre, description, image de couverture, catégorie, ancienneté minimale, niveau de demande, indicateur tirage activé/désactivé).</li>
+    <li><strong>Modifier</strong> les informations d'une activité existante.</li>
+    <li><strong>Changer le statut</strong> : Brouillon → Publié → Archivé → Annulé.</li>
+    <li><strong>Supprimer définitivement</strong> une activité (avec confirmation).</li>
+    <li><strong>Archiver</strong> une activité (la retire du catalogue public sans la supprimer).</li>
+  </ul>
+
+  <h2>Gestion des sessions</h2>
+  <ul>
+    <li><strong>Créer</strong> une session pour une activité : dates de début/fin, date limite d'inscription, date et lieu du tirage, délai de confirmation, nombre de substituts, transport inclus, télefax officiel.</li>
+    <li><strong>Configurer les sites et quotas</strong> : ajouter des sites Sonatrach (Alger, Oran, Constantine…) et leur attribuer un quota de places.</li>
+    <li><strong>Éditer</strong> une session existante.</li>
+    <li><strong>Supprimer</strong> une session.</li>
+    <li><strong>Voir le détail</strong> d'une session : tous les paramètres, sites attribués, candidats inscrits.</li>
+  </ul>
+
+  <h2>Validation des inscriptions</h2>
+  <ul>
+    <li><strong>Consulter la file d'attente</strong> avec filtres (activité, session, statut, recherche par nom/matricule).</li>
+    <li><strong>Valider</strong> une inscription PENDING → VALIDATED (la rend éligible au tirage).</li>
+    <li><strong>Rejeter</strong> une inscription avec motif obligatoire.</li>
+    <li><strong>Marquer une inscription comme CONFIRMÉE</strong> après le tirage (l'employé a confirmé sa présence).</li>
+    <li><strong>Consulter le dossier complet</strong> d'une inscription : choix de sites, documents, historique de statut.</li>
+  </ul>
+
+  <h2>Gestion des sites Sonatrach</h2>
+  <ul>
+    <li><strong>Ajouter</strong> un nouveau site (nom, adresse).</li>
+    <li><strong>Supprimer</strong> un site (avec avertissement si des sessions y sont liées).</li>
+    <li><strong>Consulter</strong> l'utilisation : combien d'activités et de sessions utilisent ce site.</li>
+  </ul>
+
+  <h2>Gestion des documents</h2>
+  <ul>
+    <li><strong>Examiner</strong> toutes les pièces téléversées par les collaborateurs.</li>
+    <li><strong>Valider</strong> un document conforme.</li>
+    <li><strong>Rejeter</strong> un document avec commentaire (motif communiqué à l'employé).</li>
+    <li><strong>Re-valider</strong> un document précédemment rejeté.</li>
+    <li><strong>Filtrer</strong> par activité, statut, recherche par nom de fichier.</li>
+  </ul>
+
+  <h2>Tirages au sort</h2>
+  <ul>
+    <li><strong>Voir la liste des sessions prêtes</strong> — celles dont la date limite est passée, avec sites configurés, candidats validés et quota positif.</li>
+    <li><strong>Examiner les bloqueurs</strong> sur les sessions non prêtes (date dépassée, quota nul, aucun site…).</li>
+    <li><strong>Prévisualiser</strong> une session avant tirage : nombre de candidats éligibles, quotas par site, candidats listés.</li>
+    <li><strong>Lancer le tirage cinématique</strong> en pleine page avec son, confettis, révélation un-par-un.</li>
+    <li><strong>Consulter l'historique complet</strong> des tirages exécutés (qui, quand, où, combien de sélectionnés/substituts).</li>
+    <li><strong>Voir les résultats détaillés</strong> de chaque tirage passé.</li>
+  </ul>
+
+  <h2>Demandes de retrait</h2>
+  <ul>
+    <li><strong>Examiner</strong> les demandes de retrait des collaborateurs sélectionnés.</li>
+    <li><strong>Approuver</strong> un retrait (déclenche potentiellement le rappel d'un substitut).</li>
+    <li><strong>Rejeter</strong> un retrait avec motif.</li>
+    <li><strong>Marquer comme TRAITÉE</strong> une demande approuvée et exécutée.</li>
+  </ul>
+
+  <h2>Rapports et statistiques</h2>
+  <ul>
+    <li><strong>Tableau de bord agrégé</strong> : utilisateurs, activités, sessions, inscriptions, documents, tirages.</li>
+    <li><strong>Courbe mensuelle</strong> des candidatures (12 derniers mois) sous forme de graphique en barres.</li>
+    <li><strong>Donut</strong> de répartition des issues d'inscription par statut.</li>
+    <li><strong>Performance par activité</strong> : taux d'approbation, candidatures vs. quotas.</li>
+    <li><strong>Synthèse</strong> retraits et documents par statut.</li>
+  </ul>
+</section>
+
+<!-- ════════════ § 05 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 05</span>
+    <h1>Communicant</h1>
+  </div>
+  <p class="lede">
+    Le communicant porte la voix de la direction socio-activités : annonces, sondages internes, modération des idées des collaborateurs.
+  </p>
+
+  <h2>Annonces</h2>
+  <ul>
+    <li><strong>Créer</strong> une annonce avec titre, contenu rédigé et document optionnel attaché (PDF, Word, image).</li>
+    <li><strong>Enregistrer en brouillon</strong> ou <strong>publier directement</strong>.</li>
+    <li><strong>Voir</strong> la liste de toutes les annonces (brouillons, publiées, archivées).</li>
+    <li><strong>Consulter</strong> le détail complet d'une annonce.</li>
+    <li><strong>Publier</strong> un brouillon vers les collaborateurs.</li>
+    <li><strong>Supprimer</strong> une annonce (avec confirmation).</li>
+  </ul>
+
+  <h2>Sondages</h2>
+  <ul>
+    <li><strong>Créer</strong> un sondage avec titre, description, date limite, audience cible.</li>
+    <li><strong>Choisir le type</strong> de question : choix unique (avec options) ou réponse texte libre.</li>
+    <li><strong>Ajouter ou retirer</strong> des options dynamiquement (minimum 2).</li>
+    <li><strong>Enregistrer en brouillon</strong> ou publier.</li>
+    <li><strong>Voir les sondages publiés</strong> avec taux de participation calculé automatiquement.</li>
+    <li><strong>Archiver</strong> un sondage ancien.</li>
+    <li><strong>Supprimer</strong> un sondage.</li>
+  </ul>
+
+  <h2>Notifications globales</h2>
+  <ul>
+    <li><strong>Envoyer</strong> un message à tous les collaborateurs (titre + message).</li>
+    <li><strong>Consulter l'historique</strong> des notifications déjà envoyées avec leur type (Général, Sondage, Annonce).</li>
+  </ul>
+
+  <h2>Modération des idées</h2>
+  <ul>
+    <li><strong>Lire</strong> toutes les idées soumises par les employés (titre, contenu, auteur, date).</li>
+    <li><strong>Rédiger un retour modérateur</strong> visible par l'auteur de l'idée.</li>
+    <li><strong>Marquer comme EXAMINÉE</strong> une idée traitée.</li>
+    <li><strong>Archiver</strong> une idée non retenue.</li>
+  </ul>
+</section>
+
+<!-- ════════════ § 06 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 06</span>
+    <h1>Administrateur système</h1>
+  </div>
+  <p class="lede">
+    L'administrateur système supervise la gouvernance technique : attribution des rôles et consultation du journal d'audit. Il ne traite pas le métier quotidien.
+  </p>
+
+  <h2>Gestion des rôles</h2>
+  <ul>
+    <li><strong>Rechercher</strong> un collaborateur par son matricule.</li>
+    <li><strong>Attribuer</strong> le rôle d'<em>Administrateur fonctionnel</em>, <em>Communicant</em> ou <em>Administrateur système</em>.</li>
+    <li><strong>Retirer</strong> un rôle (avec confirmation, l'utilisateur perd ses privilèges immédiatement).</li>
+    <li><strong>Voir la liste</strong> de chaque type d'administrateur avec leur statut (Actif / Inactif).</li>
+  </ul>
+
+  <div class="info-block warn">
+    <p class="label">Privilèges admin système</p>
+    <p class="content">
+      Les administrateurs système ont les plus hauts privilèges de la plateforme. Le rôle doit être attribué avec discernement. Toute action d'attribution ou de retrait est tracée dans le journal d'audit.
+    </p>
+  </div>
+
+  <h2>Journal d'audit</h2>
+  <ul>
+    <li><strong>Consulter</strong> les 500 dernières actions sensibles tracées : qui, quand, quoi, où (IP).</li>
+    <li><strong>Filtrer</strong> par type d'action (DRAW_EXECUTED, ROLE_ASSIGNED, DOCUMENT_VALIDATED, ANNOUNCEMENT_PUBLISHED…) ou par table cible.</li>
+    <li><strong>Rechercher</strong> par nom d'utilisateur, IP, matricule, intitulé de l'objet.</li>
+    <li><strong>Examiner</strong> le détail JSON de chaque action (payload complet stocké).</li>
+  </ul>
+</section>
+
+<!-- ════════════ § 07 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 07</span>
+    <h1>Logique du tirage au sort</h1>
+  </div>
+  <p class="lede">
+    Le tirage au sort est la pierre angulaire du système. Il garantit que lorsque les candidats dépassent les places, la sélection se fait de manière équitable, reproductible et auditable.
+  </p>
+
+  <h2>Étapes de l'algorithme</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="body">
+        <strong>Vérifications préalables.</strong> Le système refuse d'exécuter un tirage si la session a déjà été tirée, si aucun site n'est configuré ou s'il n'y a aucun candidat validé.
+      </div>
+    </div>
+    <div class="step">
+      <div class="body">
+        <strong>Préparation des données.</strong> Le système charge la liste des inscriptions validées, les sites avec leurs quotas, et les préférences de site de chaque candidat (jusqu'à 3 choix ordonnés).
+      </div>
+    </div>
+    <div class="step">
+      <div class="body">
+        <strong>Mélange Fisher-Yates.</strong> La liste des candidats est mélangée avec un algorithme cryptographiquement neutre. Chaque permutation a la même probabilité. L'ordre d'inscription est complètement ignoré.
+      </div>
+    </div>
+    <div class="step">
+      <div class="body">
+        <strong>Attribution par préférence (algorithme glouton).</strong> Pour chaque candidat dans l'ordre mélangé, on tente de le placer sur son premier choix de site. Si le quota est plein, on tente le 2ème choix. Puis le 3ème. Sinon il rejoint la pile des non-attribués.
+      </div>
+    </div>
+    <div class="step">
+      <div class="body">
+        <strong>Fallback global.</strong> Les candidats qui n'ont coché aucun choix de site sont placés sur n'importe quel site disposant encore de places.
+      </div>
+    </div>
+    <div class="step">
+      <div class="body">
+        <strong>Substituts et liste d'attente.</strong> La pile des non-attribués est re-mélangée. Les <em>N premiers</em> deviennent substituts (où <em>N = substitutes_count</em> défini sur la session), avec un rang explicite (1, 2, 3…). Les suivants partent en liste d'attente.
+      </div>
+    </div>
+    <div class="step">
+      <div class="body">
+        <strong>Persistance atomique.</strong> Tout est écrit en base dans une transaction SQL : table <code>draws</code>, table <code>draw_results</code> (avec is_selected / is_substitute / substitute_rank), mise à jour du statut de chaque inscription, passage de la session en DRAW_DONE. Tout réussit ou tout est annulé.
+      </div>
+    </div>
+    <div class="step">
+      <div class="body">
+        <strong>Journal d'audit + notifications.</strong> L'action DRAW_EXECUTED est tracée avec l'admin, l'IP, le récap chiffré. Chaque collaborateur affecté reçoit une notification ciblée selon son issue.
+      </div>
+    </div>
+  </div>
+
+  <h2>Exemple chiffré — session Cross (12 places, 5 substituts, 22 candidats)</h2>
+  <pre class="code">22 candidats validés
+└─ shuffle Fisher-Yates → ordre aléatoire reproductible
+
+Pass 1 : attribution par préférence
+├─ 12 candidats reçoivent une place selon leurs choix
+└─ 10 candidats non attribués
+
+Pass 2 : pile substituts/attente
+├─ shuffle des 10
+├─ 5 premiers → SUBSTITUTS (rangs 1 à 5)
+└─ 5 suivants → LISTE D'ATTENTE
+
+Résultat final : 12 sélectionnés · 5 substituts · 5 en attente</pre>
+
+  <h2>Garanties offertes</h2>
+  <div class="feature-grid">
+    <div class="feature">
+      <p class="title">Équité</p>
+      <p class="desc">L'ordre d'inscription n'a aucune influence. Seul le hasard et les préférences explicites comptent.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Transparence</p>
+      <p class="desc">Chaque tirage a un identifiant unique, un horodatage, un administrateur signataire, une IP et un détail JSON.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Atomicité</p>
+      <p class="desc">Impossible d'avoir un tirage à moitié écrit en base. Tout est commit ou tout est rollback.</p>
+    </div>
+    <div class="feature">
+      <p class="title">Auditabilité</p>
+      <p class="desc">L'historique de statut de chaque inscription est conservé. Le journal d'audit garde la trace de l'action d'exécution.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ § 08 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 08</span>
+    <h1>Sécurité, audit et notifications</h1>
+  </div>
+
+  <h2>Journal d'audit (AuditLogger)</h2>
+  <p>Toute action sensible est journalisée automatiquement :</p>
+  <ul>
+    <li>Exécution de tirage (DRAW_EXECUTED) — avec récap chiffré complet</li>
+    <li>Attribution / retrait d'un rôle (ROLE_ASSIGNED, ROLE_REMOVED)</li>
+    <li>Validation / rejet d'inscription (REGISTRATION_VALIDATED, REGISTRATION_REJECTED)</li>
+    <li>Validation / rejet de document (DOCUMENT_VALIDATED, DOCUMENT_REJECTED)</li>
+    <li>Publication / archivage d'annonce (ANNOUNCEMENT_PUBLISHED, ANNOUNCEMENT_ARCHIVED)</li>
+    <li>Approbation / rejet de retrait (WITHDRAWAL_APPROVED, WITHDRAWAL_REJECTED)</li>
+  </ul>
+  <p>Chaque entrée capture : <strong>utilisateur, action, table cible, ID cible, libellé, payload JSON détaillé, adresse IP, horodatage</strong>.</p>
+
+  <h2>Notifications automatiques</h2>
+  <p>Le système envoie automatiquement des notifications aux utilisateurs concernés lors des événements clés :</p>
+  <ul>
+    <li><strong>Tirage exécuté</strong> — sélectionnés, substituts et liste d'attente reçoivent chacun un message adapté</li>
+    <li><strong>Document validé / rejeté</strong> — avec le motif du modérateur le cas échéant</li>
+    <li><strong>Retrait approuvé / rejeté</strong> — avec commentaire administrateur</li>
+    <li><strong>Annonce publiée</strong> — diffusion à l'audience cible</li>
+  </ul>
+
+  <h2>Historique des statuts d'inscription</h2>
+  <p>La table <code>registration_status_history</code> conserve toutes les transitions de statut d'une inscription : ancien statut, nouveau statut, motif, horodatage. Permet de reconstituer le parcours complet d'un dossier.</p>
+
+  <h2>Authentification</h2>
+  <p>Connexion par matricule + mot de passe. Les mots de passe sont hashés avec bcrypt en production. La session utilisateur stocke le rôle, l'identité et les autorisations.</p>
+</section>
+
+<!-- ════════════ § 09 ════════════ -->
+<section class="chapter">
+  <div class="chapter-header">
+    <span class="chapter-num">§ 09</span>
+    <h1>Glossaire des statuts</h1>
+  </div>
+
+  <h2>Statuts d'activité</h2>
+  <table>
+    <thead>
+      <tr><th>Statut</th><th>Signification</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="role">DRAFT</td><td>Brouillon, non visible des collaborateurs.</td></tr>
+      <tr><td class="role">PUBLISHED</td><td>Publiée, visible dans le catalogue.</td></tr>
+      <tr><td class="role">ARCHIVED</td><td>Retirée du catalogue mais conservée pour l'historique.</td></tr>
+      <tr><td class="role">CANCELLED</td><td>Annulée définitivement.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Statuts de session</h2>
+  <table>
+    <thead>
+      <tr><th>Statut</th><th>Signification</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="role">DRAFT</td><td>Session en cours de configuration.</td></tr>
+      <tr><td class="role">OPEN</td><td>Inscriptions ouvertes aux collaborateurs.</td></tr>
+      <tr><td class="role">CLOSED</td><td>Inscriptions fermées, prête pour le tirage.</td></tr>
+      <tr><td class="role">DRAW_DONE</td><td>Tirage exécuté, résultats publiés.</td></tr>
+      <tr><td class="role">FINISHED</td><td>Activité terminée.</td></tr>
+      <tr><td class="role">CANCELLED</td><td>Session annulée.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Statuts d'inscription</h2>
+  <table>
+    <thead>
+      <tr><th>Statut</th><th>Signification</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="role">PENDING</td><td>En attente de validation administrative.</td></tr>
+      <tr><td class="role">VALIDATED</td><td>Validée, éligible au tirage.</td></tr>
+      <tr><td class="role">REJECTED</td><td>Rejetée par l'administration avec motif.</td></tr>
+      <tr><td class="role">SELECTED</td><td>Sélectionné lors du tirage au sort.</td></tr>
+      <tr><td class="role">WAITING_LIST</td><td>Substitut ou en liste d'attente.</td></tr>
+      <tr><td class="role">CONFIRMED</td><td>Présence confirmée après sélection.</td></tr>
+      <tr><td class="role">WITHDRAWN</td><td>Retirée par l'employé après approbation.</td></tr>
+      <tr><td class="role">CANCELLED</td><td>Annulée avant le tirage.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="colophon">
+    <div>Sonatrach SpA · DCCH</div>
+    <div>Plateforme v.2.6 · Mai 2026</div>
+  </div>
+</section>
+
+</body>
+</html>

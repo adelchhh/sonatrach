@@ -3,15 +3,25 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { apiGet, apiPost, getCurrentUserId } from "../api";
 import { useT } from "../i18n/LanguageContext";
+import {
+  PageHero,
+  Modal,
+  Button,
+  Alert,
+  StatusPill,
+  DataPanel,
+  Select,
+  SectionHeader,
+} from "../components/ui/Studio";
 
-const defaultImage =
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80";
+const DEFAULT_IMAGE =
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80";
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -60,9 +70,8 @@ export default function ActivityDetail() {
 
   const toggleSiteChoice = (sessionSiteId) => {
     setSiteChoices((prev) => {
-      if (prev.includes(sessionSiteId)) {
+      if (prev.includes(sessionSiteId))
         return prev.filter((id) => id !== sessionSiteId);
-      }
       if (prev.length >= 3) return prev;
       return [...prev, sessionSiteId];
     });
@@ -96,7 +105,7 @@ export default function ActivityDetail() {
       setModal({ open: false });
       setSiteChoices([]);
     } catch (err) {
-      setSubmitError(err.message || "Could not submit registration.");
+      setSubmitError(err.message || "Inscription impossible.");
     } finally {
       setSubmitting(false);
     }
@@ -105,13 +114,8 @@ export default function ActivityDetail() {
   if (loading) {
     return (
       <Layout>
-        <div className="px-4 py-16">
-          <div className="max-w-[1336px] mx-auto">
-            <p className="text-[#7A8088]">{t("common.loading")}</p>
-            <Link to="/catalog" className="text-[#ED8D31] font-medium">
-              {t("activityDetail.breadcrumbActivities")}
-            </Link>
-          </div>
+        <div className="px-8 py-20 text-center">
+          <p className="text-[#737373] text-[14px]">{t("common.loading")}</p>
         </div>
       </Layout>
     );
@@ -120,14 +124,14 @@ export default function ActivityDetail() {
   if (pageError || !activity) {
     return (
       <Layout>
-        <div className="px-4 py-16">
-          <div className="max-w-[1336px] mx-auto">
-            <p className="text-red-600">
-              {pageError || t("activityDetail.activityNotFound")}
-            </p>
-            <Link to="/catalog" className="text-[#ED8D31] font-medium">
-              {t("activityDetail.breadcrumbActivities")}
-            </Link>
+        <div className="px-8 py-20 max-w-[800px] mx-auto">
+          <Alert tone="danger" title="Activité introuvable">
+            {pageError || t("activityDetail.activityNotFound")}
+          </Alert>
+          <div className="mt-6">
+            <Button to="/catalog" variant="outline" size="md">
+              ← {t("activityDetail.breadcrumbActivities")}
+            </Button>
           </div>
         </div>
       </Layout>
@@ -143,308 +147,354 @@ export default function ActivityDetail() {
       ? activity.status
       : t(`statuses.${activity.status}`);
 
-  const image = activity.image_url || activity.image || defaultImage;
+  const heroImage = activity.image_url || activity.image || DEFAULT_IMAGE;
 
   return (
     <Layout>
-      <div className="px-4 py-10">
-        <div className="w-full max-w-[1336px] mx-auto">
-          <div className="text-sm text-[#7A8088] mb-5">
-            <Link to="/catalog" className="hover:text-[#2F343B]">
-              {t("activityDetail.breadcrumbActivities")}
-            </Link>{" "}
-            · <span className="text-[#2F343B]">{activity.title}</span>
-          </div>
+      <PageHero
+        eyebrow={categoryLabel}
+        title={activity.title}
+        subtitle={activity.description}
+        image={heroImage}
+        height="tall"
+        breadcrumbs={[
+          { label: t("activityDetail.breadcrumbActivities"), to: "/catalog" },
+          { label: activity.title },
+        ]}
+        actions={
+          sessions.length > 0 ? (
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                if (!userId) {
+                  navigate("/login");
+                  return;
+                }
+                setModal({ open: true });
+              }}
+            >
+              {t("activityDetail.register")} →
+            </Button>
+          ) : (
+            <StatusPill tone="warn" label={t("activityDetail.noOpenSessions")} solid />
+          )
+        }
+      />
 
-          <div className="mb-8">
-            <span className="inline-flex px-4 py-2 rounded-full bg-white border border-[#E5E2DC] text-sm text-[#50565E] mb-4">
-              {categoryLabel}
-            </span>
-
-            <h1 className="text-[#2F343B] text-[56px] font-extrabold leading-[100%] tracking-[-2px] mb-4">
-              {activity.title}
-            </h1>
-
-            <p className="text-[#7A8088] text-xl">
-              {activity.description}
-            </p>
-          </div>
-
+      <div className="px-8 lg:px-12 py-12 bg-white">
+        <div className="max-w-[1280px] mx-auto">
           {successMessage && (
-            <div className="mb-6 rounded-[14px] border border-green-200 bg-green-50 text-green-700 px-4 py-3 text-sm">
-              ✅ {successMessage}{" "}
-              <Link
-                to="/dashboard/requests"
-                className="font-semibold underline ml-2"
-              >
-                {t("activityDetail.seeMyRequests")}
-              </Link>
+            <div className="mb-8">
+              <Alert tone="success" title="Inscription enregistrée">
+                {successMessage}{" "}
+                <Link
+                  to="/dashboard/requests"
+                  className="font-semibold underline ml-1"
+                >
+                  {t("activityDetail.seeMyRequests")} →
+                </Link>
+              </Alert>
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 mb-10">
-            <div className="rounded-[28px] overflow-hidden min-h-[420px]">
-              <img
-                src={image}
-                alt={activity.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            <div className="rounded-[28px] border border-[#E5E2DC] bg-white p-7 h-fit">
-              <span className="inline-flex px-4 py-2 rounded-full bg-[#E9F7EF] text-[#2F8C57] text-sm font-semibold mb-5">
-                {statusLabel}
-              </span>
-
-              <h2 className="text-[#2F343B] text-[22px] font-bold mb-4">
-                {t("activityDetail.registerForSession")}
-              </h2>
-
-              <div className="space-y-3 text-sm text-[#50565E] border-b border-[#E5E2DC] pb-5 mb-5">
-                <div className="flex justify-between">
-                  <span>{t("activityDetail.minimumSeniority")}</span>
-                  <span className="font-semibold text-[#2F343B]">
-                    {activity.minimum_seniority} {t("activityDetail.yearsShort")}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>{t("activityDetail.demandLevel")}</span>
-                  <span className="font-semibold text-[#2F343B]">
-                    {activity.demand_level || "—"}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>{t("activityDetail.randomDraw")}</span>
-                  <span className="font-semibold text-[#2F343B]">
-                    {activity.draw_enabled ? t("common.yes") : t("common.no")}
-                  </span>
-                </div>
-              </div>
-
-              {sessions.length === 0 ? (
-                <p className="text-sm text-[#7A8088] italic">
-                  {t("activityDetail.noOpenSessions")}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10 mb-16">
+            {/* MAIN COLUMN — description + sessions */}
+            <div className="space-y-12">
+              <section>
+                <SectionHeader
+                  title={t("activityDetail.overview")}
+                  subtitle="Tout ce que vous devez savoir sur cette activité"
+                />
+                <p className="text-[#525252] text-[15px] leading-[1.8]">
+                  {activity.description}
                 </p>
-              ) : (
-                <>
-                  <label className="block text-sm font-semibold text-[#2F343B] mb-2">
-                    {t("activityDetail.selectSession")}
-                  </label>
+              </section>
 
-                  <select
-                    value={selectedSessionId || ""}
-                    onChange={(e) => {
-                      setSelectedSessionId(Number(e.target.value));
-                      setSiteChoices([]);
-                    }}
-                    className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none mb-5"
-                  >
+              <section>
+                <SectionHeader
+                  title={t("activityDetail.availableSessions")}
+                  subtitle={`${sessions.length} session${sessions.length > 1 ? "s" : ""} ouverte${sessions.length > 1 ? "s" : ""} à l'inscription`}
+                />
+                {sessions.length === 0 ? (
+                  <DataPanel>
+                    <div className="px-6 py-10 text-center text-[#737373] text-[13px]">
+                      {t("activityDetail.noSessions")}
+                    </div>
+                  </DataPanel>
+                ) : (
+                  <div className="space-y-3">
                     {sessions.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {formatDate(s.start_date)} → {formatDate(s.end_date)} (
-                        {s.total_quota} {t("activityDetail.places")})
-                      </option>
-                    ))}
-                  </select>
-
-                  {selectedSession && selectedSession.sites?.length > 0 && (
-                    <div className="mb-5">
-                      <p className="text-sm font-semibold text-[#2F343B] mb-2">
-                        {t("activityDetail.sitePreferences")}
-                      </p>
-                      <p className="text-xs text-[#7A8088] mb-3">
-                        {t("activityDetail.sitePrefHint")}
-                      </p>
-
-                      <div className="space-y-2 mb-3">
-                        {siteChoices.length === 0 ? (
-                          <p className="text-xs text-[#7A8088] italic">
-                            {t("activityDetail.noSiteSelected")}
+                      <div
+                        key={s.id}
+                        className="bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] transition-colors p-5 flex items-start gap-5"
+                      >
+                        <div className="min-w-[110px]">
+                          <p className="text-[#ED8D31] text-[10px] uppercase tracking-[0.2em] font-bold mb-1">
+                            Début
                           </p>
-                        ) : (
-                          siteChoices.map((id, idx) => {
-                            const site = selectedSession.sites.find(
-                              (s) => s.session_site_id === id
-                            );
-                            return (
-                              <div
-                                key={id}
-                                className="flex items-center justify-between bg-[#FFF7EC] border border-[#F3D9B0] rounded-lg px-3 py-2 text-sm"
-                              >
-                                <span>
-                                  <strong>#{idx + 1}</strong> {site?.site_name}
-                                </span>
-                                <span className="flex gap-1">
-                                  <button
-                                    onClick={() => moveChoice(idx, -1)}
-                                    className="px-2 py-0.5 text-xs bg-white border rounded"
-                                  >
-                                    ↑
-                                  </button>
-                                  <button
-                                    onClick={() => moveChoice(idx, 1)}
-                                    className="px-2 py-0.5 text-xs bg-white border rounded"
-                                  >
-                                    ↓
-                                  </button>
-                                  <button
-                                    onClick={() => toggleSiteChoice(id)}
-                                    className="px-2 py-0.5 text-xs bg-white border rounded text-red-600"
-                                  >
-                                    ✕
-                                  </button>
-                                </span>
-                              </div>
-                            );
-                          })
-                        )}
+                          <p className="text-[#0A0A0A] text-[18px] font-bold tabular-nums leading-tight">
+                            {formatDate(s.start_date)}
+                          </p>
+                          <p className="text-[#737373] text-[11px] mt-1 tabular-nums">
+                            → {formatDate(s.end_date)}
+                          </p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#0A0A0A] text-[14px] font-bold mb-2">
+                            Session #{s.id}
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[12px]">
+                            <div>
+                              <p className="text-[#A3A3A3] uppercase tracking-[0.15em] font-bold text-[10px] mb-0.5">
+                                {t("activityDetail.registrationDeadline")}
+                              </p>
+                              <p className="text-[#0A0A0A] font-semibold tabular-nums">
+                                {formatDate(s.registration_deadline)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[#A3A3A3] uppercase tracking-[0.15em] font-bold text-[10px] mb-0.5">
+                                {t("activityDetail.quota")}
+                              </p>
+                              <p className="text-[#0A0A0A] font-semibold tabular-nums">
+                                {s.total_quota} {t("activityDetail.places")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[#A3A3A3] uppercase tracking-[0.15em] font-bold text-[10px] mb-0.5">
+                                {t("activityDetail.transport")}
+                              </p>
+                              <p className="text-[#0A0A0A] font-semibold">
+                                {s.transport_included ? "Inclus" : "Non inclus"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {selectedSession.sites
-                          .filter(
-                            (s) => !siteChoices.includes(s.session_site_id)
-                          )
-                          .map((s) => (
-                            <button
-                              key={s.session_site_id}
-                              onClick={() =>
-                                toggleSiteChoice(s.session_site_id)
-                              }
-                              disabled={siteChoices.length >= 3}
-                              className="px-3 py-1.5 text-xs rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] disabled:opacity-50"
-                            >
-                              + {s.site_name} ({s.quota})
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      if (!userId) {
-                        navigate("/login");
-                        return;
-                      }
-                      setModal({ open: true });
-                    }}
-                    className="w-full py-4 rounded-[14px] bg-[#ED8D31] text-white font-semibold hover:bg-[#d97d26] transition-colors"
-                  >
-                    {t("activityDetail.register")}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-[#2F343B] text-[36px] font-bold mb-4">
-              {t("activityDetail.overview")}
-            </h2>
-            <p className="text-[#7A8088] text-base leading-[190%] mb-8">
-              {activity.description}
-            </p>
-
-            <h3 className="text-[#2F343B] text-[30px] font-bold mb-5">
-              {t("activityDetail.availableSessions")}
-            </h3>
-
-            {sessions.length === 0 ? (
-              <div className="rounded-[20px] border border-[#E5E2DC] bg-white p-5 text-[#7A8088]">
-                {t("activityDetail.noSessions")}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {sessions.map((s) => (
-                  <div
-                    key={s.id}
-                    className="rounded-[20px] border border-[#E5E2DC] bg-white p-5 flex gap-5 items-start"
-                  >
-                    <div className="min-w-[120px] text-[#ED8D31] font-bold">
-                      {formatDate(s.start_date)}
-                      <p className="text-xs text-[#7A8088] font-normal mt-1">
-                        → {formatDate(s.end_date)}
-                      </p>
-                    </div>
-
-                    <div className="flex-1">
-                      <h4 className="text-[#2F343B] font-bold mb-2">
-                        Session #{s.id}
-                      </h4>
-                      <p className="text-[#7A8088] text-sm leading-[170%]">
-                        {t("activityDetail.registrationDeadline")}:{" "}
-                        <strong>{formatDate(s.registration_deadline)}</strong> ·{" "}
-                        {t("activityDetail.quota")}: <strong>{s.total_quota}</strong>{" "}
-                        {t("activityDetail.places")} · {t("activityDetail.transport")}:{" "}
-                        {s.transport_included ? "✅" : "—"}
-                      </p>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
+              </section>
+            </div>
+
+            {/* SIDE COLUMN — registration card */}
+            <aside>
+              <div className="bg-[#FAFAFA] border border-[#E5E5E5] p-6 sticky top-6">
+                <div className="flex items-center justify-between mb-5">
+                  <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-[#737373]">
+                    Inscription
+                  </p>
+                  <StatusPill tone="success" label={statusLabel} />
+                </div>
+
+                <h2 className="text-[#0A0A0A] text-[20px] font-bold tracking-tight mb-5 leading-tight">
+                  {t("activityDetail.registerForSession")}
+                </h2>
+
+                <dl className="space-y-3 mb-6 pb-6 border-b border-[#E5E5E5]">
+                  <InfoRow
+                    label={t("activityDetail.minimumSeniority")}
+                    value={`${activity.minimum_seniority} ${t("activityDetail.yearsShort")}`}
+                  />
+                  <InfoRow
+                    label={t("activityDetail.demandLevel")}
+                    value={activity.demand_level || "—"}
+                  />
+                  <InfoRow
+                    label={t("activityDetail.randomDraw")}
+                    value={activity.draw_enabled ? t("common.yes") : t("common.no")}
+                  />
+                </dl>
+
+                {sessions.length === 0 ? (
+                  <p className="text-[12px] text-[#737373] italic">
+                    {t("activityDetail.noOpenSessions")}
+                  </p>
+                ) : (
+                  <>
+                    <Select
+                      label={t("activityDetail.selectSession")}
+                      value={selectedSessionId || ""}
+                      onChange={(v) => {
+                        setSelectedSessionId(Number(v));
+                        setSiteChoices([]);
+                      }}
+                      options={sessions.map((s) => ({
+                        value: s.id,
+                        label: `${formatDate(s.start_date)} → ${formatDate(s.end_date)} (${s.total_quota} ${t("activityDetail.places")})`,
+                      }))}
+                    />
+
+                    {selectedSession && selectedSession.sites?.length > 0 && (
+                      <div className="mt-5">
+                        <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-1">
+                          {t("activityDetail.sitePreferences")}
+                        </p>
+                        <p className="text-[11px] text-[#737373] mb-3 leading-[1.55]">
+                          {t("activityDetail.sitePrefHint")}
+                        </p>
+
+                        <div className="space-y-2 mb-3">
+                          {siteChoices.length === 0 ? (
+                            <p className="text-[11px] text-[#A3A3A3] italic">
+                              {t("activityDetail.noSiteSelected")}
+                            </p>
+                          ) : (
+                            siteChoices.map((id, idx) => {
+                              const site = selectedSession.sites.find(
+                                (s) => s.session_site_id === id
+                              );
+                              return (
+                                <div
+                                  key={id}
+                                  className="flex items-center justify-between bg-white border border-[#0A0A0A] px-3 py-2 text-[12px]"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <span className="text-[#ED8D31] font-bold tabular-nums">
+                                      #{idx + 1}
+                                    </span>
+                                    <span className="text-[#0A0A0A] font-semibold">
+                                      {site?.site_name}
+                                    </span>
+                                  </span>
+                                  <span className="flex gap-1">
+                                    <button
+                                      onClick={() => moveChoice(idx, -1)}
+                                      className="w-6 h-6 text-[#0A0A0A] hover:bg-[#FAFAFA] text-xs"
+                                      title="Monter"
+                                    >
+                                      ↑
+                                    </button>
+                                    <button
+                                      onClick={() => moveChoice(idx, 1)}
+                                      className="w-6 h-6 text-[#0A0A0A] hover:bg-[#FAFAFA] text-xs"
+                                      title="Descendre"
+                                    >
+                                      ↓
+                                    </button>
+                                    <button
+                                      onClick={() => toggleSiteChoice(id)}
+                                      className="w-6 h-6 text-[#9F1F1F] hover:bg-[#FFEFEF] text-xs"
+                                      title="Retirer"
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {selectedSession.sites
+                            .filter(
+                              (s) => !siteChoices.includes(s.session_site_id)
+                            )
+                            .map((s) => (
+                              <button
+                                key={s.session_site_id}
+                                onClick={() =>
+                                  toggleSiteChoice(s.session_site_id)
+                                }
+                                disabled={siteChoices.length >= 3}
+                                className="px-3 py-1.5 text-[11px] bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] text-[#0A0A0A] uppercase tracking-[0.1em] font-bold disabled:opacity-40 transition-colors"
+                              >
+                                + {s.site_name} ({s.quota})
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-6">
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={() => {
+                          if (!userId) {
+                            navigate("/login");
+                            return;
+                          }
+                          setModal({ open: true });
+                        }}
+                      >
+                        {t("activityDetail.register")} →
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+            </aside>
           </div>
         </div>
       </div>
 
-      {modal.open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setModal({ open: false })}
-        >
-          <div
-            className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              {t("activityDetail.confirmRegistration")}
-            </h2>
-
-            <p className="text-sm text-[#7A8088] mb-3 leading-[170%]">
-              {t("activityDetail.confirmRegistrationText", { title: activity.title })}{" "}
-              {selectedSession && (
-                <>
-                  {" "}— session {formatDate(selectedSession.start_date)} →{" "}
-                  {formatDate(selectedSession.end_date)}.
-                </>
-              )}
-            </p>
-
+      <Modal
+        open={modal.open}
+        onClose={() => setModal({ open: false })}
+        title={t("activityDetail.confirmRegistration")}
+        description={
+          <>
+            {t("activityDetail.confirmRegistrationText", {
+              title: activity.title,
+            })}
+            {selectedSession && (
+              <>
+                {" "}— session {formatDate(selectedSession.start_date)} →{" "}
+                {formatDate(selectedSession.end_date)}.
+              </>
+            )}
             {siteChoices.length > 0 && (
-              <p className="text-xs text-[#7A8088] mb-4">
-                {t("activityDetail.sitesSelected", { count: siteChoices.length })}
+              <p className="text-[11px] text-[#737373] mt-3">
+                {t("activityDetail.sitesSelected", {
+                  count: siteChoices.length,
+                })}
               </p>
             )}
-
-            {submitError && (
-              <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm mb-4">
-                {submitError}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setModal({ open: false })}
-                disabled={submitting}
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] disabled:opacity-60"
-              >
-                {t("common.cancel")}
-              </button>
-
-              <button
-                onClick={handleConfirm}
-                disabled={submitting}
-                className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white disabled:opacity-60"
-              >
-                {submitting ? t("common.submitting") : t("common.confirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => setModal({ open: false })}
+              disabled={submitting}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleConfirm}
+              disabled={submitting}
+            >
+              {submitting ? t("common.submitting") : t("common.confirm")}
+            </Button>
+          </>
+        }
+      >
+        {submitError && (
+          <Alert tone="danger" title="Erreur">
+            {submitError}
+          </Alert>
+        )}
+      </Modal>
     </Layout>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#737373]">
+        {label}
+      </dt>
+      <dd className="text-[13px] font-bold text-[#0A0A0A] text-right">
+        {value}
+      </dd>
+    </div>
   );
 }

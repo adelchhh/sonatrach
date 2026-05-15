@@ -36,33 +36,41 @@ export default function DrawWheel({
     [candidates]
   );
 
-  // master scheduler
+  // master scheduler — uses length deps so a stable-content array with a new
+  // reference doesn't restart the whole choreography mid-flight
+  const candidatesLength = candidates.length;
+  const winnersLength = winners.length;
+
   useEffect(() => {
-    if (!running || candidates.length === 0) return;
+    if (!running || candidatesLength === 0) return;
     const timers = [];
 
-    // unlock audio context (must be in user gesture context — running becomes true after click)
     sound.init();
 
     setPhase("init");
+    setCountdown(3);
+    setCurrentWinnerIndex(-1);
 
-    // INIT → 1.5s
+    // INIT → COUNTDOWN at 1500ms. Pre-schedule ALL THREE heartbeats on
+    // the audio clock at once so the rhythm is sample-accurate.
+    // Tiny +50ms audio nudge compensates for React paint latency so the
+    // sound peaks ~when the number visually pops in.
     timers.push(setTimeout(() => {
       setPhase("countdown");
-      sound.heartbeat();
+      sound.heartbeat(0.05);   // beat for "3" — slight offset for paint sync
+      sound.heartbeat(1.05);   // beat for "2" — exactly 1s later
+      sound.heartbeat(2.05);   // beat for "1" — exactly 2s later
     }, 1500));
 
-    // COUNTDOWN beats
-    timers.push(setTimeout(() => { setCountdown(2); sound.heartbeat(); }, 2500));
-    timers.push(setTimeout(() => { setCountdown(1); sound.heartbeat(); }, 3500));
+    // Visual-only number updates (audio already queued above)
+    timers.push(setTimeout(() => setCountdown(2), 2500));
+    timers.push(setTimeout(() => setCountdown(1), 3500));
 
-    // → SHUFFLE
     timers.push(setTimeout(() => {
       setPhase("shuffle");
       sound.drumrollStart();
     }, 4500));
 
-    // → REVEAL
     timers.push(setTimeout(() => {
       sound.drumrollStop();
       setPhase("reveal");
@@ -74,44 +82,58 @@ export default function DrawWheel({
       sound.drumrollStop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, candidates]);
+  }, [running, candidatesLength]);
 
-  // Reveal one winner at a time (2.0s each for breathing room)
+  // Reveal one winner at a time
   useEffect(() => {
     if (phase !== "reveal") return;
-    if (currentWinnerIndex >= winners.length) {
+
+    if (currentWinnerIndex >= winnersLength) {
       const t = setTimeout(() => {
         setPhase("final");
         sound.fanfare();
-        // big tricolore confetti finale
         burstConfetti(confettiRef.current, "finale");
-      }, 1000);
+      }, 550);
       return () => clearTimeout(t);
     }
 
-    // Trigger reveal effects
     const winner = winners[currentWinnerIndex];
+    if (!winner) return;
+
+    // Reveal choreography — all timing relative to scene mount (t=0):
+    //   t=0       whoosh (the "spin-down" air pass)
+    //   t≈400ms   IMPACT: chime + flash + shake + name slide + confetti
+    //             (the name keyframe also starts its slide-up at 400ms via
+    //              animation-delay, so audio + visual hit on the same frame)
+    //   t=2000ms  move to next winner
+    const localTimers = [];
     sound.whoosh();
-    setShake(true);
-    setFlash(true);
-    setTimeout(() => sound.chime(winner.kind), 380);
-    setTimeout(() => burstConfetti(confettiRef.current, winner.kind), 400);
-    setTimeout(() => setFlash(false), 120);
-    setTimeout(() => setShake(false), 320);
-
-    const t = setTimeout(() => {
+    localTimers.push(setTimeout(() => {
+      sound.chime(winner.kind);
+      setShake(true);
+      setFlash(true);
+      burstConfetti(confettiRef.current, winner.kind);
+    }, 400));
+    localTimers.push(setTimeout(() => setFlash(false), 520));
+    localTimers.push(setTimeout(() => setShake(false), 720));
+    localTimers.push(setTimeout(() => {
       setCurrentWinnerIndex((i) => i + 1);
-    }, 2000);
-    return () => clearTimeout(t);
-  }, [phase, currentWinnerIndex, winners, sound]);
+    }, 2000));
 
-  // notify parent when done
+    return () => localTimers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, currentWinnerIndex, winnersLength]);
+
+  // notify parent when done — keep callback in a ref so identity churn on the
+  // parent doesn't reset the 7s final-scene hold timer
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+
   useEffect(() => {
-    if (phase === "final") {
-      const t = setTimeout(() => onComplete && onComplete(), 7000);
-      return () => clearTimeout(t);
-    }
-  }, [phase, onComplete]);
+    if (phase !== "final") return;
+    const t = setTimeout(() => onCompleteRef.current && onCompleteRef.current(), 7000);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   if (!running && phase === "idle") return null;
 
@@ -145,12 +167,8 @@ export default function DrawWheel({
       <ParticleField />
       <SweepingBeams active={phase === "reveal" || phase === "shuffle"} />
 
-      {/* Algerian flag stripe */}
-      <div className="absolute top-0 inset-x-0 h-[3px] flex z-30">
-        <div className="flex-1 bg-[#006233]" />
-        <div className="flex-1 bg-white" />
-        <div className="flex-1 bg-[#D21034]" />
-      </div>
+      {/* Orange accent stripe */}
+      <div className="absolute top-0 inset-x-0 h-[3px] bg-[#ED8D31] z-30" />
 
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.06] mix-blend-overlay"
@@ -200,8 +218,8 @@ export default function DrawWheel({
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2.5">
             <span className="relative flex w-2.5 h-2.5">
-              <span className="absolute inline-flex w-full h-full rounded-full bg-[#D21034] opacity-75 animate-ping" />
-              <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-[#D21034]" />
+              <span className="absolute inline-flex w-full h-full rounded-full bg-[#ED8D31] opacity-75 animate-ping" />
+              <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-[#ED8D31]" />
             </span>
             <span className="text-white text-[11px] uppercase tracking-[0.3em] font-bold">
               On air
@@ -280,14 +298,22 @@ export default function DrawWheel({
           100% { opacity: 1; transform: scale(1); }
         }
         @keyframes scaleFade {
-          0%   { opacity: 0; transform: scale(0.5); }
-          20%  { opacity: 1; transform: scale(1); }
+          0%   { opacity: 0; transform: scale(0.7); }
+          10%  { opacity: 1; transform: scale(1); }
           80%  { opacity: 1; transform: scale(1); }
           100% { opacity: 0; transform: scale(1.5); }
         }
         @keyframes nameSlideUp {
           0%   { opacity: 0; transform: translateY(60px); letter-spacing: 0.5em; filter: blur(20px); }
           100% { opacity: 1; transform: translateY(0);   letter-spacing: -0.02em; filter: blur(0); }
+        }
+        @keyframes nameSlideUpMirror {
+          0%   { opacity: 0; transform: translateY(60px) scaleY(-1); letter-spacing: 0.5em; filter: blur(22px); }
+          100% { opacity: 0.25; transform: translateY(0) scaleY(-1); letter-spacing: -0.02em; filter: blur(2px); }
+        }
+        @keyframes shuffleIn {
+          0%   { opacity: 0; transform: scale(0.92); filter: blur(8px); }
+          100% { opacity: 1; transform: scale(1); filter: blur(0); }
         }
         @keyframes nameSubFade {
           0%, 30% { opacity: 0; transform: translateY(20px); }
@@ -298,14 +324,14 @@ export default function DrawWheel({
           to   { transform: rotate(360deg); }
         }
         @keyframes chipFly {
-          0%   { opacity: 0; transform: translate(var(--sx), var(--sy)) rotate(var(--rot)) scale(0); }
-          30%  { opacity: 0.9; transform: translate(var(--sx), var(--sy)) rotate(var(--rot)) scale(1); }
-          70%  { opacity: 0.6; transform: translate(calc(var(--sx) * 0.3), calc(var(--sy) * 0.3)) rotate(0) scale(0.9); }
-          100% { opacity: 0; transform: translate(0, 0) rotate(0) scale(0.4); }
+          0%   { opacity: 0; transform: translate(calc(var(--sx) - 50%), calc(var(--sy) - 50%)) rotate(var(--rot)) scale(0); }
+          30%  { opacity: 0.9; transform: translate(calc(var(--sx) - 50%), calc(var(--sy) - 50%)) rotate(var(--rot)) scale(1); }
+          70%  { opacity: 0.6; transform: translate(calc(var(--sx) * 0.3 - 50%), calc(var(--sy) * 0.3 - 50%)) rotate(0) scale(0.9); }
+          100% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(0.4); }
         }
         @keyframes orbiter {
-          from { transform: rotate(0deg) translateX(180px) rotate(0deg); }
-          to   { transform: rotate(360deg) translateX(180px) rotate(-360deg); }
+          from { transform: rotate(0deg) translateX(220px) rotate(0deg); }
+          to   { transform: rotate(360deg) translateX(220px) rotate(-360deg); }
         }
         @keyframes pulseGlow {
           0%, 100% { box-shadow: 0 0 60px rgba(237,141,49,0.3), 0 0 120px rgba(237,141,49,0.15); }
@@ -384,7 +410,7 @@ function SceneCountdown({ number }) {
         style={{
           background:
             "radial-gradient(circle, rgba(237,141,49,0.4) 0%, transparent 70%)",
-          animation: "scaleFade 1s ease-out",
+          animation: "scaleFade 1s ease-out forwards",
         }}
         key={number}
       />
@@ -396,7 +422,7 @@ function SceneCountdown({ number }) {
           fontWeight: 200,
           lineHeight: 1,
           letterSpacing: "-0.05em",
-          animation: "scaleFade 1s ease-out",
+          animation: "scaleFade 1s ease-out forwards",
           textShadow: "0 0 80px rgba(237,141,49,0.5)",
         }}
       >
@@ -408,7 +434,10 @@ function SceneCountdown({ number }) {
 
 function SceneShuffle({ candidates, positions }) {
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
+    <div
+      className="relative w-full h-full flex items-center justify-center"
+      style={{ animation: "shuffleIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both" }}
+    >
       <div
         className="absolute"
         style={{
@@ -431,33 +460,39 @@ function SceneShuffle({ candidates, positions }) {
         </p>
       </div>
 
-      {candidates.slice(0, 12).map((c, i) => (
+      {candidates.slice(0, 8).map((c, i) => (
         <div
           key={c.user_id || i}
           className="absolute"
           style={{
-            animation: `orbiter ${8 + (i % 4) * 2}s linear infinite`,
-            animationDelay: `-${i * 0.5}s`,
+            top: "50%",
+            left: "50%",
+            animation: `orbiter ${9 + (i % 3) * 2}s linear infinite`,
+            animationDelay: `-${i * 1.1}s`,
             transformOrigin: "0 0",
+            willChange: "transform",
           }}
         >
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-white text-xs font-medium whitespace-nowrap">
+          <div className="bg-white/12 border border-white/25 rounded-full px-4 py-1.5 text-white text-xs font-medium whitespace-nowrap -translate-x-1/2 -translate-y-1/2">
             {c.first_name} {c.name?.[0]}.
           </div>
         </div>
       ))}
 
-      {candidates.slice(0, 20).map((c, i) => {
+      {candidates.slice(0, 10).map((c, i) => {
         const pos = positions[i] || { startX: 0, startY: 0, delay: 0, angle: 0 };
         return (
           <div
             key={`chip-${c.user_id || i}-${i}`}
             className="absolute bg-[#ED8D31]/20 border border-[#ED8D31]/40 rounded-lg px-3 py-1 text-[#ED8D31] text-xs font-semibold tracking-wide pointer-events-none"
             style={{
+              top: "50%",
+              left: "50%",
               "--sx": `${pos.startX}vw`,
               "--sy": `${pos.startY}vh`,
               "--rot": `${pos.angle}deg`,
-              animation: `chipFly 3.5s ${pos.delay}s cubic-bezier(0.16, 1, 0.3, 1) infinite`,
+              animation: `chipFly 3.8s ${pos.delay}s cubic-bezier(0.16, 1, 0.3, 1) infinite`,
+              willChange: "transform, opacity",
             }}
           >
             {c.employee_number}
@@ -490,7 +525,7 @@ function SceneReveal({ winner, index, total }) {
           width: 800, height: 800,
           background: `radial-gradient(ellipse at top, ${kindColor}33 0%, transparent 60%)`,
           pointerEvents: "none",
-          animation: "scaleFade 1.8s ease-out",
+          animation: "scaleFade 1.8s ease-out forwards",
         }}
       />
 
@@ -550,14 +585,11 @@ function SceneReveal({ winner, index, total }) {
             lineHeight: 1,
             letterSpacing: "-0.04em",
             color: kindColor,
-            transform: "scaleY(-1)",
-            opacity: 0.25,
-            animation: "nameSlideUp 0.9s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
+            animation: "nameSlideUpMirror 0.9s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
             maskImage:
               "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 60%)",
             WebkitMaskImage:
               "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 60%)",
-            filter: "blur(2px)",
           }}
         >
           {winner.first_name}{" "}
@@ -678,11 +710,11 @@ function FinalColumn({ title, accent, items, icon }) {
 function ParticleField() {
   const particles = useMemo(
     () =>
-      Array.from({ length: 40 }).map((_, i) => ({
+      Array.from({ length: 24 }).map((_, i) => ({
         id: i,
         left: Math.random() * 100,
-        duration: 8 + Math.random() * 12,
-        delay: Math.random() * 8,
+        duration: 10 + Math.random() * 12,
+        delay: Math.random() * 10,
         size: 1 + Math.random() * 3,
         opacity: 0.3 + Math.random() * 0.4,
       })),
@@ -700,6 +732,7 @@ function ParticleField() {
             width: p.size, height: p.size, opacity: p.opacity,
             animation: `particleFloat ${p.duration}s ${p.delay}s linear infinite`,
             boxShadow: "0 0 4px rgba(237,141,49,0.8)",
+            willChange: "transform, opacity",
           }}
         />
       ))}
@@ -715,7 +748,7 @@ function SweepingBeams({ active }) {
   if (!active) return null;
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
-      {[0, 1, 2].map((i) => (
+      {[0, 1].map((i) => (
         <div
           key={`b1-${i}`}
           className="absolute"
@@ -724,25 +757,25 @@ function SweepingBeams({ active }) {
             width: "150vw", height: 6,
             background: "linear-gradient(90deg, transparent, rgba(237,141,49,0.7), transparent)",
             filter: "blur(8px)",
-            animation: `beamSweep1 ${5 + i * 1.5}s ${i * 1.5}s ease-in-out infinite`,
+            animation: `beamSweep1 ${6 + i * 2}s ${i * 2}s ease-in-out infinite`,
             transformOrigin: "center",
+            willChange: "transform, opacity",
           }}
         />
       ))}
-      {[0, 1].map((i) => (
-        <div
-          key={`b2-${i}`}
-          className="absolute"
-          style={{
-            top: "30%", left: 0,
-            width: "150vw", height: 4,
-            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
-            filter: "blur(6px)",
-            animation: `beamSweep2 ${6 + i * 2}s ${i * 2}s ease-in-out infinite`,
-            transformOrigin: "center",
-          }}
-        />
-      ))}
+      <div
+        className="absolute"
+        style={{
+          top: "30%", left: 0,
+          width: "150vw", height: 4,
+          background:
+            "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+          filter: "blur(6px)",
+          animation: "beamSweep2 8s 1s ease-in-out infinite",
+          transformOrigin: "center",
+          willChange: "transform, opacity",
+        }}
+      />
     </div>
   );
 }
@@ -752,56 +785,84 @@ function SweepingBeams({ active }) {
 /* ════════════════════════════════════════════════ */
 
 const ConfettiCanvas = forwardRef(function ConfettiCanvas(props, ref) {
-    const canvasRef = useRef(null);
-    const stateRef = useRef({ particles: [], rafId: null });
+  const canvasRef = useRef(null);
+  const stateRef = useRef({ particles: [], rafId: null });
 
-    useEffect(() => {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-      const resize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      };
-      resize();
-      window.addEventListener("resize", resize);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const resize = () => {
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
 
-      const tick = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const state = stateRef.current;
-        state.particles.forEach((p) => {
-          p.vy += 0.35; // gravity
-          p.vx *= 0.99; // drag
-          p.x += p.vx;
-          p.y += p.vy;
-          p.rotation += p.rotationSpeed;
-          p.opacity -= 0.005;
-        });
-        state.particles = state.particles.filter(
-          (p) => p.opacity > 0 && p.y < canvas.height + 80
-        );
+    let alive = true;
+    let lastTs = performance.now();
 
-        state.particles.forEach((p) => {
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate((p.rotation * Math.PI) / 180);
-          ctx.globalAlpha = Math.max(0, Math.min(1, p.opacity));
-          ctx.fillStyle = p.color;
-          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-          ctx.restore();
-        });
+    // Physics tuned for a 60fps baseline. On 144Hz / 240Hz monitors we
+    // scale every per-frame quantity by dt so confetti falls at the same
+    // perceived speed regardless of refresh rate. dt is clamped to avoid
+    // huge jumps if the tab was backgrounded.
+    const tick = (ts) => {
+      if (!alive) return;
+      const nowTs = ts || performance.now();
+      const dt = Math.min((nowTs - lastTs) / (1000 / 60), 3);
+      lastTs = nowTs;
 
-        state.rafId = requestAnimationFrame(tick);
-      };
-      tick();
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      ctx.clearRect(0, 0, w, h);
+      const state = stateRef.current;
+      const dragFactor = Math.pow(0.99, dt);
 
-      return () => {
-        window.removeEventListener("resize", resize);
-        cancelAnimationFrame(stateRef.current.rafId);
-      };
-    }, []);
+      for (const p of state.particles) {
+        p.vy += 0.35 * dt;
+        p.vx *= dragFactor;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rotation += p.rotationSpeed * dt;
+        p.opacity -= 0.005 * dt;
+      }
+      state.particles = state.particles.filter(
+        (p) => p.opacity > 0 && p.y < h + 80
+      );
 
-    if (ref) ref.current = stateRef.current;
+      for (const p of state.particles) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.globalAlpha = Math.max(0, Math.min(1, p.opacity));
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+
+      state.rafId = requestAnimationFrame(tick);
+    };
+    stateRef.current.rafId = requestAnimationFrame(tick);
+
+    return () => {
+      alive = false;
+      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(stateRef.current.rafId);
+      stateRef.current.particles = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (ref) {
+    if (typeof ref === "function") ref(stateRef.current);
+    else ref.current = stateRef.current;
+  }
 
   return (
     <canvas
@@ -815,7 +876,7 @@ const SONATRACH_PALETTES = {
   selected: ["#ED8D31", "#B5560F", "#FFFFFF", "#1A1A1A", "#FFD27A"],
   substitute: ["#FFFFFF", "#E0E0E0", "#ED8D31", "#7A8088"],
   waiting: ["#94A3B8", "#FFFFFF", "#475569"],
-  finale: ["#ED8D31", "#FFFFFF", "#006233", "#D21034", "#FFD27A", "#1A1A1A"],
+  finale: ["#ED8D31", "#FFFFFF", "#B5560F", "#FFD27A", "#1A1A1A", "#FA9D40"],
 };
 
 function burstConfetti(state, kind) {
@@ -877,33 +938,61 @@ function useSoundEngine() {
 function createSoundEngine() {
   let ctx = null;
   let master = null;
-  let reverb = null;
+  let compressor = null;
   let drumrollNode = null;
   let drumrollGain = null;
 
   function init() {
-    if (ctx) return;
+    if (ctx) {
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+      return;
+    }
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       ctx = new AC();
-      master = ctx.createGain();
-      master.gain.value = 0.7;
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
 
-      // Simple "reverb": delay + feedback for body
+      // Master bus → compressor → destination. Compressor catches the
+      // brass+kick stack in fanfare so it doesn't clip.
+      master = ctx.createGain();
+      master.gain.value = 0.65;
+
+      compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -14;
+      compressor.knee.value = 8;
+      compressor.ratio.value = 4;
+      compressor.attack.value = 0.005;
+      compressor.release.value = 0.25;
+
+      // Delay-based "reverb" body — single source of wet send for every
+      // sound, fed from master so volume scales consistently.
       const delay = ctx.createDelay(0.5);
       delay.delayTime.value = 0.18;
       const fb = ctx.createGain();
-      fb.gain.value = 0.32;
+      fb.gain.value = 0.3;
       const wet = ctx.createGain();
-      wet.gain.value = 0.35;
+      wet.gain.value = 0.28;
       delay.connect(fb);
       fb.connect(delay);
       delay.connect(wet);
-      wet.connect(ctx.destination);
 
-      reverb = delay; // anything connected here gets wet send
-      master.connect(ctx.destination);
+      master.connect(compressor);
       master.connect(delay);
+      wet.connect(compressor);
+      compressor.connect(ctx.destination);
+
+      // Tiny silent warm-up — kills the first-sound click on Chrome/Win
+      const warm = ctx.createOscillator();
+      const warmG = ctx.createGain();
+      warmG.gain.value = 0.0001;
+      warm.connect(warmG);
+      warmG.connect(master);
+      warm.start();
+      warm.stop(ctx.currentTime + 0.05);
     } catch (e) {
       console.warn("Web Audio unavailable", e);
     }
@@ -913,29 +1002,35 @@ function createSoundEngine() {
     return ctx ? ctx.currentTime : 0;
   }
 
-  /** Deep heartbeat kick — used during countdown */
-  function heartbeat() {
+  /**
+   * Deep heartbeat kick — used during countdown.
+   * `whenOffset` lets the caller schedule a beat in the future on the
+   * audio clock so we get rhythm-accurate playback even if setTimeout
+   * jitters by a few ms. Typical use: schedule all 3 countdown beats
+   * at once → audio rhythm is sample-accurate.
+   */
+  function heartbeat(whenOffset = 0) {
     if (!ctx) return;
-    const t = now();
+    const t = now() + Math.max(0, whenOffset);
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(140, t);
     osc.frequency.exponentialRampToValueAtTime(40, t + 0.18);
     gain.gain.setValueAtTime(0.001, t);
-    gain.gain.exponentialRampToValueAtTime(1.0, t + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.7, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
     osc.connect(gain);
     gain.connect(master);
     osc.start(t);
     osc.stop(t + 0.45);
 
-    // click layer
+    // click layer for transient definition (sharp 5ms attack)
     const click = ctx.createOscillator();
     const clickGain = ctx.createGain();
     click.type = "triangle";
     click.frequency.value = 800;
-    clickGain.gain.setValueAtTime(0.3, t);
+    clickGain.gain.setValueAtTime(0.22, t);
     clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
     click.connect(clickGain);
     clickGain.connect(master);
@@ -965,14 +1060,14 @@ function createSoundEngine() {
 
     drumrollGain = ctx.createGain();
     drumrollGain.gain.setValueAtTime(0.0001, t);
-    drumrollGain.gain.exponentialRampToValueAtTime(0.55, t + 4);
+    drumrollGain.gain.exponentialRampToValueAtTime(0.42, t + 4);
 
     // Tremolo: rapid amplitude modulation = drumroll feel
     const lfo = ctx.createOscillator();
     const lfoGain = ctx.createGain();
     lfo.frequency.setValueAtTime(8, t);
     lfo.frequency.exponentialRampToValueAtTime(22, t + 4);
-    lfoGain.gain.value = 0.4;
+    lfoGain.gain.value = 0.35;
     lfo.connect(lfoGain);
     lfoGain.connect(drumrollGain.gain);
 
@@ -990,11 +1085,13 @@ function createSoundEngine() {
     if (!ctx || !drumrollNode) return;
     const t = now();
     try {
+      // Fast 60ms fade so the drumroll doesn't bleed into the whoosh that
+      // fires right after — keeps the reveal hit clean.
       drumrollGain.gain.cancelScheduledValues(t);
       drumrollGain.gain.setValueAtTime(drumrollGain.gain.value, t);
-      drumrollGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
-      drumrollNode.stop(t + 0.25);
-      drumrollNode._lfo?.stop(t + 0.25);
+      drumrollGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      drumrollNode.stop(t + 0.08);
+      drumrollNode._lfo?.stop(t + 0.08);
     } catch (e) {}
     drumrollNode = null;
     drumrollGain = null;
@@ -1019,13 +1116,12 @@ function createSoundEngine() {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, t);
-    g.gain.exponentialRampToValueAtTime(0.5, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.42, t + 0.1);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
 
     src.connect(bp);
     bp.connect(g);
     g.connect(master);
-    g.connect(reverb);
     src.start(t);
     src.stop(t + 0.55);
   }
@@ -1041,33 +1137,34 @@ function createSoundEngine() {
       ? [440, 554.37, 659.25]               // A4 C#5 E5
       : [392, 466.16, 587.33];              // G4 A#4 D5 — softer
 
+    // Per-voice gain ramped down so a 4-note triad doesn't clip the master
+    const perVoice = 1 / Math.max(2, freqs.length);
     freqs.forEach((f, i) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       osc.type = "sine";
       osc.frequency.value = f;
-      const delay = i * 0.02;
+      const delay = i * 0.018;
+      const peak = 0.34 * perVoice * (freqs.length === 4 ? 1.4 : 1.2);
       g.gain.setValueAtTime(0.001, t + delay);
-      g.gain.exponentialRampToValueAtTime(0.25, t + delay + 0.01);
+      g.gain.exponentialRampToValueAtTime(peak, t + delay + 0.012);
       g.gain.exponentialRampToValueAtTime(0.001, t + delay + 2.2);
       osc.connect(g);
       g.connect(master);
-      g.connect(reverb);
       osc.start(t + delay);
       osc.stop(t + delay + 2.3);
     });
 
-    // shimmer harmonic
+    // shimmer harmonic — adds the bell-like sparkle on top
     const sh = ctx.createOscillator();
     const shg = ctx.createGain();
     sh.type = "triangle";
     sh.frequency.setValueAtTime(2093, t);
     shg.gain.setValueAtTime(0.001, t);
-    shg.gain.exponentialRampToValueAtTime(0.08, t + 0.05);
+    shg.gain.exponentialRampToValueAtTime(0.06, t + 0.05);
     shg.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
     sh.connect(shg);
     shg.connect(master);
-    shg.connect(reverb);
     sh.start(t);
     sh.stop(t + 1.6);
   }
@@ -1085,6 +1182,7 @@ function createSoundEngine() {
     ];
 
     sequence.forEach(([startTime, freqs, dur]) => {
+      const perVoice = 0.14 / Math.sqrt(freqs.length);
       freqs.forEach((f) => {
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
@@ -1097,14 +1195,13 @@ function createSoundEngine() {
         lp.Q.value = 1;
 
         g.gain.setValueAtTime(0.001, startTime);
-        g.gain.exponentialRampToValueAtTime(0.18, startTime + 0.04);
-        g.gain.setValueAtTime(0.18, startTime + dur - 0.1);
+        g.gain.exponentialRampToValueAtTime(perVoice, startTime + 0.04);
+        g.gain.setValueAtTime(perVoice, startTime + dur - 0.1);
         g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
 
         osc.connect(lp);
         lp.connect(g);
         g.connect(master);
-        g.connect(reverb);
         osc.start(startTime);
         osc.stop(startTime + dur + 0.05);
       });
@@ -1118,7 +1215,7 @@ function createSoundEngine() {
     k.frequency.setValueAtTime(110, kickT);
     k.frequency.exponentialRampToValueAtTime(38, kickT + 0.25);
     kg.gain.setValueAtTime(0.001, kickT);
-    kg.gain.exponentialRampToValueAtTime(0.9, kickT + 0.01);
+    kg.gain.exponentialRampToValueAtTime(0.65, kickT + 0.012);
     kg.gain.exponentialRampToValueAtTime(0.001, kickT + 0.6);
     k.connect(kg);
     kg.connect(master);

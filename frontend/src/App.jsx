@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import ScrollToTop from "./components/ScrollToTop";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -57,6 +58,34 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            background: "#0A0A0A",
+            color: "#FFFFFF",
+            fontSize: "13px",
+            fontWeight: 500,
+            padding: "14px 20px",
+            borderRadius: "0",
+            border: "1px solid #1A1A1A",
+            boxShadow: "0 10px 40px -10px rgba(0,0,0,0.4)",
+            letterSpacing: "0.01em",
+          },
+          success: {
+            iconTheme: { primary: "#ED8D31", secondary: "#0A0A0A" },
+          },
+          error: {
+            iconTheme: { primary: "#DC2626", secondary: "#FFFFFF" },
+            style: {
+              background: "#0A0A0A",
+              color: "#FFFFFF",
+              borderLeft: "3px solid #DC2626",
+            },
+          },
+        }}
+      />
       <Routes>
 
         {/* PUBLIC */}

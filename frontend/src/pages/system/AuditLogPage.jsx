@@ -1,34 +1,67 @@
 import { useEffect, useMemo, useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  Toolbar,
+  SearchInput,
+  SelectInput,
+  DataPanel,
+  StatusPill,
+  Modal,
+  Button,
+  Alert,
+} from "../../components/ui/Studio";
 
 function formatDateTime(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString();
+  return d.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-function actionStyle(action) {
-  if (!action) return "bg-[#F1F0EC] text-[#7A8088]";
-  if (action.includes("VALIDATED") || action.includes("ACCEPTED") || action.includes("PUBLISHED") || action.includes("APPROVED")) {
-    return "bg-[#D4F4DD] text-[#2D7A4A]";
-  }
-  if (action.includes("REJECTED") || action.includes("DELETED") || action.includes("ARCHIVED") || action.includes("REMOVED")) {
-    return "bg-[#FBE1E1] text-[#A93B3B]";
-  }
-  if (action.startsWith("DRAW")) return "bg-[#DAE7FB] text-[#2A52BE]";
-  if (action.startsWith("ROLE")) return "bg-[#E7E5FB] text-[#5240A1]";
-  if (action.startsWith("DOCUMENT")) return "bg-[#FFF4D6] text-[#B98900]";
-  return "bg-[#F1F0EC] text-[#7A8088]";
+function actionTone(action) {
+  if (!action) return "neutral";
+  if (
+    action.includes("VALIDATED") ||
+    action.includes("ACCEPTED") ||
+    action.includes("PUBLISHED") ||
+    action.includes("APPROVED")
+  )
+    return "success";
+  if (
+    action.includes("REJECTED") ||
+    action.includes("DELETED") ||
+    action.includes("ARCHIVED") ||
+    action.includes("REMOVED")
+  )
+    return "danger";
+  if (action.startsWith("DRAW")) return "accent";
+  if (action.startsWith("ROLE")) return "info";
+  if (action.startsWith("DOCUMENT")) return "warn";
+  return "neutral";
 }
 
 export default function AuditLogPage() {
+  const t = useT();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
-  const [filters, setFilters] = useState({ search: "", action: "all", target: "all" });
+  const [filters, setFilters] = useState({
+    search: "",
+    action: "all",
+    target: "all",
+  });
   const [detailsModal, setDetailsModal] = useState({ open: false, log: null });
 
   const load = () => {
@@ -36,7 +69,9 @@ export default function AuditLogPage() {
     setPageError(null);
     apiGet("/api/system/audit-logs")
       .then((res) => setLogs(res.data || []))
-      .catch((err) => setPageError(err.message || "Could not load audit logs."))
+      .catch((err) =>
+        setPageError(err.message || "Impossible de charger le journal d'audit.")
+      )
       .finally(() => setLoading(false));
   };
 
@@ -60,7 +95,8 @@ export default function AuditLogPage() {
     const q = filters.search.trim().toLowerCase();
     return logs.filter((l) => {
       if (filters.action !== "all" && l.action !== filters.action) return false;
-      if (filters.target !== "all" && l.target_table !== filters.target) return false;
+      if (filters.target !== "all" && l.target_table !== filters.target)
+        return false;
       if (q) {
         const hay = [
           l.action,
@@ -80,255 +116,194 @@ export default function AuditLogPage() {
   }, [logs, filters]);
 
   return (
-    <>
-      <div className="flex h-screen bg-[#F7F7F5]">
-        <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.systemAdmin")}
+        title="Journal d'audit"
+        subtitle="Traçabilité de toutes les actions sensibles effectuées par les administrateurs, communicants et super-administrateurs. 500 dernières entrées."
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Journal d'audit" },
+        ]}
+      />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardTopBar />
+      <PageBody>
+        {pageError && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {pageError}
+          </Alert>
+        )}
 
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                  Audit Log
-                </h1>
-                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                  Trace of all sensitive actions performed by admins,
-                  communicators and system admins. Last 500 entries shown.
-                </p>
-              </div>
+        <StatBar>
+          <StatCell label="Entrées" value={logs.length} sub="Total" />
+          <StatCell label="Actions" value={actions.length} sub="Types distincts" accent={actions.length > 0} />
+          <StatCell label="Tables" value={targets.length} sub="Ciblées" />
+          <StatCell
+            label="Dernière"
+            value={logs[0]?.action_date ? formatDateTime(logs[0].action_date) : "—"}
+            sub="Activité"
+          />
+        </StatBar>
 
-              {pageError && (
-                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                  {pageError}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard title="Total entries" value={logs.length} />
-                <StatCard title="Distinct actions" value={actions.length} />
-                <StatCard title="Distinct tables" value={targets.length} />
-                <StatCard
-                  title="Last entry"
-                  value={
-                    logs[0]?.action_date
-                      ? formatDateTime(logs[0].action_date)
-                      : "—"
-                  }
-                />
-              </div>
-
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                <div className="flex flex-wrap gap-3">
-                  <input
-                    type="text"
-                    value={filters.search}
-                    onChange={(e) =>
-                      setFilters((f) => ({ ...f, search: e.target.value }))
-                    }
-                    placeholder="Search action, user, target name, IP..."
-                    className="min-w-[260px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                  />
-
-                  <select
-                    value={filters.action}
-                    onChange={(e) =>
-                      setFilters((f) => ({ ...f, action: e.target.value }))
-                    }
-                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                  >
-                    <option value="all">All actions</option>
-                    {actions.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={filters.target}
-                    onChange={(e) =>
-                      setFilters((f) => ({ ...f, target: e.target.value }))
-                    }
-                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
-                  >
-                    <option value="all">All target tables</option>
-                    {targets.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    onClick={() =>
-                      setFilters({ search: "", action: "all", target: "all" })
-                    }
-                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </section>
-
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1100px]">
-                    <thead className="bg-[#FBFAF8]">
-                      <tr>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Date
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          User
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Action
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Target
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          IP
-                        </th>
-                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                          Details
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loading && (
-                        <tr>
-                          <td
-                            colSpan="6"
-                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
-                          >
-                            Loading audit logs...
-                          </td>
-                        </tr>
-                      )}
-
-                      {!loading && filtered.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan="6"
-                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
-                          >
-                            No audit entries match the filters.
-                          </td>
-                        </tr>
-                      )}
-
-                      {filtered.map((l) => (
-                        <tr key={l.id} className="border-t border-[#E5E2DC]">
-                          <td className="px-5 py-4 text-sm text-[#7A8088] whitespace-nowrap">
-                            {formatDateTime(l.action_date)}
-                          </td>
-                          <td className="px-5 py-4 text-sm text-[#2F343B]">
-                            {l.user_first_name || l.user_last_name ? (
-                              <>
-                                <p className="font-semibold">
-                                  {l.user_first_name} {l.user_last_name}
-                                </p>
-                                <p className="text-xs text-[#7A8088]">
-                                  {l.employee_number}
-                                </p>
-                              </>
-                            ) : (
-                              <span className="text-[#7A8088] italic">
-                                System
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-5 py-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-semibold ${actionStyle(
-                                l.action
-                              )}`}
-                            >
-                              {l.action}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-sm text-[#2F343B]">
-                            {l.target_name || (
-                              <span className="text-[#7A8088] italic">—</span>
-                            )}
-                            {l.target_table && (
-                              <p className="text-xs text-[#7A8088] mt-1">
-                                {l.target_table}
-                                {l.target_id ? ` #${l.target_id}` : ""}
-                              </p>
-                            )}
-                          </td>
-                          <td className="px-5 py-4 text-xs text-[#7A8088] whitespace-nowrap">
-                            {l.ip_address || "—"}
-                          </td>
-                          <td className="px-5 py-4">
-                            {l.details ? (
-                              <button
-                                onClick={() =>
-                                  setDetailsModal({ open: true, log: l })
-                                }
-                                className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
-                              >
-                                View
-                              </button>
-                            ) : (
-                              <span className="text-[#7A8088] text-xs">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </main>
-        </div>
-      </div>
-
-      {detailsModal.open && detailsModal.log && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setDetailsModal({ open: false, log: null })}
-        >
-          <div
-            className="bg-white rounded-[20px] p-6 w-full max-w-[520px] shadow-lg max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+        <Toolbar>
+          <SearchInput
+            value={filters.search}
+            onChange={(v) => setFilters((f) => ({ ...f, search: v }))}
+            placeholder="Rechercher action, utilisateur, IP…"
+          />
+          <SelectInput
+            value={filters.action}
+            onChange={(v) => setFilters((f) => ({ ...f, action: v }))}
+            options={[
+              { value: "all", label: "Toutes les actions" },
+              ...actions.map((a) => ({ value: a, label: a })),
+            ]}
+          />
+          <SelectInput
+            value={filters.target}
+            onChange={(v) => setFilters((f) => ({ ...f, target: v }))}
+            options={[
+              { value: "all", label: "Toutes les tables" },
+              ...targets.map((tg) => ({ value: tg, label: tg })),
+            ]}
+          />
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() =>
+              setFilters({ search: "", action: "all", target: "all" })
+            }
           >
-            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
-              Action details
-            </h2>
-            <p className="text-sm text-[#7A8088] mb-3">
-              {detailsModal.log.action} · {formatDateTime(detailsModal.log.action_date)}
-            </p>
-            <pre className="bg-[#F9F8F6] rounded-[12px] p-4 text-xs text-[#2F343B] overflow-x-auto">
-              {JSON.stringify(detailsModal.log.details, null, 2)}
-            </pre>
-            <div className="flex justify-end mt-5">
-              <button
-                onClick={() => setDetailsModal({ open: false, log: null })}
-                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
+            Réinitialiser
+          </Button>
+        </Toolbar>
 
-function StatCard({ title, value }) {
-  return (
-    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
-      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
-      <p className="text-2xl font-extrabold text-[#2F343B] mt-2 break-all">
-        {value}
-      </p>
-    </div>
+        <DataPanel
+          title="Journal d'activité"
+          subtitle="Chronologique inverse, de la plus récente à la plus ancienne"
+          badge={`${filtered.length} / ${logs.length}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px]">
+              <thead className="bg-[#0A0A0A]">
+                <tr>
+                  {["Date", "Utilisateur", "Action", "Cible", "IP", "Détails"].map(
+                    (h, i) => (
+                      <th
+                        key={i}
+                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
+                      >
+                        {h}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Chargement…
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Aucune entrée ne correspond aux filtres.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((l) => (
+                    <tr
+                      key={l.id}
+                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
+                    >
+                      <td className="px-6 py-4 text-[11px] tabular-nums uppercase tracking-wider text-[#525252] whitespace-nowrap">
+                        {formatDateTime(l.action_date)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {l.user_first_name || l.user_last_name ? (
+                          <>
+                            <p className="text-[13px] font-bold text-[#0A0A0A]">
+                              {l.user_first_name} {l.user_last_name}
+                            </p>
+                            <p className="text-[11px] font-mono tabular-nums text-[#737373] mt-0.5">
+                              {l.employee_number}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-[#A3A3A3] italic uppercase tracking-wider">
+                            Système
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusPill tone={actionTone(l.action)} label={l.action} />
+                      </td>
+                      <td className="px-6 py-4 text-[13px] text-[#0A0A0A]">
+                        {l.target_name || (
+                          <span className="text-[#A3A3A3] italic">—</span>
+                        )}
+                        {l.target_table && (
+                          <p className="text-[11px] uppercase tracking-wider text-[#737373] mt-0.5">
+                            {l.target_table}
+                            {l.target_id ? ` · #${l.target_id}` : ""}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-[11px] font-mono tabular-nums text-[#737373] whitespace-nowrap">
+                        {l.ip_address || "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        {l.details ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setDetailsModal({ open: true, log: l })
+                            }
+                          >
+                            Voir
+                          </Button>
+                        ) : (
+                          <span className="text-[11px] text-[#A3A3A3]">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </DataPanel>
+      </PageBody>
+
+      <Modal
+        open={detailsModal.open && !!detailsModal.log}
+        onClose={() => setDetailsModal({ open: false, log: null })}
+        title="Détails de l'action"
+        description={
+          detailsModal.log
+            ? `${detailsModal.log.action} · ${formatDateTime(detailsModal.log.action_date)}`
+            : ""
+        }
+        width="lg"
+        footer={
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setDetailsModal({ open: false, log: null })}
+          >
+            Fermer
+          </Button>
+        }
+      >
+        {detailsModal.log && (
+          <pre className="bg-[#0A0A0A] text-[#E5E5E5] p-4 text-[11px] font-mono leading-[1.6] overflow-x-auto">
+            {JSON.stringify(detailsModal.log.details, null, 2)}
+          </pre>
+        )}
+      </Modal>
+    </PageShell>
   );
 }

@@ -98,6 +98,10 @@ class WithdrawalController extends Controller
 
     /**
      * Admin: approve, reject or mark as processed.
+     *
+     * When a SELECTED registration is approved for withdrawal, the system
+     * automatically promotes the substitute with rank 1 (if any) to fill
+     * the freed slot. The remaining substitutes shift up by one rank.
      */
     public function updateStatus(Request $request, $id)
     {
@@ -109,7 +113,13 @@ class WithdrawalController extends Controller
 
         $w = WithdrawalRequest::findOrFail($id);
 
-        DB::transaction(function () use ($w, $data) {
+        // Track promotion outside the transaction so we can notify after commit
+        $promotedRegId = null;
+        $promotedUserId = null;
+        $promotedSiteName = null;
+        $activityTitle = null;
+
+        DB::transaction(function () use ($w, $data, &$promotedRegId, &$promotedUserId, &$promotedSiteName, &$activityTitle) {
             $w->status = $data['status'];
             $w->admin_comment = $data['admin_comment'] ?? null;
             $w->processed_by = $data['processed_by'] ?? null;
@@ -117,24 +127,123 @@ class WithdrawalController extends Controller
             $w->save();
 
             // If approved or processed, move the registration into WITHDRAWN
-            if (in_array($data['status'], ['APPROVED', 'PROCESSED'])) {
-                $registration = Registration::find($w->registration_id);
-                if ($registration && $registration->status !== 'WITHDRAWN') {
-                    $oldStatus = $registration->status;
-                    $registration->status = 'WITHDRAWN';
-                    $registration->withdrawn_at = now();
-                    $registration->withdrawal_reason = $w->reason;
-                    $registration->save();
-
-                    DB::table('registration_status_history')->insert([
-                        'registration_id' => $registration->id,
-                        'old_status' => $oldStatus,
-                        'new_status' => 'WITHDRAWN',
-                        'reason' => 'Withdrawal request approved',
-                        'changed_at' => now(),
-                    ]);
-                }
+            if (!in_array($data['status'], ['APPROVED', 'PROCESSED'])) {
+                return;
             }
+
+            $registration = Registration::find($w->registration_id);
+            if (!$registration || $registration->status === 'WITHDRAWN') {
+                return;
+            }
+
+            $wasSelected = $registration->status === 'SELECTED' || $registration->status === 'CONFIRMED';
+            $oldStatus = $registration->status;
+            $registration->status = 'WITHDRAWN';
+            $registration->withdrawn_at = now();
+            $registration->withdrawal_reason = $w->reason;
+            $registration->save();
+
+            DB::table('registration_status_history')->insert([
+                'registration_id' => $registration->id,
+                'old_status' => $oldStatus,
+                'new_status' => 'WITHDRAWN',
+                'reason' => 'Withdrawal request approved',
+                'changed_at' => now(),
+            ]);
+
+            // ─── SUBSTITUTE AUTO-PROMOTION ───
+            // Only kick in when the withdrawn registration was actually a
+            // selected winner of a draw. We free their seat and promote the
+            // substitute with rank 1, then shift remaining ranks up.
+            if (!$wasSelected) {
+                return;
+            }
+
+            // Find the latest executed draw on this session and the freed seat
+            $draw = DB::table('draws')
+                ->where('session_id', $registration->session_id)
+                ->where('executed', 1)
+                ->orderByDesc('draw_id')
+                ->first();
+
+            if (!$draw) return;
+
+            $withdrawnResult = DB::table('draw_results')
+                ->where('draw_id', $draw->draw_id)
+                ->where('registration_id', $registration->id)
+                ->first();
+
+            if (!$withdrawnResult || !$withdrawnResult->session_site_id) return;
+
+            $freedSiteId = $withdrawnResult->session_site_id;
+
+            // Promote substitute rank 1
+            $nextSub = DB::table('draw_results')
+                ->where('draw_id', $draw->draw_id)
+                ->where('is_substitute', 1)
+                ->where('substitute_rank', 1)
+                ->first();
+
+            if (!$nextSub) return;
+
+            // Update their draw_result: substitute → selected, assign the freed seat
+            DB::table('draw_results')
+                ->where('id', $nextSub->id)
+                ->update([
+                    'is_selected' => 1,
+                    'is_substitute' => 0,
+                    'session_site_id' => $freedSiteId,
+                    'substitute_rank' => null,
+                    'updated_at' => now(),
+                ]);
+
+            // Mark the withdrawn one's result as un-selected too
+            DB::table('draw_results')
+                ->where('id', $withdrawnResult->id)
+                ->update([
+                    'is_selected' => 0,
+                    'session_site_id' => null,
+                    'updated_at' => now(),
+                ]);
+
+            // Shift remaining substitute ranks up by 1 (rank 2 → 1, 3 → 2, etc.)
+            DB::table('draw_results')
+                ->where('draw_id', $draw->draw_id)
+                ->where('is_substitute', 1)
+                ->where('substitute_rank', '>', 1)
+                ->update([
+                    'substitute_rank' => DB::raw('substitute_rank - 1'),
+                    'updated_at' => now(),
+                ]);
+
+            // Update the promoted registration's status
+            $promotedReg = Registration::find($nextSub->registration_id);
+            if ($promotedReg) {
+                $oldRegStatus = $promotedReg->status;
+                $promotedReg->status = 'SELECTED';
+                $promotedReg->save();
+
+                DB::table('registration_status_history')->insert([
+                    'registration_id' => $promotedReg->id,
+                    'old_status' => $oldRegStatus,
+                    'new_status' => 'SELECTED',
+                    'reason' => 'Auto-promoted from substitute (withdrawal of reg #' . $registration->id . ')',
+                    'changed_at' => now(),
+                ]);
+
+                $promotedRegId = $promotedReg->id;
+                $promotedUserId = $promotedReg->user_id;
+            }
+
+            $promotedSiteName = DB::table('session_sites as ss')
+                ->join('sites as s', 's.id', '=', 'ss.site_id')
+                ->where('ss.id', $freedSiteId)
+                ->value('s.name');
+
+            $activityTitle = DB::table('activity_sessions as sess')
+                ->join('activities as a', 'a.id', '=', 'sess.activity_id')
+                ->where('sess.id', $registration->session_id)
+                ->value('a.title');
         });
 
         // Audit log
@@ -144,11 +253,15 @@ class WithdrawalController extends Controller
             'withdrawal_requests',
             $w->id,
             'Withdrawal #' . $w->id,
-            ['admin_comment' => $data['admin_comment'] ?? null, 'reason' => $w->reason],
+            [
+                'admin_comment' => $data['admin_comment'] ?? null,
+                'reason' => $w->reason,
+                'promoted_registration_id' => $promotedRegId,
+            ],
             $request
         );
 
-        // Notify the employee
+        // Notify the employee whose withdrawal was processed
         $reg = DB::table('registrations')->where('id', $w->registration_id)->first();
         if ($reg) {
             $msgs = [
@@ -167,6 +280,40 @@ class WithdrawalController extends Controller
             );
         }
 
-        return response()->json(['success' => true, 'data' => $w->fresh()]);
+        // Notify the auto-promoted substitute, if any
+        if ($promotedUserId) {
+            $siteSuffix = $promotedSiteName ? " · Site: {$promotedSiteName}" : '';
+            $activityPrefix = $activityTitle ? "{$activityTitle} — " : '';
+            NotificationService::push(
+                $promotedUserId,
+                $activityPrefix . "Vous avez été promu de substitut à sélectionné suite au retrait d'un participant." . $siteSuffix,
+                'DRAW',
+                'Promotion automatique',
+                null,
+                $reg->session_id ?? null
+            );
+
+            AuditLogger::log(
+                $data['processed_by'] ?? null,
+                'SUBSTITUTE_PROMOTED',
+                'registrations',
+                $promotedRegId,
+                'Registration #' . $promotedRegId . ' promoted',
+                [
+                    'triggered_by_withdrawal_id' => $w->id,
+                    'freed_session_site_id' => $promotedSiteName,
+                ],
+                $request
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $w->fresh(),
+            'auto_promotion' => $promotedRegId ? [
+                'registration_id' => $promotedRegId,
+                'site_name' => $promotedSiteName,
+            ] : null,
+        ]);
     }
 }

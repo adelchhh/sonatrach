@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, getCurrentUserId, API_BASE_URL } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  DataPanel,
+  Button,
+  Alert,
+} from "../../components/ui/Studio";
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -15,6 +24,7 @@ function formatDate(value) {
 }
 
 export default function ParticipationHistory() {
+  const t = useT();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -24,18 +34,22 @@ export default function ParticipationHistory() {
   useEffect(() => {
     if (!userId) {
       setLoading(false);
-      setPageError("Please log in.");
+      setPageError("Veuillez vous connecter.");
       return;
     }
     apiGet(`/me/participations?user_id=${userId}`)
       .then((res) => setHistory(res.data || []))
-      .catch((err) => setPageError(err.message || "Could not load history."))
+      .catch((err) =>
+        setPageError(err.message || "Impossible de charger l'historique.")
+      )
       .finally(() => setLoading(false));
   }, [userId]);
 
   const stats = useMemo(() => {
     const total = history.length;
-    const ratings = history.filter((p) => p.rating != null).map((p) => Number(p.rating));
+    const ratings = history
+      .filter((p) => p.rating != null)
+      .map((p) => Number(p.rating));
     const avgRating = ratings.length
       ? (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(1)
       : "—";
@@ -44,141 +58,116 @@ export default function ParticipationHistory() {
   }, [history]);
 
   return (
-    <div className="flex h-screen bg-[#F7F7F5]">
-      <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.myArea")}
+        title="Historique de participation"
+        subtitle="Toutes les activités auxquelles vous avez participé, avec votre évaluation et vos certificats."
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Historique" },
+        ]}
+      />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardTopBar />
+      <PageBody>
+        {pageError && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {pageError}
+          </Alert>
+        )}
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                Participation History
-              </h1>
-              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                All activities you've participated in, your ratings, and your
-                certificates.
-              </p>
-            </div>
+        <StatBar>
+          <StatCell label="Activités" value={stats.total} sub="Suivies" />
+          <StatCell label="Note moyenne" value={stats.avgRating} sub="Mon évaluation moyenne" accent />
+          <StatCell label="Certificats" value={stats.certs} sub="Obtenus" />
+        </StatBar>
 
-            {pageError && (
-              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                {pageError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard title="Activities attended" value={stats.total} />
-              <StatCard title="Average rating" value={stats.avgRating} />
-              <StatCard title="Certificates earned" value={stats.certs} />
-            </div>
-
-            <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[860px]">
-                  <thead className="bg-[#FBFAF8]">
-                    <tr>
-                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Activity
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Period
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Site
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        My rating
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
-                        Certificate
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading && (
-                      <tr>
-                        <td
-                          colSpan="5"
-                          className="px-5 py-10 text-center text-sm text-[#7A8088]"
-                        >
-                          Loading...
-                        </td>
-                      </tr>
-                    )}
-
-                    {!loading && history.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan="5"
-                          className="px-5 py-10 text-center text-sm text-[#7A8088]"
-                        >
-                          No past participation yet.
-                        </td>
-                      </tr>
-                    )}
-
-                    {history.map((p) => (
-                      <tr key={p.id} className="border-t border-[#E5E2DC]">
-                        <td className="px-5 py-4 text-sm font-semibold text-[#2F343B]">
+        <DataPanel title="Mon parcours" badge={`${history.length}`}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px]">
+              <thead className="bg-[#0A0A0A]">
+                <tr>
+                  {[
+                    "Activité",
+                    "Période",
+                    "Site",
+                    "Mon évaluation",
+                    "Certificat",
+                  ].map((h, i) => (
+                    <th
+                      key={i}
+                      className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Chargement…
+                    </td>
+                  </tr>
+                ) : history.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Aucune participation passée.
+                    </td>
+                  </tr>
+                ) : (
+                  history.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
+                    >
+                      <td className="px-6 py-5">
+                        <p className="text-[#0A0A0A] text-[14px] font-bold">
                           {p.activity_title}
-                          <p className="text-xs text-[#7A8088] mt-1">
-                            {p.activity_category}
-                          </p>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-[#7A8088]">
-                          {formatDate(p.start_date)} → {formatDate(p.end_date)}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-[#2F343B]">
-                          {p.site_name}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-[#2F343B]">
-                          {p.rating != null ? (
-                            <span className="text-[#ED8D31] font-semibold">
-                              {"★".repeat(p.rating)}
-                              {"☆".repeat(5 - p.rating)}
+                        </p>
+                        <p className="text-[11px] uppercase tracking-wider text-[#737373] mt-1">
+                          {p.activity_category}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
+                        {formatDate(p.start_date)} → {formatDate(p.end_date)}
+                      </td>
+                      <td className="px-6 py-5 text-[13px] text-[#0A0A0A]">
+                        {p.site_name}
+                      </td>
+                      <td className="px-6 py-5">
+                        {p.rating != null ? (
+                          <span className="text-[#ED8D31] font-bold text-[14px] tracking-wider">
+                            {"★".repeat(p.rating)}
+                            <span className="text-[#E5E5E5]">
+                              {"★".repeat(5 - p.rating)}
                             </span>
-                          ) : (
-                            <span className="text-[#7A8088] italic">
-                              Not rated
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-sm">
-                          {p.certificate_path ? (
-                            <a
-                              href={`${API_BASE_URL}/storage/${p.certificate_path}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-xs font-medium"
-                            >
-                              Download
-                            </a>
-                          ) : (
-                            <span className="text-[#7A8088] italic">
-                              Not yet
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-[#A3A3A3] italic">
+                            Non noté
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-5">
+                        <a
+                          href={`${API_BASE_URL}/participations/${p.id}/certificate`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 px-3.5 py-2 text-[11px] uppercase tracking-[0.15em] font-bold bg-[#ED8D31] text-black hover:bg-[#fa9d40] transition-colors"
+                        >
+                          Certificat ↓
+                        </a>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        </main>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value }) {
-  return (
-    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
-      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
-      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-    </div>
+        </DataPanel>
+      </PageBody>
+    </PageShell>
   );
 }

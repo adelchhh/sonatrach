@@ -1,42 +1,38 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { FileText, ExternalLink } from "lucide-react";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import {
   getPublicAnnouncement,
   getPublicAnnouncements,
 } from "../services/announcementService";
-
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { API_BASE_URL } from "../api";
+import {
+  PageHero,
+  Button,
+  Alert,
+  StatusPill,
+} from "../components/ui/Studio";
 
 function formatDate(item) {
-  return item?.publish_date || item?.created_at?.slice(0, 10) || "";
+  if (!item) return "";
+  const raw = item.publish_date || item.created_at?.slice(0, 10);
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  return d
+    .toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+    .toUpperCase();
 }
 
-function shortText(text, max = 120) {
+function shortText(text, max = 130) {
   if (!text) return "";
-  return text.length > max ? text.slice(0, max) + "..." : text;
-}
-
-function RelatedAnnouncementCard({ item }) {
-  return (
-    <Link
-      to={`/announcements/${item.id}`}
-      className="block rounded-[20px] bg-white border border-[#E5E2DC] p-5 hover:shadow-md transition"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span className="px-3 py-1 rounded-full bg-[#F3C38F] text-[#2F343B] text-xs font-bold">
-          Announcement
-        </span>
-
-        <span className="text-xs text-[#7A8088]">{formatDate(item)}</span>
-      </div>
-
-      <h3 className="text-lg font-bold text-[#2F343B] mt-4">{item.title}</h3>
-
-      <p className="text-sm text-[#7A8088] mt-2 leading-[160%]">
-        {shortText(item.content)}
-      </p>
-    </Link>
-  );
+  return text.length > max ? text.slice(0, max) + "…" : text;
 }
 
 export default function AnnouncementDetails() {
@@ -44,207 +40,235 @@ export default function AnnouncementDetails() {
   const announcementId = id || slug;
 
   const [announcement, setAnnouncement] = useState(null);
-  const [relatedAnnouncements, setRelatedAnnouncements] = useState([]);
+  const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadAnnouncement() {
+    async function load() {
       try {
         const item = await getPublicAnnouncement(announcementId);
         setAnnouncement(item);
-
         const all = await getPublicAnnouncements();
-        setRelatedAnnouncements(
-          all.filter((a) => Number(a.id) !== Number(announcementId)).slice(0, 3)
+        setRelated(
+          all
+            .filter((a) => Number(a.id) !== Number(announcementId))
+            .slice(0, 3)
         );
       } catch (err) {
-        console.error("Failed to load announcement:", err);
         setAnnouncement(null);
       } finally {
         setLoading(false);
       }
     }
-
-    loadAnnouncement();
+    load();
   }, [announcementId]);
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#F7F7F5] p-8">
-        <p className="text-[#7A8088]">Loading announcement...</p>
-      </main>
+      <div className="min-h-screen bg-white flex flex-col">
+        <Navbar />
+        <main className="flex-1 py-20 text-center text-[13px] text-[#737373]">
+          Chargement…
+        </main>
+        <Footer />
+      </div>
     );
   }
 
   if (!announcement) {
     return (
-      <main className="min-h-screen bg-[#F7F7F5] py-12">
-        <div className="max-w-[900px] mx-auto px-4">
-          <p className="text-sm font-bold text-[#ED8D31] uppercase tracking-[0.18em]">
-            Announcement
-          </p>
-
-          <h1 className="text-[42px] font-bold text-[#2F343B] mt-3">
-            Announcement not found
-          </h1>
-
-          <p className="text-[#7A8088] mt-4">
-            The announcement you are looking for does not exist or is no longer
-            available.
-          </p>
-
-          <Link
-            to="/announcements"
-            className="inline-flex mt-6 px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold"
-          >
-            Back to announcements
-          </Link>
-        </div>
-      </main>
+      <div className="min-h-screen bg-white flex flex-col">
+        <Navbar />
+        <main className="flex-1 py-20 max-w-[800px] mx-auto px-8 w-full">
+          <Alert tone="danger" title="Annonce introuvable">
+            L'annonce demandée n'existe pas ou a été retirée.
+          </Alert>
+          <div className="mt-6">
+            <Button to="/announcements" variant="outline" size="md">
+              ← Retour aux annonces
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F7F5] py-12">
-      <div className="max-w-[1180px] mx-auto px-4">
-        <Link
-          to="/announcements"
-          className="inline-flex mb-8 text-sm font-semibold text-[#ED8D31]"
-        >
-          ← Back to announcements
-        </Link>
+    <div className="min-h-screen bg-white flex flex-col">
+      <Navbar />
 
-        <div className="grid lg:grid-cols-[1fr_320px] gap-8">
-          <div className="space-y-8">
-            <section className="rounded-[30px] bg-white border border-[#E5E2DC] p-8">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="px-3 py-1 rounded-full bg-[#F3C38F] text-[#2F343B] text-xs font-bold">
-                  Announcement
-                </span>
+      <PageHero
+        eyebrow="Communication interne"
+        title={announcement.title}
+        subtitle={`Publiée le ${formatDate(announcement)}`}
+        height="tall"
+        breadcrumbs={[
+          { label: "Accueil", to: "/" },
+          { label: "Annonces", to: "/announcements" },
+          { label: announcement.title },
+        ]}
+      />
 
-                <span className="text-sm text-[#7A8088]">
-                  {formatDate(announcement)}
-                </span>
+      <main className="flex-1 py-14 lg:py-16">
+        <div className="max-w-[1280px] mx-auto px-8 lg:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-12">
+            <article className="space-y-10">
+              <div className="bg-white border border-[#E5E5E5] p-8 lg:p-10">
+                <div className="flex items-center gap-3 mb-6 flex-wrap">
+                  <span className="px-2.5 py-1 bg-[#0A0A0A] text-white text-[10px] uppercase tracking-[0.18em] font-bold">
+                    Annonce
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#737373] tabular-nums">
+                    {formatDate(announcement)}
+                  </span>
+                </div>
+                <div className="text-[#0A0A0A] text-[15px] leading-[1.85] whitespace-pre-line">
+                  {announcement.content}
+                </div>
               </div>
 
-              <h1 className="text-[42px] font-bold text-[#2F343B] mt-5 leading-tight">
-                {announcement.title}
-              </h1>
-            </section>
+              {announcement.document_path && (
+                <div className="bg-white border border-[#E5E5E5] p-8">
+                  <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-[#737373] mb-4">
+                    Document officiel
+                  </p>
+                  <div className="flex items-center justify-between gap-4 p-4 bg-[#FAFAFA] border border-[#E5E5E5]">
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 bg-[#0A0A0A] text-white flex items-center justify-center">
+                        <FileText size={18} strokeWidth={1.7} />
+                      </div>
+                      <div>
+                        <p className="text-[#0A0A0A] text-[14px] font-bold">
+                          {announcement.document_name || "Document attaché"}
+                        </p>
+                        <p className="text-[11px] text-[#737373] uppercase tracking-wider mt-0.5">
+                          Pièce jointe officielle
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={`${API_BASE_URL}${announcement.document_path}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#ED8D31] text-black text-[11px] uppercase tracking-[0.15em] font-bold hover:bg-[#fa9d40] transition-colors"
+                    >
+                      <ExternalLink size={13} strokeWidth={2.5} />
+                      Consulter
+                    </a>
+                  </div>
+                </div>
+              )}
 
-            <section className="rounded-[30px] bg-white border border-[#E5E2DC] p-8">
-              <h2 className="text-2xl font-bold text-[#2F343B]">
-                Announcement Content
-              </h2>
+              {related.length > 0 && (
+                <div>
+                  <div className="flex items-end justify-between mb-6">
+                    <div>
+                      <p className="text-[#ED8D31] text-[10px] uppercase tracking-[0.3em] font-bold mb-2">
+                        À lire aussi
+                      </p>
+                      <h2 className="text-[#0A0A0A] text-[24px] font-bold tracking-tight">
+                        Annonces récentes
+                      </h2>
+                    </div>
+                    <Link
+                      to="/announcements"
+                      className="text-[11px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] hover:text-[#ED8D31] transition-colors"
+                    >
+                      Toutes →
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {related.map((item) => (
+                      <RelatedCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </article>
 
-              <p className="text-sm text-[#7A8088] mt-2">
-                Full communication details shared with employees.
-              </p>
-
-              <div className="mt-6 text-[#2F343B] leading-[180%] whitespace-pre-line">
-                {announcement.content}
-              </div>
-            </section>
-
-            {announcement.document_path && (
-              <section className="rounded-[30px] bg-white border border-[#E5E2DC] p-8">
-                <h2 className="text-2xl font-bold text-[#2F343B]">
-                  Official Document
-                </h2>
-
-                <p className="text-sm text-[#7A8088] mt-2">
-                  Attached file associated with this announcement.
+            <aside className="space-y-6">
+              <div className="bg-white border border-[#E5E5E5] p-6">
+                <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-[#737373] mb-5">
+                  Informations
                 </p>
+                <div className="space-y-4">
+                  <InfoRow label="Statut">
+                    <StatusPill tone="success" label={announcement.status} />
+                  </InfoRow>
+                  <InfoRow label="Date">
+                    <span className="text-[13px] font-bold text-[#0A0A0A] tabular-nums">
+                      {formatDate(announcement)}
+                    </span>
+                  </InfoRow>
+                  <InfoRow label="Document">
+                    <span className="text-[12px] font-bold text-[#0A0A0A]">
+                      {announcement.document_path ? "Attaché" : "Aucun"}
+                    </span>
+                  </InfoRow>
+                </div>
+              </div>
 
-                <div className="mt-6 rounded-[20px] bg-[#FBFAF8] border border-[#E5E2DC] p-5">
-                  <p className="text-sm text-[#7A8088]">Document</p>
-
-                  <h3 className="text-lg font-bold text-[#2F343B] mt-1">
-                    {announcement.document_name || "Attached document"}
-                  </h3>
-
-                  <a
-                    href={`${API_BASE_URL}${announcement.document_path}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex mt-5 px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold"
+              <div className="bg-[#FAFAFA] border border-[#E5E5E5] p-6">
+                <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-[#737373] mb-4">
+                  Aller plus loin
+                </p>
+                <div className="space-y-2.5">
+                  <Link
+                    to="/announcements"
+                    className="block px-4 py-3 bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] text-[11px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] transition-colors"
                   >
-                    View document
-                  </a>
+                    Toutes les annonces →
+                  </Link>
+                  <Link
+                    to="/catalog"
+                    className="block px-4 py-3 bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] text-[11px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] transition-colors"
+                  >
+                    Catalogue d'activités →
+                  </Link>
                 </div>
-              </section>
-            )}
-
-            {relatedAnnouncements.length > 0 && (
-              <section>
-                <h2 className="text-2xl font-bold text-[#2F343B]">
-                  Related Announcements
-                </h2>
-
-                <p className="text-sm text-[#7A8088] mt-2">
-                  Other published communication items you may want to read.
-                </p>
-
-                <div className="grid md:grid-cols-3 gap-5 mt-5">
-                  {relatedAnnouncements.map((item) => (
-                    <RelatedAnnouncementCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </section>
-            )}
+              </div>
+            </aside>
           </div>
-
-          <aside className="space-y-6">
-            <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6">
-              <h3 className="text-xl font-bold text-[#2F343B]">
-                Announcement Info
-              </h3>
-
-              <div className="mt-5 space-y-3">
-                <SummaryRow label="Status" value={announcement.status} />
-                <SummaryRow label="Date" value={formatDate(announcement)} />
-                <SummaryRow
-                  label="Document"
-                  value={announcement.document_path ? "Attached" : "None"}
-                />
-              </div>
-            </section>
-
-            <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6">
-              <h3 className="text-xl font-bold text-[#2F343B]">
-                Quick Actions
-              </h3>
-
-              <div className="mt-5 space-y-3">
-                <Link
-                  to="/announcements"
-                  className="block px-4 py-3 rounded-[14px] bg-[#F7F7F5] text-sm font-semibold text-[#2F343B]"
-                >
-                  Browse all announcements
-                </Link>
-
-                <Link
-                  to="/activities"
-                  className="block px-4 py-3 rounded-[14px] bg-[#F7F7F5] text-sm font-semibold text-[#2F343B]"
-                >
-                  Explore activities
-                </Link>
-              </div>
-            </section>
-          </aside>
         </div>
-      </div>
-    </main>
+      </main>
+
+      <Footer />
+    </div>
   );
 }
 
-function SummaryRow({ label, value }) {
+function InfoRow({ label, children }) {
   return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value || "-"}
+    <div className="flex items-baseline justify-between gap-4 pb-3 border-b border-[#F5F5F5] last:border-b-0 last:pb-0">
+      <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-[#737373]">
+        {label}
       </span>
+      <div className="text-right">{children}</div>
     </div>
+  );
+}
+
+function RelatedCard({ item }) {
+  return (
+    <Link
+      to={`/announcements/${item.id}`}
+      className="group block bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] transition-colors p-5"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className="px-2 py-0.5 bg-[#0A0A0A] text-white text-[9px] uppercase tracking-[0.15em] font-bold">
+          Annonce
+        </span>
+        <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#A3A3A3] tabular-nums">
+          {formatDate(item)}
+        </span>
+      </div>
+      <h3 className="text-[14px] font-bold text-[#0A0A0A] tracking-tight leading-tight mb-2 group-hover:text-[#ED8D31] transition-colors">
+        {item.title}
+      </h3>
+      <p className="text-[12px] text-[#525252] leading-[1.6] line-clamp-2">
+        {shortText(item.content)}
+      </p>
+    </Link>
   );
 }

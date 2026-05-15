@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { useNavigate, useParams } from "react-router-dom";
 import SessionForm from "../../components/admin/SessionForm";
 import { apiGet, apiPost } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
+import { PageShell, PageHeader, PageBody } from "../../components/ui/Studio";
 
 export default function CreateSession() {
   const t = useT();
@@ -19,7 +18,9 @@ export default function CreateSession() {
   useEffect(() => {
     apiGet(`/activities/${id}`)
       .then((res) => setActivity(res.data))
-      .catch((err) => setError(err.message || t("admin.createSession.loadingActivity")))
+      .catch((err) =>
+        setError(err.message || t("admin.createSession.loadingActivity"))
+      )
       .finally(() => setLoadingActivity(false));
   }, [id]);
 
@@ -30,7 +31,6 @@ export default function CreateSession() {
       const res = await apiPost(`/activities/${id}/sessions`, payload);
       const newSessionId = res?.data?.id;
       if (newSessionId) {
-        // Send admin straight to sites & quotas to finish session setup
         navigate(
           `/dashboard/admin/activities/${id}/sessions/${newSessionId}/sites-quotas`
         );
@@ -38,64 +38,51 @@ export default function CreateSession() {
         navigate(`/dashboard/admin/activities/${id}/sessions`);
       }
     } catch (err) {
-      setError(err.message || "Could not create session.");
+      setError(err.message || "Création impossible.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex h-screen bg-[#F7F7F5]">
-      <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.administration")}
+        title={t("admin.createSession.title")}
+        subtitle={
+          activity
+            ? t("admin.createSession.subtitleFor", { title: activity.title })
+            : t("admin.createSession.subtitleGeneric")
+        }
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Activités", to: "/dashboard/admin/activities" },
+          {
+            label: activity?.title || `#${id}`,
+            to: `/dashboard/admin/activities/${id}/sessions`,
+          },
+          { label: t("admin.createSession.breadcrumbCreate") },
+        ]}
+      />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardTopBar />
-
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
-            <div className="text-sm text-[#7A8088]">
-              <Link
-                to={`/dashboard/admin/activities/${id}/sessions`}
-                className="text-[#ED8D31] font-medium"
-              >
-                {t("admin.createSession.backToSessions")}
-              </Link>
-              <span className="mx-2">›</span>
-              <span className="text-[#2F343B] font-medium">
-                {t("admin.createSession.breadcrumbCreate")}
-              </span>
-            </div>
-
-            <div>
-              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                {t("admin.createSession.title")}
-              </h1>
-              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
-                {activity
-                  ? t("admin.createSession.subtitleFor", { title: activity.title })
-                  : t("admin.createSession.subtitleGeneric")}
-              </p>
-            </div>
-
-            {loadingActivity ? (
-              <div className="rounded-[14px] border border-[#E5E2DC] bg-white px-4 py-6 text-sm text-[#7A8088]">
-                {t("admin.createSession.loadingActivity")}
-              </div>
-            ) : (
-              <SessionForm
-                showDrawFields={!activity || !!activity.draw_enabled}
-                submitting={submitting}
-                errorMessage={error}
-                onCancel={() =>
-                  navigate(`/dashboard/admin/activities/${id}/sessions`)
-                }
-                onSubmit={handleSave}
-                submitLabel={t("admin.createSession.save")}
-              />
-            )}
+      <PageBody>
+        {loadingActivity ? (
+          <div className="border border-[#E5E5E5] bg-white py-10 text-center text-[13px] text-[#737373]">
+            {t("admin.createSession.loadingActivity")}
           </div>
-        </main>
-      </div>
-    </div>
+        ) : (
+          <SessionForm
+            showDrawFields={!activity || !!activity.draw_enabled}
+            submitting={submitting}
+            errorMessage={error}
+            onCancel={() =>
+              navigate(`/dashboard/admin/activities/${id}/sessions`)
+            }
+            onSubmit={handleSave}
+            submitLabel={t("admin.createSession.save")}
+          />
+        )}
+      </PageBody>
+    </PageShell>
   );
 }

@@ -23,6 +23,19 @@ use App\Http\Controllers\AnnouncementController;
 // ----- AUTH -----
 Route::post('/login', [AuthController::class, 'login']);
 
+// ----- DASHBOARD KPIs -----
+Route::get('/dashboard', [DashboardController::class, 'index']);
+
+// ----- CERTIFICATES -----
+Route::get('/participations/{id}/certificate', [App\Http\Controllers\CertificateController::class, 'download']);
+Route::get('/demo/certificate', [App\Http\Controllers\CertificateController::class, 'demo']);
+
+// ----- CSV EXPORTS -----
+Route::get('/export/registrations.csv', [App\Http\Controllers\ExportController::class, 'registrations']);
+Route::get('/export/draws.csv', [App\Http\Controllers\ExportController::class, 'draws']);
+Route::get('/export/draws/{id}/results.csv', [App\Http\Controllers\ExportController::class, 'drawResults']);
+Route::get('/export/audit-log.csv', [App\Http\Controllers\ExportController::class, 'auditLog']);
+
 // ----- ACTIVITIES -----
 Route::get('/activities', [ActiviteController::class, 'index']);
 Route::get('/activities/{id}', [ActiviteController::class, 'show']);

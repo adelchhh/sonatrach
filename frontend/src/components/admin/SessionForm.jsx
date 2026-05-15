@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
 import { useT } from "../../i18n/LanguageContext";
+import {
+  DataPanel,
+  Button,
+  Alert,
+  TextField,
+  Select,
+} from "../ui/Studio";
 
 const STATUS_VALUES = ["DRAFT", "OPEN", "CLOSED", "DRAW_DONE", "FINISHED", "CANCELLED"];
 
@@ -35,8 +42,7 @@ export default function SessionForm({
         registration_deadline: initial.registration_deadline || "",
         draw_date: initial.draw_date || "",
         draw_location: initial.draw_location || "",
-        confirmation_delay_hours:
-          initial.confirmation_delay_hours ?? 48,
+        confirmation_delay_hours: initial.confirmation_delay_hours ?? 48,
         document_upload_deadline: initial.document_upload_deadline || "",
         transport_included: !!initial.transport_included,
         telefax_url: initial.telefax_url || "",
@@ -46,9 +52,7 @@ export default function SessionForm({
     }
   }, [initial]);
 
-  const handleChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -67,324 +71,196 @@ export default function SessionForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {errorMessage && (
-        <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+        <Alert tone="danger" title="Erreur">
           {errorMessage}
-        </div>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
-        {/* Left side */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E5E2DC]">
-              <h2 className="text-[24px] font-bold text-[#2F343B]">
-                {t("admin.sessionForm.sessionDates")}
-              </h2>
-              <p className="text-sm text-[#7A8088] mt-1">
-                {t("admin.sessionForm.sessionDatesHint")}
-              </p>
-              <p className="text-xs text-[#A95A1B] bg-[#FFF7EC] border border-[#F3D9B0] rounded-lg px-3 py-2 mt-3">
-                ℹ️ Registration deadline must be ≤ start date · End date must be ≥ start date
-              </p>
+          <DataPanel
+            title={t("admin.sessionForm.sessionDates")}
+            subtitle={t("admin.sessionForm.sessionDatesHint")}
+          >
+            <div className="px-6 py-4 bg-[#FFF7E8] border-b border-[#E5E5E5] text-[12px] text-[#7A4F0A] flex items-start gap-2">
+              <span className="inline-block w-1 h-1 rounded-full bg-[#ED8D31] mt-1.5" />
+              <span>
+                La date limite d'inscription doit être ≤ à la date de début. La
+                date de fin doit être ≥ à la date de début.
+              </span>
             </div>
-
-            <div className="p-5 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label={t("admin.sessionForm.startDate")}>
-                  <input
-                    type="date"
-                    required
-                    value={form.start_date}
-                    onChange={(e) =>
-                      handleChange("start_date", e.target.value)
-                    }
-                    className="input-text"
-                  />
-                </Field>
-
-                <Field label={t("admin.sessionForm.endDate")}>
-                  <input
-                    type="date"
-                    required
-                    value={form.end_date}
-                    onChange={(e) => handleChange("end_date", e.target.value)}
-                    className="input-text"
-                  />
-                </Field>
-
-                <Field label={t("admin.sessionForm.registrationDeadline")}>
-                  <input
-                    type="date"
-                    required
-                    value={form.registration_deadline}
-                    onChange={(e) =>
-                      handleChange("registration_deadline", e.target.value)
-                    }
-                    className="input-text"
-                  />
-                </Field>
-
-                <Field label={t("admin.sessionForm.documentUploadDeadline")}>
-                  <input
-                    type="date"
-                    value={form.document_upload_deadline}
-                    onChange={(e) =>
-                      handleChange("document_upload_deadline", e.target.value)
-                    }
-                    className="input-text"
-                  />
-                </Field>
+            <div className="p-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <DateField
+                  label={t("admin.sessionForm.startDate")}
+                  value={form.start_date}
+                  onChange={(v) => update("start_date", v)}
+                  required
+                />
+                <DateField
+                  label={t("admin.sessionForm.endDate")}
+                  value={form.end_date}
+                  onChange={(v) => update("end_date", v)}
+                  required
+                />
+                <DateField
+                  label={t("admin.sessionForm.registrationDeadline")}
+                  value={form.registration_deadline}
+                  onChange={(v) => update("registration_deadline", v)}
+                  required
+                />
+                <DateField
+                  label={t("admin.sessionForm.documentUploadDeadline")}
+                  value={form.document_upload_deadline}
+                  onChange={(v) => update("document_upload_deadline", v)}
+                />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label={t("admin.sessionForm.confirmationDelay")}>
-                  <input
-                    type="number"
-                    min="0"
-                    max="8760"
-                    value={form.confirmation_delay_hours}
-                    onChange={(e) =>
-                      handleChange(
-                        "confirmation_delay_hours",
-                        e.target.value
-                      )
-                    }
-                    className="input-text"
-                  />
-                </Field>
-
-                <Field label={t("admin.sessionForm.substitutesCount")}>
-                  <input
-                    type="number"
-                    min="0"
-                    max="50"
-                    value={form.substitutes_count}
-                    onChange={(e) =>
-                      handleChange("substitutes_count", e.target.value)
-                    }
-                    className="input-text"
-                  />
-                </Field>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <TextField
+                  label={t("admin.sessionForm.confirmationDelay")}
+                  type="number"
+                  value={form.confirmation_delay_hours}
+                  onChange={(v) => update("confirmation_delay_hours", v)}
+                />
+                <TextField
+                  label={t("admin.sessionForm.substitutesCount")}
+                  type="number"
+                  value={form.substitutes_count}
+                  onChange={(v) => update("substitutes_count", v)}
+                />
               </div>
             </div>
-          </section>
+          </DataPanel>
 
           {showDrawFields && (
-            <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#E5E2DC]">
-                <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  {t("admin.sessionForm.drawSettings")}
-                </h2>
-                <p className="text-sm text-[#7A8088] mt-1">
-                  {t("admin.sessionForm.drawSettingsHint")}
-                </p>
+            <DataPanel
+              title={t("admin.sessionForm.drawSettings")}
+              subtitle={t("admin.sessionForm.drawSettingsHint")}
+            >
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <DateField
+                  label={t("admin.sessionForm.drawDate")}
+                  value={form.draw_date}
+                  onChange={(v) => update("draw_date", v)}
+                />
+                <TextField
+                  label={t("admin.sessionForm.drawLocation")}
+                  value={form.draw_location}
+                  onChange={(v) => update("draw_location", v)}
+                  placeholder={t("admin.sessionForm.drawLocationPlaceholder")}
+                />
               </div>
-
-              <div className="p-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label={t("admin.sessionForm.drawDate")}>
-                    <input
-                      type="date"
-                      value={form.draw_date}
-                      onChange={(e) =>
-                        handleChange("draw_date", e.target.value)
-                      }
-                      className="input-text"
-                    />
-                  </Field>
-
-                  <Field label={t("admin.sessionForm.drawLocation")}>
-                    <input
-                      type="text"
-                      value={form.draw_location}
-                      onChange={(e) =>
-                        handleChange("draw_location", e.target.value)
-                      }
-                      placeholder={t("admin.sessionForm.drawLocationPlaceholder")}
-                      className="input-text"
-                    />
-                  </Field>
-                </div>
-              </div>
-            </section>
+            </DataPanel>
           )}
 
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E5E2DC]">
-              <h2 className="text-[24px] font-bold text-[#2F343B]">
-                {t("admin.sessionForm.logistics")}
-              </h2>
-              <p className="text-sm text-[#7A8088] mt-1">
-                {t("admin.sessionForm.logisticsHint")}
-              </p>
-            </div>
-
-            <div className="p-5 space-y-5">
-              <ToggleCard
+          <DataPanel
+            title={t("admin.sessionForm.logistics")}
+            subtitle={t("admin.sessionForm.logisticsHint")}
+          >
+            <div className="p-6 space-y-5">
+              <ToggleRow
                 title={t("admin.sessionForm.transportCovered")}
                 description={t("admin.sessionForm.transportHint")}
                 checked={form.transport_included}
                 onToggle={() =>
-                  handleChange("transport_included", !form.transport_included)
+                  update("transport_included", !form.transport_included)
                 }
               />
-
-              <Field label={t("admin.sessionForm.telefax")}>
-                <input
-                  type="text"
-                  value={form.telefax_url}
-                  onChange={(e) =>
-                    handleChange("telefax_url", e.target.value)
-                  }
-                  placeholder={t("admin.sessionForm.telefaxPlaceholder")}
-                  className="input-text"
-                />
-              </Field>
+              <TextField
+                label={t("admin.sessionForm.telefax")}
+                value={form.telefax_url}
+                onChange={(v) => update("telefax_url", v)}
+                placeholder={t("admin.sessionForm.telefaxPlaceholder")}
+              />
             </div>
-          </section>
+          </DataPanel>
 
           <div className="flex justify-end gap-3">
             {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
-              >
+              <Button type="button" variant="outline" size="md" onClick={onCancel}>
                 {t("common.cancel")}
-              </button>
+              </Button>
             )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors disabled:opacity-60"
-            >
+            <Button type="submit" variant="primary" size="md" disabled={submitting}>
               {submitting ? t("common.saving") : (submitLabel || t("admin.createSession.save"))}
-            </button>
+            </Button>
           </div>
         </div>
 
-        {/* Right side */}
         <div className="space-y-6">
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E5E2DC]">
-              <h3 className="text-[24px] font-bold text-[#2F343B]">
-                {t("admin.sessionForm.sessionStatus")}
-              </h3>
-              <p className="text-sm text-[#7A8088] mt-1">
-                {t("admin.sessionForm.sessionStatusHint")}
-              </p>
+          <DataPanel
+            title={t("admin.sessionForm.sessionStatus")}
+            subtitle={t("admin.sessionForm.sessionStatusHint")}
+          >
+            <div className="p-6">
+              <Select
+                label={t("common.status")}
+                value={form.status}
+                onChange={(v) => update("status", v)}
+                options={STATUS_VALUES.map((v) => ({
+                  value: v,
+                  label: t(`statuses.${v}`),
+                }))}
+              />
             </div>
+          </DataPanel>
 
-            <div className="p-5">
-              <Field label={t("common.status")}>
-                <select
-                  value={form.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input-text"
-                >
-                  {STATUS_VALUES.map((v) => (
-                    <option key={v} value={v}>
-                      {t(`statuses.${v}`)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-          </section>
-
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E5E2DC]">
-              <h3 className="text-[24px] font-bold text-[#2F343B]">
-                {t("admin.sessionForm.previewSummary")}
-              </h3>
-              <p className="text-sm text-[#7A8088] mt-1">
-                {t("admin.sessionForm.previewHint")}
-              </p>
-            </div>
-
-            <div className="p-5 space-y-3">
+          <DataPanel
+            title={t("admin.sessionForm.previewSummary")}
+            subtitle={t("admin.sessionForm.previewHint")}
+          >
+            <div className="p-6 space-y-2">
               <SummaryRow label={t("admin.sessionForm.summaryStart")} value={form.start_date || t("common.notSet")} />
               <SummaryRow label={t("admin.sessionForm.summaryEnd")} value={form.end_date || t("common.notSet")} />
-              <SummaryRow
-                label={t("admin.sessionForm.summaryRegDeadline")}
-                value={form.registration_deadline || t("common.notSet")}
-              />
-              <SummaryRow
-                label={t("admin.sessionForm.summaryDocsDeadline")}
-                value={form.document_upload_deadline || t("common.notSet")}
-              />
-              <SummaryRow
-                label={t("admin.sessionForm.summaryDrawDate")}
-                value={form.draw_date || t("common.notSet")}
-              />
+              <SummaryRow label={t("admin.sessionForm.summaryRegDeadline")} value={form.registration_deadline || t("common.notSet")} />
+              <SummaryRow label={t("admin.sessionForm.summaryDocsDeadline")} value={form.document_upload_deadline || t("common.notSet")} />
+              <SummaryRow label={t("admin.sessionForm.summaryDrawDate")} value={form.draw_date || t("common.notSet")} />
               <SummaryRow
                 label={t("admin.sessionForm.summaryTransport")}
                 value={form.transport_included ? t("admin.sessionForm.transportCoveredYes") : t("admin.sessionForm.transportCoveredNo")}
               />
-              <SummaryRow
-                label={t("admin.sessionForm.summarySubstitutes")}
-                value={String(form.substitutes_count)}
-              />
-              <SummaryRow
-                label={t("common.status")}
-                value={t(`statuses.${form.status}`)}
-              />
+              <SummaryRow label={t("admin.sessionForm.summarySubstitutes")} value={String(form.substitutes_count)} />
+              <SummaryRow label={t("common.status")} value={t(`statuses.${form.status}`)} />
             </div>
-          </section>
+          </DataPanel>
         </div>
       </div>
-
-      <style>{`
-        .input-text {
-          width: 100%;
-          padding: 0.75rem 1rem;
-          border-radius: 14px;
-          border: 1px solid #E5E2DC;
-          background: #F7F7F5;
-          font-size: 0.875rem;
-          outline: none;
-        }
-        .input-text:focus {
-          border-color: #ED8D31;
-        }
-      `}</style>
     </form>
   );
 }
 
-function Field({ label, children }) {
+function DateField({ label, value, onChange, required }) {
   return (
-    <div>
-      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+    <label className="block">
+      <span className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
         {label}
-      </label>
-      {children}
-    </div>
+        {required && <span className="text-[#ED8D31] ml-1">*</span>}
+      </span>
+      <input
+        type="date"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="w-full px-4 py-3 bg-[#FAFAFA] border border-[#E5E5E5] text-[14px] text-[#0A0A0A] outline-none focus:border-[#0A0A0A] focus:bg-white transition-colors"
+      />
+    </label>
   );
 }
 
-function ToggleCard({ title, description, checked, onToggle }) {
+function ToggleRow({ title, description, checked, onToggle }) {
   return (
-    <div className="rounded-[18px] border border-[#E5E2DC] bg-[#FBFAF8] p-4 flex items-center justify-between gap-4">
-      <div>
-        <p className="text-sm font-semibold text-[#2F343B]">{title}</p>
-        <p className="text-xs text-[#7A8088] mt-1 leading-[160%]">
-          {description}
-        </p>
+    <div className="bg-[#FAFAFA] border border-[#E5E5E5] p-4 flex items-center justify-between gap-4">
+      <div className="flex-1">
+        <p className="text-[14px] font-bold text-[#0A0A0A]">{title}</p>
+        <p className="text-[11px] text-[#737373] mt-1 leading-[1.55]">{description}</p>
       </div>
-
       <button
         type="button"
         onClick={onToggle}
-        className={`relative w-10 h-6 rounded-full transition-colors ${
-          checked ? "bg-[#ED8D31]" : "bg-[#E5E2DC]"
-        }`}
+        className={`relative w-11 h-6 transition-colors ${checked ? "bg-[#0A0A0A]" : "bg-[#E5E5E5]"}`}
       >
         <span
-          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
-            checked ? "left-5" : "left-1"
-          }`}
+          className={`absolute top-0.5 w-5 h-5 bg-white transition-all ${checked ? "left-[22px]" : "left-0.5"}`}
         />
       </button>
     </div>
@@ -393,9 +269,11 @@ function ToggleCard({ title, description, checked, onToggle }) {
 
 function SummaryRow({ label, value }) {
   return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
+    <div className="flex items-baseline justify-between gap-4 py-2 border-b border-[#F5F5F5] last:border-b-0">
+      <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-[#737373]">
+        {label}
+      </span>
+      <span className="text-[12px] font-bold text-[#0A0A0A] text-right tabular-nums">
         {value}
       </span>
     </div>

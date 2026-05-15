@@ -1,245 +1,273 @@
 import { useEffect, useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { API_BASE_URL } from "../../api";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  DataPanel,
+  StatusPill,
+  Modal,
+  Button,
+  Alert,
+  TextField,
+} from "../../components/ui/Studio";
 
-const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = `${API_BASE_URL}/api`;
+const ROLE_PATH = "communicator";
+const ROLE_PATH_PLURAL = "communicators";
 
 export default function ManageCommunicators() {
-  const [communicators, setCommunicators] = useState([]);
+  const t = useT();
+  const [users, setUsers] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [foundEmployee, setFoundEmployee] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [removeModal, setRemoveModal] = useState({ open: false, id: null });
 
-  const loadCommunicators = async () => {
+  const load = async () => {
     try {
-      const res = await fetch(`${API_URL}/system/roles/communicators`);
+      setLoading(true);
+      const res = await fetch(`${API_URL}/system/roles/${ROLE_PATH_PLURAL}`);
       const data = await res.json();
-      setCommunicators(data.data || []);
-    } catch (err) {
-      console.error(err);
-      setError("Could not load communicators");
+      setUsers(data.data || []);
+    } catch {
+      setError("Impossible de charger les communicants.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadCommunicators();
+    load();
   }, []);
 
   const handleSearch = async () => {
     setError("");
     setFoundEmployee(null);
-
     if (!searchValue.trim()) {
-      setError("Please enter employee number or user ID");
+      setError("Saisissez un matricule.");
       return;
     }
-
     try {
       const res = await fetch(
         `${API_URL}/system/employees/search?query=${searchValue}`
       );
-
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.message || "Employee not found");
+        setError(data.message || "Collaborateur introuvable.");
         return;
       }
-
       setFoundEmployee(data.data);
-    } catch (err) {
-      console.error(err);
-      setError("Search failed");
+    } catch {
+      setError("La recherche a échoué.");
     }
   };
 
   const handleAssign = async () => {
     if (!foundEmployee) return;
-
     try {
       const res = await fetch(
-        `${API_URL}/system/users/${foundEmployee.id}/roles/communicator`,
-        {
-          method: "POST",
-        }
+        `${API_URL}/system/users/${foundEmployee.id}/roles/${ROLE_PATH}`,
+        { method: "POST" }
       );
-
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.message || "Could not assign role");
+        setError(data.message || "Attribution impossible.");
         return;
       }
-
       setFoundEmployee(null);
       setSearchValue("");
-      await loadCommunicators();
-    } catch (err) {
-      console.error(err);
-      setError("Could not assign role");
+      await load();
+    } catch {
+      setError("Attribution impossible.");
     }
   };
 
-  const handleRemove = async (id) => {
+  const handleRemove = async () => {
     try {
       const res = await fetch(
-        `${API_URL}/system/users/${id}/roles/communicator`,
-        {
-          method: "DELETE",
-        }
+        `${API_URL}/system/users/${removeModal.id}/roles/${ROLE_PATH}`,
+        { method: "DELETE" }
       );
-
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.message || "Could not remove role");
+        setError(data.message || "Retrait impossible.");
         return;
       }
-
-      await loadCommunicators();
-    } catch (err) {
-      console.error(err);
-      setError("Could not remove role");
+      setRemoveModal({ open: false, id: null });
+      await load();
+    } catch {
+      setError("Retrait impossible.");
     }
   };
 
+  const activeCount = users.filter((u) => u.active).length;
+
   return (
-    <div className="flex h-screen bg-[#F7F7F5]">
-      <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.systemAdmin")}
+        title="Communicants"
+        subtitle="Gérez les comptes ayant le rôle de communicant — annonces, sondages et modération idées."
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Communicants" },
+        ]}
+      />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardTopBar />
+      <PageBody>
+        {error && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {error}
+          </Alert>
+        )}
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div>
-            <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-              System admin tools
-            </p>
+        <StatBar>
+          <StatCell label="Total" value={users.length} sub="Comptes attribués" />
+          <StatCell label="Actifs" value={activeCount} sub="Connexions valides" accent={activeCount > 0} />
+          <StatCell label="Inactifs" value={users.length - activeCount} sub="Suspendus" />
+        </StatBar>
 
-            <h1 className="text-[36px] font-extrabold text-[#2F343B]">
-              Manage Communicators
-            </h1>
-
-            <p className="text-[#7A8088] text-sm mt-2">
-              Search an employee by employee number or user ID and assign the
-              Communicator role.
-            </p>
-          </div>
-
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-            <h2 className="text-[22px] font-bold text-[#2F343B] mb-4">
-              Assign Communicator Role
-            </h2>
-
-            <div className="flex gap-3">
-              <input
-                value={searchValue}
-                onChange={(e) => {
-                  setSearchValue(e.target.value);
-                  setFoundEmployee(null);
-                  setError("");
-                }}
-                placeholder="Enter employee number, e.g. 002016"
-                className="flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none"
-              />
-
-              <button
-                onClick={handleSearch}
-                className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white hover:bg-[#F7F7F5]"
-              >
-                Search
-              </button>
+        <DataPanel
+          title="Attribuer le rôle"
+          subtitle="Saisissez le matricule du collaborateur"
+        >
+          <div className="p-6 space-y-5">
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <TextField
+                  label="Matricule"
+                  value={searchValue}
+                  onChange={(v) => {
+                    setSearchValue(v);
+                    setFoundEmployee(null);
+                    setError("");
+                  }}
+                  placeholder="ex : 002017"
+                />
+              </div>
+              <Button variant="dark" size="md" onClick={handleSearch}>
+                Rechercher
+              </Button>
             </div>
-
-            {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
 
             {foundEmployee && (
-              <div className="mt-4 flex justify-between items-center border border-[#E5E2DC] bg-[#FBFAF8] p-4 rounded-[14px]">
+              <div className="bg-[#FFF7E8] border border-[#ED8D31] p-4 flex justify-between items-center gap-4">
                 <div>
-                  <p className="font-semibold text-[#2F343B]">
-                    {foundEmployee.name} {foundEmployee.first_name}
+                  <p className="text-[14px] font-bold text-[#0A0A0A]">
+                    {foundEmployee.first_name} {foundEmployee.name}
                   </p>
-
-                  <p className="text-xs text-[#7A8088]">
-                    {foundEmployee.employee_number} · {foundEmployee.email}
+                  <p className="text-[11px] text-[#737373] mt-1 tabular-nums">
+                    Matricule {foundEmployee.employee_number} · {foundEmployee.email}
                   </p>
                 </div>
-
-                <button
-                  onClick={handleAssign}
-                  className="px-4 py-2 bg-[#ED8D31] text-white rounded-[10px]"
-                >
-                  Add Role
-                </button>
+                <Button variant="primary" size="md" onClick={handleAssign}>
+                  Attribuer
+                </Button>
               </div>
             )}
-          </section>
+          </div>
+        </DataPanel>
 
-          <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-            <div className="px-5 py-4 border-b">
-              <h2 className="font-bold text-lg text-[#2F343B]">
-                Current Communicators
-              </h2>
-            </div>
-
-            {loading ? (
-              <div className="p-6 text-[#7A8088]">Loading...</div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-[#FBFAF8] text-xs text-gray-500">
-                  <tr>
-                    <th className="px-5 py-3 text-left">Name</th>
-                    <th className="px-5 py-3 text-left">Employee Number</th>
-                    <th className="px-5 py-3 text-left">Email</th>
-                    <th className="px-5 py-3 text-left">Status</th>
-                    <th className="px-5 py-3 text-left">Action</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {communicators.map((communicator) => (
-                    <tr key={communicator.id} className="border-t">
-                      <td className="px-5 py-4">
-                        {communicator.name} {communicator.first_name}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {communicator.employee_number}
-                      </td>
-
-                      <td className="px-5 py-4">{communicator.email}</td>
-
-                      <td className="px-5 py-4">
-                        {communicator.active ? "Active" : "Inactive"}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() => handleRemove(communicator.id)}
-                          className="text-red-500 font-semibold"
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {communicators.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="text-center py-6 text-gray-400">
-                        No communicators yet
-                      </td>
-                    </tr>
+        <DataPanel
+          title="Communicants actuels"
+          subtitle="Comptes avec le rôle"
+          badge={`${users.length}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-[#0A0A0A]">
+                <tr>
+                  {["Nom", "Matricule", "Email", "Statut", "Action"].map(
+                    (h, i) => (
+                      <th
+                        key={i}
+                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
+                      >
+                        {h}
+                      </th>
+                    )
                   )}
-                </tbody>
-              </table>
-            )}
-          </section>
-        </main>
-      </div>
-    </div>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Chargement…
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Aucun communicant.
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((u) => (
+                    <tr
+                      key={u.id}
+                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors"
+                    >
+                      <td className="px-6 py-4 text-[14px] font-bold text-[#0A0A0A]">
+                        {u.first_name} {u.name}
+                      </td>
+                      <td className="px-6 py-4 text-[12px] font-mono tabular-nums text-[#525252]">
+                        {u.employee_number}
+                      </td>
+                      <td className="px-6 py-4 text-[12px] text-[#525252]">
+                        {u.email}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusPill
+                          tone={u.active ? "success" : "neutral"}
+                          label={u.active ? "Actif" : "Inactif"}
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() =>
+                            setRemoveModal({ open: true, id: u.id })
+                          }
+                        >
+                          Retirer
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </DataPanel>
+      </PageBody>
+
+      <Modal
+        open={removeModal.open}
+        onClose={() => setRemoveModal({ open: false, id: null })}
+        title="Retirer le rôle"
+        description="Confirmer le retrait du rôle de communicant ?"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => setRemoveModal({ open: false, id: null })}
+            >
+              Annuler
+            </Button>
+            <Button variant="danger" size="md" onClick={handleRemove}>
+              Retirer
+            </Button>
+          </>
+        }
+      />
+    </PageShell>
   );
 }

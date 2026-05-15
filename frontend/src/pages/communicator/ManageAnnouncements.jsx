@@ -1,24 +1,44 @@
 import { useEffect, useState } from "react";
-import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
-import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
-import { Link } from "react-router-dom";
-import { publishAnnouncement } from "../../services/announcementService";
 import {
   getCommunicatorAnnouncements,
+  publishAnnouncement,
   deleteAnnouncement,
 } from "../../services/announcementService";
+import { useT } from "../../i18n/LanguageContext";
+import {
+  PageShell,
+  PageHeader,
+  PageBody,
+  StatBar,
+  StatCell,
+  DataPanel,
+  StatusPill,
+  Modal,
+  Button,
+  Alert,
+} from "../../components/ui/Studio";
+
+const STATUS_TONE = {
+  DRAFT: "warn",
+  PUBLISHED: "success",
+  ARCHIVED: "neutral",
+};
+
+function formatDate(item) {
+  return item.publish_date || item.created_at?.slice(0, 10) || "—";
+}
+
+function shortText(text, max = 110) {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "…" : text;
+}
 
 export default function ManageAnnouncements() {
+  const t = useT();
   const [announcements, setAnnouncements] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const [modal, setModal] = useState({
-    open: false,
-    type: null,
-    announcementId: null,
-  });
+  const [modal, setModal] = useState({ open: false, type: null, id: null });
 
   useEffect(() => {
     loadAnnouncements();
@@ -29,9 +49,8 @@ export default function ManageAnnouncements() {
       setLoading(true);
       const data = await getCommunicatorAnnouncements();
       setAnnouncements(data);
-      setSelectedId(data[0]?.id ?? null);
     } catch (err) {
-      setError(err.message || "Failed to load announcements");
+      setError(err.message || "Impossible de charger les annonces.");
     } finally {
       setLoading(false);
     }
@@ -40,366 +59,266 @@ export default function ManageAnnouncements() {
   async function handlePublish(id) {
     try {
       const updated = await publishAnnouncement(id);
-  
       setAnnouncements((prev) =>
         prev.map((item) => (item.id === id ? updated : item))
       );
     } catch (err) {
-      setError(err.message || "Failed to publish announcement");
+      setError(err.message || "Publication impossible.");
     }
   }
-
-  const selectedAnnouncement =
-    announcements.find(
-      (item) => item.id === (modal.announcementId ?? selectedId)
-    ) || null;
-
-  const totalCount = announcements.length;
-  const draftCount = announcements.filter((a) => a.status === "DRAFT").length;
-  const publishedCount = announcements.filter((a) => a.status === "PUBLISHED").length;
-  const archivedCount = announcements.filter((a) => a.status === "ARCHIVED").length;
-
-  const closeModal = () => {
-    setModal({ open: false, type: null, announcementId: null });
-  };
-
-  const openModal = (type, announcementId = selectedId) => {
-    setModal({ open: true, type, announcementId });
-  };
 
   async function handleDelete(id) {
     try {
       await deleteAnnouncement(id);
-      const next = announcements.filter((item) => item.id !== id);
-      setAnnouncements(next);
-      setSelectedId(next[0]?.id ?? null);
+      setAnnouncements((prev) => prev.filter((item) => item.id !== id));
       closeModal();
     } catch (err) {
-      setError(err.message || "Failed to delete announcement");
+      setError(err.message || "Suppression impossible.");
     }
   }
 
+  const closeModal = () =>
+    setModal({ open: false, type: null, id: null });
+
+  const selected =
+    announcements.find((a) => a.id === modal.id) || null;
+
+  const totalCount = announcements.length;
+  const draftCount = announcements.filter((a) => a.status === "DRAFT").length;
+  const publishedCount = announcements.filter(
+    (a) => a.status === "PUBLISHED"
+  ).length;
+  const archivedCount = announcements.filter(
+    (a) => a.status === "ARCHIVED"
+  ).length;
+
   return (
-    <>
-      <div className="flex h-screen bg-[#F7F7F5]">
-        <DashboardSidebar />
+    <PageShell>
+      <PageHeader
+        eyebrow={t("sg.communication")}
+        title="Annonces"
+        subtitle="Créez, publiez et archivez les communications destinées aux collaborateurs : rappels, résultats de tirage, mises à jour."
+        breadcrumbs={[
+          { label: t("sg.dashboard"), to: "/dashboard" },
+          { label: "Annonces" },
+        ]}
+        actions={
+          <Button
+            to="/dashboard/communicator/announcements/create"
+            variant="primary"
+            size="md"
+            icon={<span className="text-[14px] leading-none">＋</span>}
+          >
+            Nouvelle annonce
+          </Button>
+        }
+      />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardTopBar />
+      <PageBody>
+        {error && (
+          <Alert tone="danger" title={t("sg.error")}>
+            {error}
+          </Alert>
+        )}
 
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div className="flex justify-between items-start gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-[#ED8D31] mb-2">
-                    Communicateur tools
-                  </p>
-                  <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
-                    Manage Announcements
-                  </h1>
-                  <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
-                    Create, publish, and archive employee-facing announcements
-                    related to activities, draw results, reminders, and updates.
-                  </p>
-                </div>
+        <StatBar>
+          <StatCell label="Total" value={totalCount} sub="Toutes annonces" />
+          <StatCell
+            label="Brouillons"
+            value={draftCount}
+            sub="Non publiés"
+            accent={draftCount > 0}
+          />
+          <StatCell
+            label="Publiées"
+            value={publishedCount}
+            sub="Visibles aux collaborateurs"
+          />
+          <StatCell label="Archivées" value={archivedCount} sub="Hors-circuit" />
+        </StatBar>
 
-                <Link
-                  to="/dashboard/communicator/announcements/create"
-                  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
-                >
-                  Create Announcement
-                </Link>
-              </div>
-
-              {error && (
-                <div className="rounded-[16px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard title="Total Announcements" value={totalCount} subtitle="All communication posts" />
-                <StatCard title="Drafts" value={draftCount} subtitle="Not yet visible to employees" />
-                <StatCard title="Published" value={publishedCount} subtitle="Currently visible announcements" />
-                <StatCard title="Archived" value={archivedCount} subtitle="Past communication items" />
-              </div>
-
-              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                <h2 className="text-[24px] font-bold text-[#2F343B]">
-                  Announcement Filters
-                </h2>
-                <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                  Backend connected. Filters can be added later if needed.
-                </p>
-              </section>
-
-              <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
-                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
-                    <div>
-                      <h3 className="text-[24px] font-bold text-[#2F343B]">
-                        Announcement List
-                      </h3>
-                      <p className="text-sm text-[#7A8088] mt-1">
-                        Review published, draft, and archived announcements.
-                      </p>
-                    </div>
-
-                    <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
-                      {announcements.length} items
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1050px]">
-                      <thead className="bg-[#FBFAF8]">
-                        <tr>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Title</th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Publish Date</th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Document</th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Status</th>
-                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">Actions</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {loading ? (
-                          <tr>
-                            <td colSpan="5" className="px-5 py-10 text-center text-sm text-[#7A8088]">
-                              Loading announcements...
-                            </td>
-                          </tr>
-                        ) : (
-                          announcements.map((item) => (
-                            <tr
-                              key={item.id}
-                              className={`border-t border-[#E5E2DC] align-top ${
-                                selectedId === item.id ? "bg-[#FCFBF9]" : ""
-                              }`}
+        <DataPanel
+          title="Liste des annonces"
+          subtitle="Toutes les annonces, du brouillon à l'archive"
+          badge={`${announcements.length}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1000px]">
+              <thead className="bg-[#0A0A0A]">
+                <tr>
+                  {["Titre", "Date", "Document", "Statut", "Actions"].map(
+                    (h, i) => (
+                      <th
+                        key={i}
+                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
+                      >
+                        {h}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Chargement…
+                    </td>
+                  </tr>
+                ) : announcements.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
+                      Aucune annonce pour le moment.
+                    </td>
+                  </tr>
+                ) : (
+                  announcements.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
+                    >
+                      <td className="px-6 py-5 max-w-[420px]">
+                        <p className="text-[#0A0A0A] text-[14px] font-bold">
+                          {item.title}
+                        </p>
+                        <p className="text-[12px] text-[#737373] mt-1 line-clamp-2">
+                          {shortText(item.content)}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
+                        {formatDate(item)}
+                      </td>
+                      <td className="px-6 py-5 text-[12px] text-[#525252]">
+                        {item.document_path ? "Attaché" : "—"}
+                      </td>
+                      <td className="px-6 py-5">
+                        <StatusPill
+                          tone={STATUS_TONE[item.status] || "neutral"}
+                          label={item.status}
+                        />
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setModal({
+                                open: true,
+                                type: "details",
+                                id: item.id,
+                              })
+                            }
+                          >
+                            Détails
+                          </Button>
+                          {item.status === "DRAFT" && (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => handlePublish(item.id)}
                             >
-                              <td className="px-5 py-5">
-                                <button onClick={() => setSelectedId(item.id)} className="text-left">
-                                  <p className="font-semibold text-[#2F343B] text-sm">
-                                    {item.title}
-                                  </p>
-                                  <p className="text-xs text-[#7A8088] mt-1 max-w-[320px]">
-                                    {shortText(item.content)}
-                                  </p>
-                                </button>
-                              </td>
+                              Publier
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() =>
+                              setModal({
+                                open: true,
+                                type: "delete",
+                                id: item.id,
+                              })
+                            }
+                          >
+                            Supprimer
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </DataPanel>
+      </PageBody>
 
-                              <td className="px-5 py-5 text-sm text-[#7A8088]">
-                                {formatDate(item)}
-                              </td>
-
-                              <td className="px-5 py-5 text-sm text-[#7A8088]">
-                                {item.document_path ? "Attached" : "None"}
-                              </td>
-
-                              <td className="px-5 py-5">
-                                <StatusBadge status={item.status} />
-                              </td>
-
-                              <td className="px-5 py-5">
-  <div className="flex flex-wrap gap-2">
-
-    <button
-      onClick={() => openModal("details", item.id)}
-      className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
-    >
-      View details
-    </button>
-
-    {/* ✅ ADD THIS */}
-    {item.status === "DRAFT" && (
-      <button
-        onClick={() => handlePublish(item.id)}
-        className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm"
+      <Modal
+        open={modal.open && modal.type === "details" && !!selected}
+        onClose={closeModal}
+        title={selected?.title || "Détails"}
+        width="lg"
+        footer={
+          <Button variant="outline" size="md" onClick={closeModal}>
+            Fermer
+          </Button>
+        }
       >
-        Publish
-      </button>
-    )}
-
-    <button
-      onClick={() => openModal("delete", item.id)}
-      className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm"
-    >
-      Delete
-    </button>
-
-  </div>
-</td>
-                            </tr>
-                          ))
-                        )}
-
-                        {!loading && announcements.length === 0 && (
-                          <tr>
-                            <td colSpan="5" className="px-5 py-10 text-center text-sm text-[#7A8088]">
-                              No announcements available.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                <div className="space-y-5">
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Status summary
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Current distribution of announcement statuses.
-                    </p>
-
-                    <div className="space-y-3">
-                      <SummaryRow label="Drafts" value={draftCount} />
-                      <SummaryRow label="Published" value={publishedCount} />
-                      <SummaryRow label="Archived" value={archivedCount} />
-                    </div>
-                  </section>
-
-                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
-                    <h3 className="text-[24px] font-bold text-[#2F343B]">
-                      Selected announcement
-                    </h3>
-                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
-                      Quick summary of the currently selected communication item.
-                    </p>
-
-                    {selectedAnnouncement && (
-                      <div className="space-y-3">
-                        <SummaryRow label="Title" value={selectedAnnouncement.title} />
-                        <SummaryRow label="Status" value={selectedAnnouncement.status} />
-                        <SummaryRow label="Date" value={formatDate(selectedAnnouncement)} />
-                        <SummaryRow label="Document" value={selectedAnnouncement.document_path ? "Attached" : "None"} />
-                      </div>
-                    )}
-                  </section>
-                </div>
+        {selected && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-[12px]">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
+                  Date
+                </p>
+                <p className="text-[13px] font-bold text-[#0A0A0A] tabular-nums">
+                  {formatDate(selected)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
+                  Statut
+                </p>
+                <StatusPill
+                  tone={STATUS_TONE[selected.status] || "neutral"}
+                  label={selected.status}
+                />
+              </div>
+              <div className="col-span-2">
+                <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
+                  Document
+                </p>
+                <p className="text-[13px] text-[#0A0A0A]">
+                  {selected.document_name || "Aucun"}
+                </p>
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-
-      {modal.open && modal.type === "details" && selectedAnnouncement && (
-        <ModalShell title="Announcement Details" onClose={closeModal}>
-          <DetailRow label="Title" value={selectedAnnouncement.title} />
-          <DetailRow label="Publish Date" value={formatDate(selectedAnnouncement)} />
-          <DetailRow label="Status" value={selectedAnnouncement.status} />
-          <DetailRow label="Document" value={selectedAnnouncement.document_name || "No document"} />
-
-          <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
-            <p className="text-sm font-semibold text-[#2F343B] mb-2">Content</p>
-            <p className="text-sm text-[#7A8088] leading-[170%] whitespace-pre-line">
-              {selectedAnnouncement.content}
-            </p>
+            <div className="border-t border-[#E5E5E5] pt-4">
+              <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-2">
+                Contenu
+              </p>
+              <p className="text-[13px] text-[#0A0A0A] leading-[1.7] whitespace-pre-line">
+                {selected.content}
+              </p>
+            </div>
           </div>
-        </ModalShell>
-      )}
+        )}
+      </Modal>
 
-      {modal.open && modal.type === "delete" && selectedAnnouncement && (
-        <ConfirmModal
-          title="Delete Announcement"
-          message={`Do you want to delete "${selectedAnnouncement.title}"?`}
-          confirmLabel="Delete"
-          onCancel={closeModal}
-          onConfirm={() => handleDelete(selectedAnnouncement.id)}
-        />
-      )}
-    </>
-  );
-}
-
-function formatDate(item) {
-  return item.publish_date || item.created_at?.slice(0, 10) || "-";
-}
-
-function shortText(text, max = 120) {
-  if (!text) return "";
-  return text.length > max ? text.slice(0, max) + "..." : text;
-}
-
-function StatCard({ title, value, subtitle }) {
-  return (
-    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
-      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
-      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
-      <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-bold text-[#2F343B] text-right">{value}</span>
-    </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const styles = {
-    DRAFT: "bg-[#FFF4D6] text-[#B98900]",
-    PUBLISHED: "bg-[#D4F4DD] text-[#2D7A4A]",
-    ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
-  };
-
-  return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
-      {status}
-    </span>
-  );
-}
-
-function ModalShell({ title, children, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[520px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-4">{title}</h2>
-        <div className="space-y-3 mb-6">{children}</div>
-        <div className="flex justify-end">
-          <button onClick={onClose} className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmModal({ title, message, confirmLabel, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
-        <h2 className="text-xl font-bold text-[#2F343B] mb-3">{title}</h2>
-        <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">{message}</p>
-
-        <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm">
-            Cancel
-          </button>
-
-          <button onClick={onConfirm} className="px-4 py-2 rounded-[12px] bg-red-600 text-white text-sm font-medium">
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
-      <span className="text-sm text-[#7A8088]">{label}</span>
-      <span className="text-sm font-semibold text-[#2F343B] text-right">
-        {value || "-"}
-      </span>
-    </div>
+      <Modal
+        open={modal.open && modal.type === "delete" && !!selected}
+        onClose={closeModal}
+        title="Supprimer l'annonce"
+        description={
+          selected ? `Confirmer la suppression de « ${selected.title} » ?` : ""
+        }
+        footer={
+          <>
+            <Button variant="outline" size="md" onClick={closeModal}>
+              Annuler
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => selected && handleDelete(selected.id)}
+            >
+              Supprimer
+            </Button>
+          </>
+        }
+      />
+    </PageShell>
   );
 }

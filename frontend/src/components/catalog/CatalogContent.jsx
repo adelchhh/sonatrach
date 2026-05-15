@@ -1,167 +1,289 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { API_BASE_URL } from "../../api";
+import { API_BASE_URL, apiGet } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
+import {
+  PageHero,
+  Toolbar,
+  SearchInput,
+  FilterChip,
+  EmptyState,
+  Button,
+  SectionHeader,
+} from "../ui/Studio";
 
-const defaultImage =
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80";
+const DEFAULT_IMAGE =
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80";
 
-function imageOf(activity) {
+const POSTER_FALLBACKS = [
+  "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=900&q=80",
+];
+
+const CATEGORIES = ["ALL", "SPORT", "FAMILY", "STAY", "NATURE", "SPIRITUAL", "TRAVEL", "LEISURE"];
+
+function imageOf(activity, idx = 0) {
   const url = activity.image_url || activity.image;
-  if (!url) return defaultImage;
+  if (!url) return POSTER_FALLBACKS[idx % POSTER_FALLBACKS.length];
   if (url.startsWith("http")) return url;
   return `${API_BASE_URL}${url}`;
 }
-
-  function ActivityCard({ activity, featured = false, t }) {
-    const categoryLabel =
-      t(`categories.${activity.category}`) === `categories.${activity.category}`
-        ? activity.category
-        : t(`categories.${activity.category}`);
-    const statusLabel =
-      t(`statuses.${activity.status}`) === `statuses.${activity.status}`
-        ? activity.status
-        : t(`statuses.${activity.status}`);
-    return (
-      <Link
-        to={`/activities/${activity.id}`}
-        className={`relative overflow-hidden rounded-[24px] block group ${
-          featured ? "h-[340px]" : "h-[300px]"
-        }`}
-      >
-        <img
-          src={imageOf(activity)}
-          alt={activity.title}
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-        />
-  
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(47,52,59,0.12) 0%, rgba(47,52,59,0.20) 45%, rgba(47,52,59,0.82) 100%)",
-          }}
-        />
-  
-        <div className="absolute top-4 left-4">
-          <span className="px-3 py-1.5 rounded-full bg-[rgba(255,255,255,0.92)] text-[#2F343B] text-xs font-semibold">
-            {categoryLabel}
-          </span>
-        </div>
-
-        <div className="absolute top-4 right-4">
-          <span className="px-3 py-1.5 rounded-full bg-[rgba(47,52,59,0.72)] text-white text-xs font-medium">
-            {statusLabel}
-          </span>
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <h3 className="text-white text-[22px] font-bold leading-[110%] mb-2">
-            {activity.title}
-          </h3>
-          <div className="text-[rgba(255,255,255,0.82)] text-sm">
-            {categoryLabel} · {activity.demand_level}
-          </div>
-        </div>
-      </Link>
-    );
-  }
 
 export default function CatalogContent({ compact = false }) {
   const t = useT();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("ALL");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/activities")
-      .then((res) => res.json())
-      .then((data) => {
-        setActivities(data.data || []);
-      })
-      .catch((error) => {
-        console.error("Error fetching activities:", error);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    apiGet("/activities")
+      .then((data) => setActivities(data.data || []))
+      .catch((err) => console.error("Catalog fetch error:", err))
+      .finally(() => setLoading(false));
   }, []);
 
-  const featured = activities.slice(0, 2);
-  const others = activities.slice(2);
+  const filtered = useMemo(() => {
+    return activities.filter((a) => {
+      if (category !== "ALL" && a.category !== category) return false;
+      if (
+        search &&
+        !a.title.toLowerCase().includes(search.toLowerCase()) &&
+        !(a.description || "").toLowerCase().includes(search.toLowerCase())
+      )
+        return false;
+      return true;
+    });
+  }, [activities, search, category]);
 
-  if (loading) {
-    return (
-      <div className="px-4 py-10 text-center text-[#7A8088]">
-        {t("common.loading")}
-      </div>
-    );
-  }
+  const featured = filtered.slice(0, 2);
+  const others = filtered.slice(2);
 
   return (
-    <div className={compact ? "" : "px-4 py-10"}>
-      <div className="w-full max-w-[1336px] mx-auto">
-        <div className={`text-center ${compact ? "mb-8" : "mb-10"}`}>
-          <div className="inline-flex items-center px-4 py-2 rounded-full border border-[#E5E2DC] bg-white text-[#7A8088] text-sm mb-4">
-            {t("catalog.tag")}
+    <>
+      {!compact && (
+        <PageHero
+          eyebrow={t("catalog.tag")}
+          title={t("catalog.title")}
+          subtitle={t("catalog.subtitle")}
+          height="tall"
+          image={
+            activities[0]
+              ? imageOf(activities[0])
+              : DEFAULT_IMAGE
+          }
+        />
+      )}
+
+      <div className={compact ? "px-8 lg:px-12 py-10" : "px-8 lg:px-12 py-12"}>
+        <div className="max-w-[1400px] mx-auto">
+          {compact && (
+            <div className="mb-8">
+              <p className="text-[#ED8D31] text-[11px] uppercase tracking-[0.35em] font-bold mb-3">
+                {t("catalog.tag")}
+              </p>
+              <h1 className="text-[#0A0A0A] text-[36px] lg:text-[44px] font-bold tracking-[-0.02em] leading-tight">
+                {t("catalog.title")}
+              </h1>
+              <p className="text-[#737373] text-[14px] mt-3 max-w-[680px] leading-[1.65]">
+                {t("catalog.subtitle")}
+              </p>
+            </div>
+          )}
+
+          <div className="mb-10">
+            <Toolbar>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t("catalog.searchPlaceholder")}
+              />
+              <div className="flex gap-2 flex-wrap">
+                {CATEGORIES.map((c) => (
+                  <FilterChip
+                    key={c}
+                    active={category === c}
+                    onClick={() => setCategory(c)}
+                    label={
+                      c === "ALL"
+                        ? t("catalog.allTypes")
+                        : t(`categories.${c}`) === `categories.${c}`
+                        ? c
+                        : t(`categories.${c}`)
+                    }
+                  />
+                ))}
+              </div>
+            </Toolbar>
           </div>
 
-          <h1 className="text-[#2F343B] text-[56px] font-extrabold leading-[100%] tracking-[-2px] mb-4">
-            {t("catalog.title")}
-          </h1>
+          {loading ? (
+            <div className="py-20 text-center text-[13px] text-[#737373]">
+              {t("common.loading")}
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon="🔍"
+              title={t("catalog.noActivities")}
+              description="Essayez de modifier vos filtres ou de réinitialiser votre recherche."
+              action={
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => {
+                    setSearch("");
+                    setCategory("ALL");
+                  }}
+                >
+                  {t("common.reset")}
+                </Button>
+              }
+            />
+          ) : (
+            <>
+              {featured.length > 0 && (
+                <>
+                  <SectionHeader
+                    title="À l'affiche"
+                    subtitle="Les activités phares du moment"
+                  />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                    <div className="lg:col-span-2">
+                      <FeatureCard activity={featured[0]} t={t} index={0} />
+                    </div>
+                    {featured[1] && (
+                      <div>
+                        <FeatureCard activity={featured[1]} t={t} index={1} />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
-          <p className="text-[#7A8088] text-lg leading-[170%] max-w-[700px] mx-auto">
-            {t("catalog.subtitle")}
+              {others.length > 0 && (
+                <>
+                  <SectionHeader
+                    title="Toutes les activités"
+                    subtitle={`${others.length} autres activités disponibles`}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {others.map((activity, i) => (
+                      <PosterCard
+                        key={activity.id}
+                        activity={activity}
+                        t={t}
+                        index={i + 2}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function FeatureCard({ activity, t, index }) {
+  const categoryLabel =
+    t(`categories.${activity.category}`) === `categories.${activity.category}`
+      ? activity.category
+      : t(`categories.${activity.category}`);
+  return (
+    <Link
+      to={`/activities/${activity.id}`}
+      className="group relative h-[400px] block overflow-hidden bg-black"
+    >
+      <img
+        src={imageOf(activity, index)}
+        alt={activity.title}
+        className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700"
+        onError={(e) => {
+          e.currentTarget.src = POSTER_FALLBACKS[index % POSTER_FALLBACKS.length];
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+
+      <div className="absolute top-5 left-5 flex items-center gap-3">
+        <span className="px-3 py-1 bg-[#ED8D31] text-black text-[10px] uppercase tracking-[0.2em] font-bold">
+          À la une
+        </span>
+        <span className="px-3 py-1 bg-white/95 text-black text-[10px] uppercase tracking-[0.15em] font-bold">
+          {categoryLabel}
+        </span>
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 p-6">
+        <h3 className="text-white text-[28px] lg:text-[34px] font-bold leading-[1.1] tracking-tight mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
+          {activity.title}
+        </h3>
+        <p className="text-white/85 text-[13px] leading-[1.6] line-clamp-2 max-w-[600px] mb-4">
+          {activity.description}
+        </p>
+        <div className="flex items-center gap-3">
+          <span className="inline-block w-6 h-px bg-[#ED8D31] group-hover:w-10 transition-all duration-500" />
+          <p className="text-white text-[10px] uppercase tracking-[0.25em] font-bold">
+            Découvrir →
           </p>
         </div>
-
-        <div className="mb-8 rounded-[20px] border border-[#E5E2DC] bg-white p-4 flex gap-4 flex-wrap">
-          <input
-            type="text"
-            placeholder={t("catalog.searchPlaceholder")}
-            className="flex-1 min-w-[220px] px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none"
-          />
-
-          <button className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-[#50565E]">
-            {t("catalog.allTypes")}
-          </button>
-
-          <button className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-[#50565E]">
-            {t("catalog.upcoming")}
-          </button>
-
-          <button className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white font-medium">
-            {t("catalog.openOnly")}
-          </button>
-        </div>
-
-        {activities.length === 0 ? (
-          <div className="text-center text-[#7A8088] py-12">
-            {t("catalog.noActivities")}
-          </div>
-        ) : (
-          <>
-            {featured.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2">
-                  <ActivityCard activity={featured[0]} featured t={t} />
-                </div>
-
-                {featured[1] && (
-                  <div>
-                    <ActivityCard activity={featured[1]} featured t={t} />
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
-              {others.map((activity) => (
-                <ActivityCard key={activity.id} activity={activity} t={t} />
-              ))}
-            </div>
-          </>
-        )}
       </div>
-    </div>
+    </Link>
+  );
+}
+
+function PosterCard({ activity, t, index }) {
+  const categoryLabel =
+    t(`categories.${activity.category}`) === `categories.${activity.category}`
+      ? activity.category
+      : t(`categories.${activity.category}`);
+
+  return (
+    <Link
+      to={`/activities/${activity.id}`}
+      className="group block relative bg-black overflow-hidden aspect-[16/11]"
+    >
+      <img
+        src={imageOf(activity, index)}
+        alt={activity.title}
+        className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700"
+        onError={(e) => {
+          e.currentTarget.src = POSTER_FALLBACKS[index % POSTER_FALLBACKS.length];
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+
+      <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/95 text-black text-[10px] uppercase tracking-[0.15em] font-bold">
+        {categoryLabel}
+      </div>
+
+      <div className="absolute top-3 right-3 text-white/40 text-[22px] font-black leading-none tabular-nums group-hover:text-[#ED8D31] transition-colors">
+        {String(index + 1).padStart(2, "0")}
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 p-4">
+        <h3 className="text-white text-[18px] font-bold leading-tight mb-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] line-clamp-2">
+          {activity.title}
+        </h3>
+        <p className="text-white/65 text-[11px] line-clamp-2 mt-1">
+          {activity.description}
+        </p>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="inline-block w-4 h-px bg-white group-hover:bg-[#ED8D31] group-hover:w-8 transition-all" />
+          <p className="text-white text-[10px] uppercase tracking-[0.2em] font-bold group-hover:text-[#ED8D31] transition-colors">
+            Voir la fiche
+          </p>
+        </div>
+      </div>
+
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#ED8D31] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500" />
+    </Link>
   );
 }
