@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiGet, getCurrentUser } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
+import sonatrachLogo from "../../assets/logo/sonatrach_logo2-1024x1024.png";
 
 const FALLBACK_IMG =
   "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=1600&q=80";
@@ -123,6 +124,7 @@ export default function DashboardMain() {
         loading={loading}
         userName={firstName}
         roleLabel={roleLabel}
+        categoryLabels={CATEGORY_LABEL}
       />
 
       <KpiStrip kpis={kpis} loading={loading} />
@@ -190,10 +192,10 @@ export default function DashboardMain() {
 /*  HERO — Netflix-style featured activity          */
 /* ════════════════════════════════════════════════ */
 
-function HeroFeatured({ activity, loading, userName, roleLabel }) {
+function HeroFeatured({ activity, loading, userName, roleLabel, categoryLabels = {} }) {
   const heroImage = activity ? pickImage(activity, 0) : FALLBACK_IMG;
   const categoryLabel = activity
-    ? CATEGORY_LABEL[activity.category] || activity.category
+    ? categoryLabels[activity.category] || activity.category
     : "—";
 
   return (
@@ -715,15 +717,11 @@ function SiteFooter() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div
-                className="w-9 h-9 flex items-center justify-center font-black text-white text-lg"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #ED8D31 0%, #B5560F 100%)",
-                }}
-              >
-                S
-              </div>
+              <img
+                src={sonatrachLogo}
+                alt="Sonatrach"
+                className="w-12 h-12 object-contain bg-white p-0.5"
+              />
               <p className="font-bold text-[15px] tracking-tight">SONATRACH</p>
             </div>
             <p className="text-white/55 text-[12px] leading-[1.65]">

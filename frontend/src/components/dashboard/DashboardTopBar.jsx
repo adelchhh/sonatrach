@@ -63,6 +63,17 @@ export default function DashboardTopBar() {
           >
             FR
           </button>
+          <button
+            type="button"
+            onClick={() => setLang("ar")}
+            className={`px-3 h-8 text-[10px] uppercase tracking-[0.15em] font-bold transition-colors border-l border-[#E5E5E5] ${
+              lang === "ar"
+                ? "bg-[#0A0A0A] text-white"
+                : "text-[#737373] hover:text-[#0A0A0A]"
+            }`}
+          >
+            AR
+          </button>
         </div>
 
         {/* Notifications */}

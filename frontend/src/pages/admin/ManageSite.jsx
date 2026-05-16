@@ -109,15 +109,15 @@ export default function ManageSite() {
         )}
 
         <StatBar>
-          <StatCell label={t("admin.site.statTotal")} value={totalSites} sub="Référencés" />
+          <StatCell label={t("admin.site.statTotal")} value={totalSites} sub={t("sg.total")} />
           <StatCell
             label={t("admin.site.statInUse")}
             value={sitesInUse}
-            sub="Sites actifs sur sessions"
+            sub={t("sg.subActive")}
             accent={sitesInUse > 0}
           />
-          <StatCell label={t("admin.site.statActivities")} value={totalActivities} sub="Activités liées" />
-          <StatCell label={t("admin.site.statSessions")} value={totalSessions} sub="Sessions liées" />
+          <StatCell label={t("admin.site.statActivities")} value={totalActivities} sub={t("sg.activities")} />
+          <StatCell label={t("admin.site.statSessions")} value={totalSessions} sub={t("sg.sessions")} />
         </StatBar>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.65fr_1fr] gap-6">
@@ -256,7 +256,7 @@ export default function ManageSite() {
         }
       >
         {selectedSite && Number(selectedSite.sessions_count) > 0 && (
-          <Alert tone="warn" title="Attention">
+          <Alert tone="warn" title={t("sg.error")}>
             {t("admin.site.deleteWarn", { count: selectedSite.sessions_count })}
           </Alert>
         )}

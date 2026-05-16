@@ -28,11 +28,7 @@ const STATUS_TONE = {
   ACCEPTED: "success",
   ARCHIVED: "neutral",
 };
-const STATUS_LABEL_FR = {
-  UNDER_REVIEW: "En cours d'examen",
-  ACCEPTED: "Acceptée",
-  ARCHIVED: "Archivée",
-};
+// status labels resolved via t() at render time
 
 function formatDate(value) {
   if (!value) return "—";
@@ -47,6 +43,11 @@ function formatDate(value) {
 
 export default function IdeaBox() {
   const t = useT();
+  const statusLabel = (s) => ({
+    UNDER_REVIEW: t("sg.pending"),
+    ACCEPTED: t("sg.validated"),
+    ARCHIVED: t("sg.archived"),
+  }[s] || s);
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -61,14 +62,14 @@ export default function IdeaBox() {
   const load = () => {
     if (!userId) {
       setLoading(false);
-      setPageError("Veuillez vous connecter.");
+      setPageError(t("sg.error"));
       return;
     }
     setLoading(true);
     apiGet(`/me/ideas?user_id=${userId}`)
       .then((res) => setIdeas(res.data || []))
       .catch((err) =>
-        setPageError(err.message || "Impossible de charger vos idées.")
+        setPageError(err.message || t("sg.loadingFailed"))
       )
       .finally(() => setLoading(false));
   };
@@ -91,7 +92,7 @@ export default function IdeaBox() {
     setFormError(null);
     setSuccess(null);
     if (!form.content.trim()) {
-      setFormError("Veuillez décrire votre idée.");
+      setFormError(t("sg.error"));
       return;
     }
     setSubmitting(true);
@@ -102,10 +103,10 @@ export default function IdeaBox() {
         category: form.category,
       });
       setForm({ category: "ACTIVITIES", content: "" });
-      setSuccess("Merci ! Votre idée a bien été transmise au comité.");
+      setSuccess(t("sg.ideaSent"));
       load();
     } catch (err) {
-      setFormError(err.message || "Soumission impossible.");
+      setFormError(err.message || t("sg.saveImpossible"));
     } finally {
       setSubmitting(false);
     }
@@ -115,11 +116,11 @@ export default function IdeaBox() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.myArea")}
-        title="Boîte à idées"
-        subtitle="Proposez des améliorations pour les activités, services et bien-être Sonatrach. Le comité de communication examine chaque idée."
+        title={t("sg.myIdeas")}
+        subtitle={t("sg.subMyIdeas")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Boîte à idées" },
+          { label: t("sg.myIdeas") },
         ]}
       />
 
@@ -131,19 +132,19 @@ export default function IdeaBox() {
         )}
 
         <StatBar>
-          <StatCell label="Mes idées" value={stats.total} sub="Soumises" />
-          <StatCell label="En examen" value={stats.review} sub="Avis du comité" />
-          <StatCell label="Acceptées" value={stats.accepted} sub="Validées" accent={stats.accepted > 0} />
+          <StatCell label={t("sg.myIdeas")} value={stats.total} sub={t("sg.subRecorded")} />
+          <StatCell label={t("sg.pending")} value={stats.review} sub={t("sg.subToReview")} />
+          <StatCell label={t("sg.validated")} value={stats.accepted} sub={t("sg.validated")} accent={stats.accepted > 0} />
         </StatBar>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.65fr] gap-6">
           <DataPanel
-            title="Soumettre une nouvelle idée"
-            subtitle="Soyez précis : les suggestions concrètes sont plus faciles à évaluer"
+            title={t("sg.submitIdea")}
+            subtitle={t("sg.subMyIdeas")}
           >
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               {success && (
-                <Alert tone="success" title="Idée transmise">
+                <Alert tone="success" title={t("sg.ideaSent")}>
                   {success}
                 </Alert>
               )}
@@ -153,17 +154,17 @@ export default function IdeaBox() {
                 </Alert>
               )}
               <Select
-                label="Catégorie"
+                label={t("sg.labelType")}
                 value={form.category}
                 onChange={(v) => setForm((p) => ({ ...p, category: v }))}
                 options={CATEGORY_OPTIONS}
               />
               <div>
                 <TextArea
-                  label="Votre idée"
+                  label={t("sg.colIdea")}
                   value={form.content}
                   onChange={(v) => setForm((p) => ({ ...p, content: v }))}
-                  placeholder="Décrivez votre idée, pourquoi elle est utile, et comment l'implémenter…"
+                  placeholder={t("sg.phIdeaContent")}
                   rows={6}
                   required
                 />
@@ -177,19 +178,19 @@ export default function IdeaBox() {
                 size="lg"
                 disabled={submitting}
               >
-                {submitting ? "Envoi…" : "Transmettre l'idée"}
+                {submitting ? t("sg.sending") : t("sg.submitIdea")}
               </Button>
             </form>
           </DataPanel>
 
-          <DataPanel title="Mes idées transmises" badge={`${ideas.length}`}>
+          <DataPanel title={t("sg.myIdeas")} badge={`${ideas.length}`}>
             {loading ? (
               <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                Chargement…
+                {t("sg.loading")}
               </div>
             ) : ideas.length === 0 ? (
               <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                Aucune idée transmise pour le moment.
+                {t("sg.emptyIdeas")}
               </div>
             ) : (
               <div className="divide-y divide-[#E5E5E5]">
@@ -201,7 +202,7 @@ export default function IdeaBox() {
                       </span>
                       <StatusPill
                         tone={STATUS_TONE[i.status] || "neutral"}
-                        label={STATUS_LABEL_FR[i.status] || i.status}
+                        label={statusLabel(i.status)}
                       />
                     </div>
                     <p className="text-[13px] text-[#0A0A0A] leading-[1.7]">

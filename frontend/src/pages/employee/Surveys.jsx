@@ -40,7 +40,7 @@ export default function Surveys() {
   async function loadSurveys() {
     if (!userId) {
       setLoading(false);
-      setPageError("Veuillez vous connecter.");
+      setPageError(t("sg.error"));
       return;
     }
     try {
@@ -56,7 +56,7 @@ export default function Surveys() {
       });
       setDraftAnswers(drafts);
     } catch (err) {
-      setPageError(err.message || "Impossible de charger les sondages.");
+      setPageError(err.message || t("sg.loadingFailed"));
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function Surveys() {
   async function submitAnswer(survey) {
     const value = draftAnswers[survey.id];
     if (!value) {
-      alert("Veuillez répondre au sondage avant de soumettre.");
+      alert(t("sg.error"));
       return;
     }
     try {
@@ -97,7 +97,7 @@ export default function Surveys() {
       setSelectedSurvey(null);
       await loadSurveys();
     } catch (err) {
-      alert(err.message || "Soumission impossible.");
+      alert(err.message || t("sg.saveImpossible"));
     } finally {
       setSubmitting(null);
     }
@@ -107,12 +107,12 @@ export default function Surveys() {
     return (
       <PageShell>
         <PageHeader
-          eyebrow="Sondage"
+          eyebrow={t("sg.surveys")}
           title={selectedSurvey.title}
-          subtitle={`Date limite : ${formatDate(selectedSurvey.end_date)}`}
+          subtitle={`${t("sg.labelDeadline")} : ${formatDate(selectedSurvey.end_date)}`}
           breadcrumbs={[
             { label: t("sg.dashboard"), to: "/dashboard" },
-            { label: "Sondages", to: "#" },
+            { label: t("sg.surveys"), to: "#" },
             { label: selectedSurvey.title },
           ]}
           actions={
@@ -121,7 +121,7 @@ export default function Surveys() {
               size="md"
               onClick={() => setSelectedSurvey(null)}
             >
-              ← Retour
+              ← {t("sg.back")}
             </Button>
           }
         />
@@ -145,11 +145,11 @@ export default function Surveys() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.myArea")}
-        title="Sondages & opinions"
-        subtitle="Participez aux sondages internes et aidez à améliorer la vie professionnelle de Sonatrach."
+        title={t("sg.surveys")}
+        subtitle={t("sg.subMySurveys")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Sondages" },
+          { label: t("sg.surveys") },
         ]}
       />
 
@@ -157,12 +157,12 @@ export default function Surveys() {
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E5E5E5] pb-4">
           <div className="flex gap-2">
             <FilterChip
-              label={`Actifs · ${activeSurveys.length}`}
+              label={`${t("sg.active")} · ${activeSurveys.length}`}
               active={tab === "ACTIVE"}
               onClick={() => setTab("ACTIVE")}
             />
             <FilterChip
-              label={`Complétés · ${completedSurveys.length}`}
+              label={`${t("sg.processed")} · ${completedSurveys.length}`}
               active={tab === "COMPLETED"}
               onClick={() => setTab("COMPLETED")}
             />
@@ -171,7 +171,7 @@ export default function Surveys() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Rechercher un sondage…"
+              placeholder={t("sg.phSearchTitle")}
             />
           </div>
         </div>
@@ -184,11 +184,11 @@ export default function Surveys() {
 
         {loading ? (
           <div className="border border-[#E5E5E5] bg-white py-14 text-center text-[13px] text-[#737373]">
-            Chargement…
+            {t("sg.loading")}
           </div>
         ) : filteredSurveys.length === 0 ? (
           <div className="border border-[#E5E5E5] bg-white py-14 text-center text-[13px] text-[#737373]">
-            Aucun sondage à afficher.
+            {t("sg.emptySurveys")}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">

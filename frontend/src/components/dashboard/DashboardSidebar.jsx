@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import sonatrachLogo from "../../assets/logo/sonatrach_logo2-1024x1024.png";
 import {
   LayoutDashboard,
   Tent,
@@ -142,14 +143,11 @@ export default function DashboardSidebar() {
   return (
     <aside className="w-[240px] min-w-[240px] h-screen bg-white border-r border-[#E5E5E5] flex flex-col sticky top-0">
       <div className="flex items-center gap-2.5 px-4 py-5 border-b border-[#E5E5E5]">
-        <div
-          className="w-9 h-9 flex items-center justify-center font-black text-white text-base"
-          style={{
-            background: "linear-gradient(135deg, #ED8D31 0%, #B5560F 100%)",
-          }}
-        >
-          S
-        </div>
+        <img
+          src={sonatrachLogo}
+          alt="Sonatrach"
+          className="w-12 h-12 object-contain"
+        />
         <span className="font-black text-[#0A0A0A] text-[13px] tracking-[0.18em]">
           SONATRACH
         </span>

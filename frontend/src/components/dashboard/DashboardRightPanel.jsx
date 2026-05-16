@@ -245,8 +245,8 @@ function DrawResultCard({ result }) {
     : "waiting";
   const kindLabel = {
     selected: "Sélectionné",
-    substitute: "Substitut",
-    waiting: "Liste d'attente",
+    substitute: "Suppléant",
+    waiting: "Non retenu",
   }[kind];
   const kindColor = {
     selected: "#15803D",

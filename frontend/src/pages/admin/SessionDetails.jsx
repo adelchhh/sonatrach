@@ -109,8 +109,8 @@ export default function SessionDetails() {
         ) : session ? (
           <>
             <DataPanel
-              title="Informations"
-              subtitle="Tous les paramètres de la session"
+              title={t("sg.information")}
+              subtitle={t("sg.sessions")}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 divide-x divide-y divide-[#E5E5E5]">
                 <InfoCell label={t("admin.sessionDetails.info.activity")} value={session.activity_title || `Activité #${id}`} />

@@ -20,11 +20,7 @@ const STATUS_TONE = {
   VALIDATED: "success",
   REJECTED: "danger",
 };
-const STATUS_LABEL_FR = {
-  UPLOADED: "En attente",
-  VALIDATED: "Validé",
-  REJECTED: "Rejeté",
-};
+// status labels resolved via t() at render time
 
 function formatDate(value) {
   if (!value) return "—";
@@ -39,6 +35,11 @@ function formatDate(value) {
 
 export default function Documents() {
   const t = useT();
+  const statusLabel = (s) => ({
+    UPLOADED: t("sg.pending"),
+    VALIDATED: t("sg.validated"),
+    REJECTED: t("sg.rejected"),
+  }[s] || s);
   const [documents, setDocuments] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export default function Documents() {
   const load = () => {
     if (!userId) {
       setLoading(false);
-      setPageError("Veuillez vous connecter.");
+      setPageError(t("sg.error"));
       return;
     }
     setLoading(true);
@@ -71,7 +72,7 @@ export default function Documents() {
         setRegistrations(regs.data || []);
       })
       .catch((err) =>
-        setPageError(err.message || "Impossible de charger les documents.")
+        setPageError(err.message || t("sg.loadingFailed"))
       )
       .finally(() => setLoading(false));
   };
@@ -102,7 +103,7 @@ export default function Documents() {
     e.preventDefault();
     setUploadError(null);
     if (!uploadForm.registration_id || !uploadForm.file) {
-      setUploadError("Choisissez une inscription et un fichier.");
+      setUploadError(t("sg.error"));
       return;
     }
     setUploading(true);
@@ -119,7 +120,7 @@ export default function Documents() {
       if (input) input.value = "";
       load();
     } catch (err) {
-      setUploadError(err.message || "Téléversement impossible.");
+      setUploadError(err.message || t("sg.saveImpossible"));
     } finally {
       setUploading(false);
     }
@@ -129,11 +130,11 @@ export default function Documents() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.myArea")}
-        title="Mes documents"
-        subtitle="Téléversez les pièces justificatives requises pour vos inscriptions et suivez leur validation."
+        title={t("sg.myDocuments")}
+        subtitle={t("sg.subMyDocuments")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Mes documents" },
+          { label: t("sg.myDocuments") },
         ]}
       />
 
@@ -145,28 +146,28 @@ export default function Documents() {
         )}
 
         <StatBar>
-          <StatCell label="Téléversés" value={stats.total} sub="Total" />
+          <StatCell label={t("sg.subUploaded")} value={stats.total} sub={t("sg.total")} />
           <StatCell
-            label="En attente"
+            label={t("sg.pending")}
             value={stats.pending}
-            sub="À valider"
+            sub={t("sg.toValidate")}
             accent={stats.pending > 0}
           />
-          <StatCell label="Validés" value={stats.validated} sub="Conformes" />
-          <StatCell label="Rejetés" value={stats.rejected} sub="Non conformes" />
+          <StatCell label={t("sg.validated")} value={stats.validated} sub={t("sg.validated")} />
+          <StatCell label={t("sg.rejected")} value={stats.rejected} sub={t("sg.rejected")} />
         </StatBar>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6">
-          <DataPanel title="Mes documents" badge={`${documents.length}`}>
+          <DataPanel title={t("sg.myDocuments")} badge={`${documents.length}`}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[860px]">
                 <thead className="bg-[#0A0A0A]">
                   <tr>
                     {[
-                      "Fichier",
-                      "Pour l'activité",
-                      "Téléversé",
-                      "Statut",
+                      t("sg.colDocument"),
+                      t("sg.colActivity"),
+                      t("sg.subUploaded"),
+                      t("sg.colStatus"),
                     ].map((h, i) => (
                       <th
                         key={i}
@@ -181,13 +182,13 @@ export default function Documents() {
                   {loading ? (
                     <tr>
                       <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        Chargement…
+                        {t("sg.loading")}
                       </td>
                     </tr>
                   ) : documents.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        Vous n'avez encore téléversé aucun document.
+                        {t("sg.emptyDocuments")}
                       </td>
                     </tr>
                   ) : (
@@ -216,7 +217,7 @@ export default function Documents() {
                         <td className="px-6 py-4">
                           <StatusPill
                             tone={STATUS_TONE[d.status] || "neutral"}
-                            label={STATUS_LABEL_FR[d.status] || d.status}
+                            label={statusLabel(d.status)}
                           />
                           {d.validation_comment && (
                             <p className="text-[11px] text-[#9F1F1F] mt-2 max-w-[200px]">

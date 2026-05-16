@@ -8,7 +8,8 @@ const LanguageContext = createContext({
 });
 
 const STORAGE_KEY = "sonatrach.lang";
-const SUPPORTED = ["en", "fr"];
+const SUPPORTED = ["en", "fr", "ar"];
+const RTL_LANGS = ["ar"];
 
 function detectInitialLang() {
   if (typeof window === "undefined") return "en";
@@ -49,6 +50,7 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.lang = lang;
+      document.documentElement.dir = RTL_LANGS.includes(lang) ? "rtl" : "ltr";
     }
   }, [lang]);
 

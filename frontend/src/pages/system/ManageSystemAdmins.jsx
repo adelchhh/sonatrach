@@ -109,11 +109,11 @@ export default function ManageSystemAdmins() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.systemAdmin")}
-        title="Administrateurs système"
-        subtitle="Gérez les comptes super-administrateurs — pouvoir total sur la plateforme."
+        title={t("sg.systemAdmins")}
+        subtitle={t("sg.subSystemAdminSA")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Administrateurs système" },
+          { label: t("sg.systemAdmins") },
         ]}
       />
 
@@ -124,27 +124,25 @@ export default function ManageSystemAdmins() {
           </Alert>
         )}
 
-        <Alert tone="warn" title="Attention">
-          Les administrateurs système disposent des plus hauts privilèges :
-          attribution/retrait de rôles, consultation des journaux d'audit.
-          Attribuez ce rôle avec discernement.
+        <Alert tone="warn" title={t("sg.error")}>
+          {t("sg.subSystemAdminSA")}
         </Alert>
 
         <StatBar>
-          <StatCell label="Total" value={users.length} sub="Comptes attribués" />
-          <StatCell label="Actifs" value={activeCount} sub="Connexions valides" accent={activeCount > 0} />
-          <StatCell label="Inactifs" value={users.length - activeCount} sub="Suspendus" />
+          <StatCell label={t("sg.total")} value={users.length} sub={t("sg.total")} />
+          <StatCell label={t("sg.active")} value={activeCount} sub={t("sg.subActive")} accent={activeCount > 0} />
+          <StatCell label={t("sg.inactive")} value={users.length - activeCount} sub={t("sg.subInactive")} />
         </StatBar>
 
         <DataPanel
-          title="Attribuer le rôle"
-          subtitle="Saisissez le matricule du collaborateur"
+          title={t("sg.approve")}
+          subtitle={t("sg.colMatricule")}
         >
           <div className="p-6 space-y-5">
             <div className="flex gap-3 items-end">
               <div className="flex-1">
                 <TextField
-                  label="Matricule"
+                  label={t("sg.colMatricule")}
                   value={searchValue}
                   onChange={(v) => {
                     setSearchValue(v);
@@ -155,7 +153,7 @@ export default function ManageSystemAdmins() {
                 />
               </div>
               <Button variant="dark" size="md" onClick={handleSearch}>
-                Rechercher
+                {t("common.search")}
               </Button>
             </div>
 
@@ -170,7 +168,7 @@ export default function ManageSystemAdmins() {
                   </p>
                 </div>
                 <Button variant="primary" size="md" onClick={handleAssign}>
-                  Attribuer
+                  {t("sg.approve")}
                 </Button>
               </div>
             )}
@@ -178,15 +176,15 @@ export default function ManageSystemAdmins() {
         </DataPanel>
 
         <DataPanel
-          title="Administrateurs système actuels"
-          subtitle="Comptes avec privilèges complets"
+          title={t("sg.systemAdmins")}
+          subtitle={t("sg.systemAdmins")}
           badge={`${users.length}`}
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead className="bg-[#0A0A0A]">
                 <tr>
-                  {["Nom", "Matricule", "Email", "Statut", "Action"].map(
+                  {[t("sg.colEmployee"), t("sg.colMatricule"), t("sg.colEmail"), t("sg.colStatus"), t("sg.colAction")].map(
                     (h, i) => (
                       <th
                         key={i}
@@ -202,13 +200,13 @@ export default function ManageSystemAdmins() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucun administrateur système.
+                      {t("sg.emptyUsers")}
                     </td>
                   </tr>
                 ) : (
@@ -229,7 +227,7 @@ export default function ManageSystemAdmins() {
                       <td className="px-6 py-4">
                         <StatusPill
                           tone={u.active ? "success" : "neutral"}
-                          label={u.active ? "Actif" : "Inactif"}
+                          label={u.active ? t("sg.active") : t("sg.inactive")}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -240,7 +238,7 @@ export default function ManageSystemAdmins() {
                             setRemoveModal({ open: true, id: u.id })
                           }
                         >
-                          Retirer
+                          {t("sg.remove")}
                         </Button>
                       </td>
                     </tr>
@@ -255,8 +253,8 @@ export default function ManageSystemAdmins() {
       <Modal
         open={removeModal.open}
         onClose={() => setRemoveModal({ open: false, id: null })}
-        title="Retirer le rôle"
-        description="Confirmer le retrait du rôle d'administrateur système ? L'utilisateur perdra ses privilèges immédiatement."
+        title={t("sg.remove")}
+        description={t("sg.confirmReason")}
         footer={
           <>
             <Button
@@ -264,7 +262,7 @@ export default function ManageSystemAdmins() {
               size="md"
               onClick={() => setRemoveModal({ open: false, id: null })}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button variant="danger" size="md" onClick={handleRemove}>
               Retirer

@@ -1,4 +1,5 @@
 import { useT } from "../i18n/LanguageContext";
+import sonatrachLogo from "../assets/logo/sonatrach_logo2-1024x1024.png";
 
 export default function Footer() {
   const t = useT();
@@ -10,15 +11,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <div
-                className="w-9 h-9 flex items-center justify-center font-black text-white text-base"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #ED8D31 0%, #B5560F 100%)",
-                }}
-              >
-                S
-              </div>
+              <img
+                src={sonatrachLogo}
+                alt="Sonatrach"
+                className="w-12 h-12 object-contain bg-white p-0.5"
+              />
               <p className="font-black text-[14px] tracking-[0.18em]">
                 SONATRACH
               </p>

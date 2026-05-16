@@ -20,11 +20,7 @@ const STATUS_TONE = {
   ARCHIVED: "neutral",
 };
 
-const STATUS_LABEL_FR = {
-  PENDING: "En attente",
-  REVIEWED: "Examinée",
-  ARCHIVED: "Archivée",
-};
+// status labels resolved via t() at render time
 
 function formatDate(idea) {
   return idea.submitted_at || idea.created_at?.slice(0, 10) || "—";
@@ -44,6 +40,11 @@ export default function IdeaBoxModeration() {
   const [error, setError] = useState("");
 
   const selectedIdea = ideas.find((idea) => idea.id === selectedId) || null;
+  const statusLabel = (s) => ({
+    PENDING: t("sg.statusPendingLabel"),
+    REVIEWED: t("sg.statusReviewedLabel"),
+    ARCHIVED: t("sg.statusArchivedLabel"),
+  }[s] || s);
 
   useEffect(() => {
     loadIdeas();
@@ -60,7 +61,7 @@ export default function IdeaBoxModeration() {
       setSelectedId(data[0]?.id ?? null);
       setFeedback(data[0]?.moderator_response || "");
     } catch (err) {
-      setError(err.message || "Impossible de charger les idées.");
+      setError(err.message || t("sg.loadingFailed"));
     } finally {
       setLoading(false);
     }
@@ -78,7 +79,7 @@ export default function IdeaBoxModeration() {
       );
       setFeedback("");
     } catch (err) {
-      setError(err.message || "Modération impossible.");
+      setError(err.message || t("sg.moderationImpossible"));
     }
   }
 
@@ -90,11 +91,11 @@ export default function IdeaBoxModeration() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.communication")}
-        title="Modération boîte à idées"
-        subtitle="Examinez les suggestions des collaborateurs, ajoutez un retour et archivez les idées traitées."
+        title={t("sg.ideaModeration")}
+        subtitle={t("sg.subIdeaBox")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Modération idées" },
+          { label: t("sg.ideaModeration") },
         ]}
       />
 
@@ -107,26 +108,26 @@ export default function IdeaBoxModeration() {
 
         <StatBar>
           <StatCell
-            label="En attente"
+            label={t("sg.pending")}
             value={pendingCount}
-            sub="À examiner"
+            sub={t("sg.subToReview")}
             accent={pendingCount > 0}
           />
-          <StatCell label="Examinées" value={reviewedCount} sub="Avec retour" />
-          <StatCell label="Archivées" value={archivedCount} sub="Hors-circuit" />
+          <StatCell label={t("sg.statusReviewedLabel")} value={reviewedCount} sub={t("sg.subWithFeedback")} />
+          <StatCell label={t("sg.archived")} value={archivedCount} sub={t("sg.subOffCircuit")} />
         </StatBar>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
           <DataPanel
-            title="Idées soumises"
-            subtitle="Cliquez sur une ligne pour la modérer"
+            title={t("sg.panelIdeasSubmitted")}
+            subtitle={t("sg.panelIdeasSubmittedSub")}
             badge={`${ideas.length}`}
           >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px]">
                 <thead className="bg-[#0A0A0A]">
                   <tr>
-                    {["Idée", "Auteur", "Soumise", "Statut"].map((h, i) => (
+                    {[t("sg.colIdea"), t("sg.colAuthor"), t("sg.colSubmitted"), t("sg.colStatus")].map((h, i) => (
                       <th
                         key={i}
                         className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
@@ -143,7 +144,7 @@ export default function IdeaBoxModeration() {
                         colSpan={4}
                         className="px-6 py-14 text-center text-[13px] text-[#737373]"
                       >
-                        Chargement…
+                        {t("sg.loading")}
                       </td>
                     </tr>
                   ) : ideas.length === 0 ? (
@@ -152,7 +153,7 @@ export default function IdeaBoxModeration() {
                         colSpan={4}
                         className="px-6 py-14 text-center text-[13px] text-[#737373]"
                       >
-                        Aucune idée soumise pour le moment.
+                        {t("sg.emptyIdeasSubmitted")}
                       </td>
                     </tr>
                   ) : (
@@ -178,7 +179,7 @@ export default function IdeaBoxModeration() {
                           </p>
                         </td>
                         <td className="px-6 py-5 text-[12px] text-[#525252]">
-                          {idea.user?.name || idea.author || "Collaborateur"}
+                          {idea.user?.name || idea.author || t("sg.collaborator")}
                         </td>
                         <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
                           {formatDate(idea)}
@@ -186,7 +187,7 @@ export default function IdeaBoxModeration() {
                         <td className="px-6 py-5">
                           <StatusPill
                             tone={STATUS_TONE[idea.status] || "neutral"}
-                            label={STATUS_LABEL_FR[idea.status] || idea.status}
+                            label={statusLabel(idea.status)}
                           />
                         </td>
                       </tr>
@@ -198,35 +199,35 @@ export default function IdeaBoxModeration() {
           </DataPanel>
 
           <DataPanel
-            title="Panneau de modération"
+            title={t("sg.moderationPanel")}
             subtitle={
               selectedIdea
-                ? "Rédigez votre retour et choisissez une action"
-                : "Sélectionnez une idée à modérer"
+                ? t("sg.panelModerationActiveSub")
+                : t("sg.panelModerationEmptySub")
             }
           >
             <div className="p-6">
               {!selectedIdea ? (
                 <p className="text-[13px] text-[#737373] italic">
-                  Cliquez sur une idée dans la liste pour la modérer.
+                  {t("sg.moderationHint")}
                 </p>
               ) : (
                 <div className="space-y-5">
-                  <DetailRow label="Titre" value={selectedIdea.title} />
+                  <DetailRow label={t("sg.colTitle")} value={selectedIdea.title} />
                   <DetailRow
-                    label="Statut"
+                    label={t("sg.colStatus")}
                     value={
-                      STATUS_LABEL_FR[selectedIdea.status] || selectedIdea.status
+                      statusLabel(selectedIdea.status)
                     }
                   />
                   <DetailRow
-                    label="Soumise le"
+                    label={t("sg.colSubmitted")}
                     value={formatDate(selectedIdea)}
                   />
 
                   <div className="border-t border-[#E5E5E5] pt-5">
                     <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#737373] mb-2">
-                      Contenu de l'idée
+                      {t("sg.ideaContent")}
                     </p>
                     <p className="text-[13px] text-[#0A0A0A] leading-[1.7] whitespace-pre-line">
                       {selectedIdea.content}
@@ -234,10 +235,10 @@ export default function IdeaBoxModeration() {
                   </div>
 
                   <TextArea
-                    label="Retour du modérateur"
+                    label={t("sg.moderatorFeedback")}
                     value={feedback}
                     onChange={setFeedback}
-                    placeholder="Rédigez un retour pour le collaborateur…"
+                    placeholder={t("sg.phFeedback")}
                     rows={5}
                   />
 
@@ -247,14 +248,14 @@ export default function IdeaBoxModeration() {
                       size="lg"
                       onClick={() => handleModerate("REVIEWED")}
                     >
-                      Marquer comme examinée
+                      {t("sg.markReviewed")}
                     </Button>
                     <Button
                       variant="outline"
                       size="lg"
                       onClick={() => handleModerate("ARCHIVED")}
                     >
-                      Archiver
+                      {t("sg.archive")}
                     </Button>
                   </div>
                 </div>

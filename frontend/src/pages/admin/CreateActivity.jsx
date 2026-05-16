@@ -105,12 +105,12 @@ export default function CreateActivity() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.administration")}
-        title="Créer une activité"
-        subtitle="Définissez les informations principales avant de configurer les sessions, les sites et les quotas."
+        title={t("sg.create") + " — " + t("sg.activities")}
+        subtitle={t("sg.generalInfo")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Activités", to: "/dashboard/admin/activities" },
-          { label: "Nouvelle" },
+          { label: t("sg.activities"), to: "/dashboard/admin/activities" },
+          { label: t("sg.newRecord") },
         ]}
         actions={
           <>
@@ -119,7 +119,7 @@ export default function CreateActivity() {
               variant="outline"
               size="md"
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="primary"
@@ -127,7 +127,7 @@ export default function CreateActivity() {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? "Enregistrement…" : "Enregistrer"}
+              {saving ? t("sg.processing") : t("sg.save")}
             </Button>
           </>
         }
@@ -143,33 +143,33 @@ export default function CreateActivity() {
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
           <div className="space-y-6">
             <DataPanel
-              title="Informations générales"
-              subtitle="Détails de présentation de l'activité"
+              title={t("sg.generalInfo")}
+              subtitle={t("sg.activities")}
             >
               <div className="p-6 space-y-5">
                 <TextField
-                  label="Titre de l'activité"
+                  label={t("sg.colTitle")}
                   value={form.title}
                   onChange={(v) => update("title", v)}
-                  placeholder="ex : Colonie de vacances été 2026"
+                  placeholder={t("sg.phTitle")}
                   required
                 />
                 <TextArea
-                  label="Description"
+                  label={t("sg.labelDescription")}
                   value={form.description}
                   onChange={(v) => update("description", v)}
-                  placeholder="Décrivez en détail l'activité…"
+                  placeholder={t("sg.phContent")}
                   rows={5}
                 />
                 <Select
-                  label="Catégorie"
+                  label={t("sg.labelType")}
                   value={form.category}
                   onChange={(v) => update("category", v)}
                   options={CATEGORY_OPTIONS}
                 />
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
-                    Image de couverture
+                    {t("sg.coverImage")}
                   </label>
                   <label className="block bg-[#FAFAFA] border border-dashed border-[#E5E5E5] hover:border-[#0A0A0A] hover:bg-white transition-colors h-[180px] cursor-pointer overflow-hidden relative">
                     {imagePreview ? (
@@ -184,8 +184,7 @@ export default function CreateActivity() {
                           ⬆
                         </div>
                         <p className="text-[13px] text-[#0A0A0A] font-bold">
-                          <span className="text-[#ED8D31]">Cliquez</span> pour
-                          téléverser ou glissez-déposez
+                          {t("sg.uploadFile")}
                         </p>
                         <p className="text-[11px] text-[#737373] mt-1">
                           SVG · PNG · JPG · GIF · WEBP (4 Mo max)
@@ -204,27 +203,27 @@ export default function CreateActivity() {
             </DataPanel>
 
             <DataPanel
-              title="Règles d'activité"
-              subtitle="Critères d'éligibilité et tirage"
+              title={t("sg.operations")}
+              subtitle={t("sg.drawCenter")}
             >
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Select
-                  label="Ancienneté minimale"
+                  label={t("sg.labelType")}
                   value={form.minimumSeniority}
                   onChange={(v) => update("minimumSeniority", v)}
                   options={SENIORITY_OPTIONS}
                 />
                 <Select
-                  label="Tirage au sort"
+                  label={t("sg.drawCenter")}
                   value={form.drawEnabled}
                   onChange={(v) => update("drawEnabled", v)}
                   options={[
-                    { value: "yes", label: "Oui" },
-                    { value: "no", label: "Non" },
+                    { value: "yes", label: t("common.yes") },
+                    { value: "no", label: t("common.no") },
                   ]}
                 />
                 <Select
-                  label="Niveau de demande"
+                  label={t("sg.labelType")}
                   value={form.demandLevel}
                   onChange={(v) => update("demandLevel", v)}
                   options={DEMAND_OPTIONS}
@@ -238,7 +237,7 @@ export default function CreateActivity() {
                 variant="outline"
                 size="md"
               >
-                Annuler
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="primary"
@@ -246,38 +245,37 @@ export default function CreateActivity() {
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving ? "Enregistrement…" : "Enregistrer l'activité"}
+                {saving ? t("sg.processing") : t("sg.save")}
               </Button>
             </div>
           </div>
 
           <div className="space-y-6">
-            <DataPanel title="Publication" subtitle="Statut courant">
+            <DataPanel title={t("sg.publish")} subtitle={t("sg.currentStatus")}>
               <div className="p-6">
                 <Select
-                  label="Statut"
+                  label={t("sg.colStatus")}
                   value={form.status}
                   onChange={(v) => update("status", v)}
                   options={STATUS_OPTIONS}
-                  hint="Seules les activités publiées apparaissent dans le catalogue."
                 />
               </div>
             </DataPanel>
 
-            <DataPanel title="Résumé" subtitle="Aperçu de la configuration">
+            <DataPanel title={t("sg.summary")} subtitle={t("sg.overview")}>
               <div className="p-6 space-y-2">
-                <SummaryRow label="Titre" value={form.title || "Non défini"} />
-                <SummaryRow label="Catégorie" value={form.category} />
+                <SummaryRow label={t("sg.colTitle")} value={form.title || t("sg.notDefined")} />
+                <SummaryRow label={t("sg.labelType")} value={form.category} />
                 <SummaryRow
-                  label="Ancienneté min."
-                  value={`${form.minimumSeniority} an(s)`}
+                  label={t("sg.labelType")}
+                  value={`${form.minimumSeniority}`}
                 />
                 <SummaryRow
-                  label="Tirage"
-                  value={form.drawEnabled === "yes" ? "Oui" : "Non"}
+                  label={t("sg.drawCenter")}
+                  value={form.drawEnabled === "yes" ? t("common.yes") : t("common.no")}
                 />
-                <SummaryRow label="Demande" value={form.demandLevel} />
-                <SummaryRow label="Statut" value={form.status} />
+                <SummaryRow label={t("sg.labelType")} value={form.demandLevel} />
+                <SummaryRow label={t("sg.colStatus")} value={form.status} />
               </div>
             </DataPanel>
           </div>

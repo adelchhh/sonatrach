@@ -48,7 +48,7 @@ export default function ManageNotifications() {
         : response.data || response.notifications || [];
       setNotifications(data);
     } catch (err) {
-      setError(err.message || "Impossible de charger les notifications.");
+      setError(err.message || t("sg.loadingFailed"));
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ export default function ManageNotifications() {
 
   async function handleSend() {
     if (!form.title.trim() || !form.message.trim()) {
-      setError("Titre et message sont obligatoires.");
+      setError(t("sg.mandatoryFields"));
       return;
     }
     try {
@@ -69,7 +69,7 @@ export default function ManageNotifications() {
       setForm({ title: "", message: "" });
       await loadNotifications();
     } catch (err) {
-      setError(err.message || "Envoi impossible.");
+      setError(err.message || t("sg.sendImpossible"));
     } finally {
       setSending(false);
     }
@@ -86,11 +86,11 @@ export default function ManageNotifications() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.communication")}
-        title="Notifications"
-        subtitle="Créez des notifications globales destinées à tous les collaborateurs et consultez l'historique des envois."
+        title={t("sg.notifications")}
+        subtitle={t("sg.subNotifications")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Notifications" },
+          { label: t("sg.notifications") },
         ]}
       />
 
@@ -102,30 +102,30 @@ export default function ManageNotifications() {
         )}
 
         <StatBar>
-          <StatCell label="Total" value={totalCount} sub="Envoyées" />
-          <StatCell label="Général" value={generalCount} sub="Messages génériques" accent={generalCount > 0} />
-          <StatCell label="Sondage" value={surveyCount} sub="Liées aux sondages" />
-          <StatCell label="Annonce" value={announcementCount} sub="Liées aux annonces" />
+          <StatCell label={t("sg.total")} value={totalCount} sub={t("sg.subAllNotifs")} />
+          <StatCell label={t("sg.typeGeneral")} value={generalCount} sub={t("sg.subGeneric")} accent={generalCount > 0} />
+          <StatCell label={t("sg.typeSurvey")} value={surveyCount} sub={t("sg.subLinkedToSurveys")} />
+          <StatCell label={t("sg.typeAnnouncement")} value={announcementCount} sub={t("sg.subLinkedToAnnouncements")} />
         </StatBar>
 
         <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-6">
           <DataPanel
-            title="Envoyer une notification"
-            subtitle="Visible par tous les collaborateurs"
+            title={t("sg.panelSendNotif")}
+            subtitle={t("sg.panelSendNotifSub")}
           >
             <div className="p-6 space-y-5">
               <TextField
-                label="Titre"
+                label={t("sg.colTitle")}
                 value={form.title}
                 onChange={(v) => setForm((p) => ({ ...p, title: v }))}
-                placeholder="Saisissez le titre…"
+                placeholder={t("sg.phTitle")}
                 required
               />
               <TextArea
-                label="Message"
+                label={t("sg.labelMessage")}
                 value={form.message}
                 onChange={(v) => setForm((p) => ({ ...p, message: v }))}
-                placeholder="Rédigez le message…"
+                placeholder={t("sg.phMessage")}
                 rows={7}
                 required
               />
@@ -135,21 +135,21 @@ export default function ManageNotifications() {
                 onClick={handleSend}
                 disabled={sending}
               >
-                {sending ? "Envoi…" : "Envoyer maintenant"}
+                {sending ? t("sg.sending") : t("sg.sendNow")}
               </Button>
             </div>
           </DataPanel>
 
           <DataPanel
-            title="Historique d'envoi"
-            subtitle="Notifications globales envoyées"
+            title={t("sg.sentHistory")}
+            subtitle={t("sg.subAllNotifs")}
             badge={`${notifications.length}`}
           >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
                 <thead className="bg-[#0A0A0A]">
                   <tr>
-                    {["Titre", "Message", "Type", "Envoyée"].map((h, i) => (
+                    {[t("sg.colTitle"), t("sg.colMessage"), t("sg.colType"), t("sg.colSent")].map((h, i) => (
                       <th
                         key={i}
                         className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
@@ -163,13 +163,13 @@ export default function ManageNotifications() {
                   {loading ? (
                     <tr>
                       <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        Chargement…
+                        {t("sg.loading")}
                       </td>
                     </tr>
                   ) : notifications.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        Aucune notification envoyée pour le moment.
+                        {t("sg.emptySent")}
                       </td>
                     </tr>
                   ) : (

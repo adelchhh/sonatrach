@@ -111,11 +111,11 @@ export default function ManageCommunicators() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.systemAdmin")}
-        title="Communicants"
-        subtitle="Gérez les comptes ayant le rôle de communicant — annonces, sondages et modération idées."
+        title={t("sg.communicators")}
+        subtitle={t("sg.subSystemAdminCom")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Communicants" },
+          { label: t("sg.communicators") },
         ]}
       />
 
@@ -127,20 +127,20 @@ export default function ManageCommunicators() {
         )}
 
         <StatBar>
-          <StatCell label="Total" value={users.length} sub="Comptes attribués" />
-          <StatCell label="Actifs" value={activeCount} sub="Connexions valides" accent={activeCount > 0} />
-          <StatCell label="Inactifs" value={users.length - activeCount} sub="Suspendus" />
+          <StatCell label={t("sg.total")} value={users.length} sub={t("sg.total")} />
+          <StatCell label={t("sg.active")} value={activeCount} sub={t("sg.subActive")} accent={activeCount > 0} />
+          <StatCell label={t("sg.inactive")} value={users.length - activeCount} sub={t("sg.subInactive")} />
         </StatBar>
 
         <DataPanel
-          title="Attribuer le rôle"
-          subtitle="Saisissez le matricule du collaborateur"
+          title={t("sg.approve")}
+          subtitle={t("sg.colMatricule")}
         >
           <div className="p-6 space-y-5">
             <div className="flex gap-3 items-end">
               <div className="flex-1">
                 <TextField
-                  label="Matricule"
+                  label={t("sg.colMatricule")}
                   value={searchValue}
                   onChange={(v) => {
                     setSearchValue(v);
@@ -151,7 +151,7 @@ export default function ManageCommunicators() {
                 />
               </div>
               <Button variant="dark" size="md" onClick={handleSearch}>
-                Rechercher
+                {t("common.search")}
               </Button>
             </div>
 
@@ -166,7 +166,7 @@ export default function ManageCommunicators() {
                   </p>
                 </div>
                 <Button variant="primary" size="md" onClick={handleAssign}>
-                  Attribuer
+                  {t("sg.approve")}
                 </Button>
               </div>
             )}
@@ -174,15 +174,15 @@ export default function ManageCommunicators() {
         </DataPanel>
 
         <DataPanel
-          title="Communicants actuels"
-          subtitle="Comptes avec le rôle"
+          title={t("sg.communicators")}
+          subtitle={t("sg.communicators")}
           badge={`${users.length}`}
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead className="bg-[#0A0A0A]">
                 <tr>
-                  {["Nom", "Matricule", "Email", "Statut", "Action"].map(
+                  {[t("sg.colEmployee"), t("sg.colMatricule"), t("sg.colEmail"), t("sg.colStatus"), t("sg.colAction")].map(
                     (h, i) => (
                       <th
                         key={i}
@@ -198,13 +198,13 @@ export default function ManageCommunicators() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucun communicant.
+                      {t("sg.emptyUsers")}
                     </td>
                   </tr>
                 ) : (
@@ -225,7 +225,7 @@ export default function ManageCommunicators() {
                       <td className="px-6 py-4">
                         <StatusPill
                           tone={u.active ? "success" : "neutral"}
-                          label={u.active ? "Actif" : "Inactif"}
+                          label={u.active ? t("sg.active") : t("sg.inactive")}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -236,7 +236,7 @@ export default function ManageCommunicators() {
                             setRemoveModal({ open: true, id: u.id })
                           }
                         >
-                          Retirer
+                          {t("sg.remove")}
                         </Button>
                       </td>
                     </tr>
@@ -251,8 +251,8 @@ export default function ManageCommunicators() {
       <Modal
         open={removeModal.open}
         onClose={() => setRemoveModal({ open: false, id: null })}
-        title="Retirer le rôle"
-        description="Confirmer le retrait du rôle de communicant ?"
+        title={t("sg.remove")}
+        description={t("sg.confirmReason")}
         footer={
           <>
             <Button
@@ -260,7 +260,7 @@ export default function ManageCommunicators() {
               size="md"
               onClick={() => setRemoveModal({ open: false, id: null })}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button variant="danger" size="md" onClick={handleRemove}>
               Retirer

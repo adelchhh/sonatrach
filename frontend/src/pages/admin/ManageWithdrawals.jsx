@@ -154,23 +154,23 @@ export default function ManageWithdrawals() {
           <StatCell
             label={t("admin.withdrawals.statTotal")}
             value={stats.total}
-            sub="Toutes demandes"
+            sub={t("sg.total")}
           />
           <StatCell
             label={t("admin.withdrawals.statPending")}
             value={stats.pending}
-            sub="À traiter"
+            sub={t("sg.subToReview")}
             accent={stats.pending > 0}
           />
           <StatCell
             label={t("admin.withdrawals.statApproved")}
             value={stats.approved}
-            sub="Approuvés"
+            sub={t("sg.validated")}
           />
           <StatCell
             label={t("admin.withdrawals.statProcessed")}
             value={stats.processed}
-            sub="Définitivement traités"
+            sub={t("sg.processed")}
           />
         </StatBar>
 
@@ -201,8 +201,8 @@ export default function ManageWithdrawals() {
         </Toolbar>
 
         <DataPanel
-          title="Demandes de retrait"
-          subtitle="Approuvez, rejetez ou marquez comme traitées"
+          title={t("sg.withdrawals")}
+          subtitle={t("sg.operations")}
           badge={`${filtered.length} / ${withdrawals.length}`}
         >
           <div className="overflow-x-auto">

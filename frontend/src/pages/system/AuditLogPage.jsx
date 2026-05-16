@@ -119,11 +119,11 @@ export default function AuditLogPage() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.systemAdmin")}
-        title="Journal d'audit"
-        subtitle="Traçabilité de toutes les actions sensibles effectuées par les administrateurs, communicants et super-administrateurs. 500 dernières entrées."
+        title={t("sg.auditLog")}
+        subtitle={t("sg.subAuditLog")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Journal d'audit" },
+          { label: t("sg.auditLog") },
         ]}
       />
 
@@ -135,13 +135,13 @@ export default function AuditLogPage() {
         )}
 
         <StatBar>
-          <StatCell label="Entrées" value={logs.length} sub="Total" />
-          <StatCell label="Actions" value={actions.length} sub="Types distincts" accent={actions.length > 0} />
-          <StatCell label="Tables" value={targets.length} sub="Ciblées" />
+          <StatCell label={t("sg.colAction")} value={logs.length} sub={t("sg.total")} />
+          <StatCell label={t("sg.labelType")} value={actions.length} sub={t("sg.total")} accent={actions.length > 0} />
+          <StatCell label={t("sg.colTarget")} value={targets.length} sub={t("sg.total")} />
           <StatCell
-            label="Dernière"
+            label={t("sg.lastUpdate")}
             value={logs[0]?.action_date ? formatDateTime(logs[0].action_date) : "—"}
-            sub="Activité"
+            sub={t("sg.colWhen")}
           />
         </StatBar>
 
@@ -149,13 +149,13 @@ export default function AuditLogPage() {
           <SearchInput
             value={filters.search}
             onChange={(v) => setFilters((f) => ({ ...f, search: v }))}
-            placeholder="Rechercher action, utilisateur, IP…"
+            placeholder={t("sg.search")}
           />
           <SelectInput
             value={filters.action}
             onChange={(v) => setFilters((f) => ({ ...f, action: v }))}
             options={[
-              { value: "all", label: "Toutes les actions" },
+              { value: "all", label: t("sg.allTypes") },
               ...actions.map((a) => ({ value: a, label: a })),
             ]}
           />
@@ -163,7 +163,7 @@ export default function AuditLogPage() {
             value={filters.target}
             onChange={(v) => setFilters((f) => ({ ...f, target: v }))}
             options={[
-              { value: "all", label: "Toutes les tables" },
+              { value: "all", label: t("sg.allTypes") },
               ...targets.map((tg) => ({ value: tg, label: tg })),
             ]}
           />
@@ -174,20 +174,20 @@ export default function AuditLogPage() {
               setFilters({ search: "", action: "all", target: "all" })
             }
           >
-            Réinitialiser
+            {t("sg.reset")}
           </Button>
         </Toolbar>
 
         <DataPanel
-          title="Journal d'activité"
-          subtitle="Chronologique inverse, de la plus récente à la plus ancienne"
+          title={t("sg.auditLog")}
+          subtitle={t("sg.subAuditLog")}
           badge={`${filtered.length} / ${logs.length}`}
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px]">
               <thead className="bg-[#0A0A0A]">
                 <tr>
-                  {["Date", "Utilisateur", "Action", "Cible", "IP", "Détails"].map(
+                  {[t("sg.colDate"), t("sg.colEmployee"), t("sg.colAction"), t("sg.colTarget"), "IP", t("sg.details")].map(
                     (h, i) => (
                       <th
                         key={i}
@@ -203,13 +203,13 @@ export default function AuditLogPage() {
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucune entrée ne correspond aux filtres.
+                      {t("sg.emptyAuditLog")}
                     </td>
                   </tr>
                 ) : (
@@ -233,7 +233,7 @@ export default function AuditLogPage() {
                           </>
                         ) : (
                           <span className="text-[11px] text-[#A3A3A3] italic uppercase tracking-wider">
-                            Système
+                            {t("sg.systemAdmin")}
                           </span>
                         )}
                       </td>
@@ -263,7 +263,7 @@ export default function AuditLogPage() {
                               setDetailsModal({ open: true, log: l })
                             }
                           >
-                            Voir
+                            {t("sg.view")}
                           </Button>
                         ) : (
                           <span className="text-[11px] text-[#A3A3A3]">—</span>
@@ -281,7 +281,7 @@ export default function AuditLogPage() {
       <Modal
         open={detailsModal.open && !!detailsModal.log}
         onClose={() => setDetailsModal({ open: false, log: null })}
-        title="Détails de l'action"
+        title={t("sg.details")}
         description={
           detailsModal.log
             ? `${detailsModal.log.action} · ${formatDateTime(detailsModal.log.action_date)}`
@@ -294,7 +294,7 @@ export default function AuditLogPage() {
             size="md"
             onClick={() => setDetailsModal({ open: false, log: null })}
           >
-            Fermer
+            {t("common.close")}
           </Button>
         }
       >

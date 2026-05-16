@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../i18n/LanguageContext";
+import sonatrachLogo from "../assets/logo/sonatrach_logo2-1024x1024.png";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -25,15 +26,11 @@ export default function Navbar() {
           onClick={() => navigate("/")}
           className="flex items-center gap-3 group"
         >
-          <div
-            className="w-10 h-10 flex items-center justify-center font-black text-white text-base"
-            style={{
-              background:
-                "linear-gradient(135deg, #ED8D31 0%, #B5560F 100%)",
-            }}
-          >
-            S
-          </div>
+          <img
+            src={sonatrachLogo}
+            alt="Sonatrach"
+            className="w-14 h-14 object-contain"
+          />
           <span className="font-black text-[#0A0A0A] text-[15px] tracking-[0.18em]">
             SONATRACH
           </span>
@@ -76,6 +73,17 @@ export default function Navbar() {
               }`}
             >
               FR
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang("ar")}
+              className={`px-3 h-8 text-[10px] uppercase tracking-[0.15em] font-bold transition-colors border-l border-[#E5E5E5] ${
+                lang === "ar"
+                  ? "bg-[#0A0A0A] text-white"
+                  : "text-[#737373] hover:text-[#0A0A0A]"
+              }`}
+            >
+              AR
             </button>
           </div>
 

@@ -105,16 +105,16 @@ export default function NotificationsPage() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.myArea")}
-        title="Notifications"
-        subtitle="Mises à jour sur les tirages, confirmations, documents et sondages."
+        title={t("sg.notifications")}
+        subtitle={t("sg.subMyNotifications")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Notifications" },
+          { label: t("sg.notifications") },
         ]}
         actions={
           stats.unread > 0 ? (
             <Button variant="outline" size="md" onClick={handleMarkAllRead}>
-              Tout marquer comme lu
+              {t("sg.markProcessed")}
             </Button>
           ) : null
         }
@@ -128,13 +128,13 @@ export default function NotificationsPage() {
         )}
 
         <StatBar>
-          <StatCell label="Total" value={stats.total} sub="Notifications reçues" />
-          <StatCell label="Non lues" value={stats.unread} sub="Nécessitent votre attention" accent={stats.unread > 0} />
+          <StatCell label={t("sg.total")} value={stats.total} sub={t("sg.notifications")} />
+          <StatCell label={t("sg.pending")} value={stats.unread} sub={t("sg.subToReview")} accent={stats.unread > 0} />
         </StatBar>
 
         <div className="flex flex-wrap gap-2">
-          <FilterChip label="Toutes" active={filter === "all"} onClick={() => setFilter("all")} />
-          <FilterChip label="Non lues" active={filter === "unread"} onClick={() => setFilter("unread")} />
+          <FilterChip label={t("common.all")} active={filter === "all"} onClick={() => setFilter("all")} />
+          <FilterChip label={t("sg.pending")} active={filter === "unread"} onClick={() => setFilter("unread")} />
           {TYPE_KEYS.map((k) => (
             <FilterChip
               key={k}

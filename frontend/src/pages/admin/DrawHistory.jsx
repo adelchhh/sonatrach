@@ -69,11 +69,11 @@ export default function DrawHistory() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.administration")}
-        title="Historique des tirages"
-        subtitle="Journal d'audit de tous les tirages exécutés. Cliquez sur une ligne pour voir les listes complètes (sélectionnés / substituts / liste d'attente)."
+        title={t("sg.drawHistory")}
+        subtitle={t("sg.subAuditLog")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Historique des tirages" },
+          { label: t("sg.drawHistory") },
         ]}
       />
 
@@ -85,8 +85,8 @@ export default function DrawHistory() {
         )}
 
         <DataPanel
-          title="Tirages exécutés"
-          subtitle="Audit complet, du plus récent au plus ancien"
+          title={t("sg.executed")}
+          subtitle={t("sg.subAuditLog")}
           badge={`${draws.length}`}
         >
           <div className="overflow-x-auto">
@@ -167,7 +167,7 @@ export default function DrawHistory() {
                         <span className="text-[#737373] font-bold">
                           {d.waiting_count}
                         </span>
-                        <span className="text-[#A3A3A3]"> attente</span>
+                        <span className="text-[#A3A3A3]"> non retenu</span>
                       </td>
                       <td className="px-6 py-5">
                         <Button
@@ -209,7 +209,7 @@ export default function DrawHistory() {
         {details?.results && (
           <div className="space-y-6">
             <ResultsBlock
-              title="Sélectionnés"
+              title={t("sg.selected")}
               tone="dark"
               items={details.results.filter(
                 (r) => r.is_selected === 1 || r.is_selected === true
@@ -217,7 +217,7 @@ export default function DrawHistory() {
               showSite
             />
             <ResultsBlock
-              title="Substituts"
+              title={t("sg.substitute")}
               tone="accent"
               items={details.results.filter(
                 (r) =>
@@ -225,15 +225,6 @@ export default function DrawHistory() {
                   !(r.is_selected === 1 || r.is_selected === true)
               )}
               showRank
-            />
-            <ResultsBlock
-              title="Liste d'attente"
-              tone="neutral"
-              items={details.results.filter(
-                (r) =>
-                  (r.is_selected === 0 || r.is_selected === false) &&
-                  (r.is_substitute === 0 || r.is_substitute === false)
-              )}
             />
           </div>
         )}

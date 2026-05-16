@@ -50,7 +50,7 @@ export default function ManageAnnouncements() {
       const data = await getCommunicatorAnnouncements();
       setAnnouncements(data);
     } catch (err) {
-      setError(err.message || "Impossible de charger les annonces.");
+      setError(err.message || t("sg.loadingFailed"));
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export default function ManageAnnouncements() {
         prev.map((item) => (item.id === id ? updated : item))
       );
     } catch (err) {
-      setError(err.message || "Publication impossible.");
+      setError(err.message || t("sg.publishImpossible"));
     }
   }
 
@@ -73,7 +73,7 @@ export default function ManageAnnouncements() {
       setAnnouncements((prev) => prev.filter((item) => item.id !== id));
       closeModal();
     } catch (err) {
-      setError(err.message || "Suppression impossible.");
+      setError(err.message || t("sg.deleteImpossible"));
     }
   }
 
@@ -96,11 +96,11 @@ export default function ManageAnnouncements() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.communication")}
-        title="Annonces"
-        subtitle="Créez, publiez et archivez les communications destinées aux collaborateurs : rappels, résultats de tirage, mises à jour."
+        title={t("sg.announcements")}
+        subtitle={t("sg.subAnnouncements")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Annonces" },
+          { label: t("sg.announcements") },
         ]}
         actions={
           <Button
@@ -109,7 +109,7 @@ export default function ManageAnnouncements() {
             size="md"
             icon={<span className="text-[14px] leading-none">＋</span>}
           >
-            Nouvelle annonce
+            {t("sg.newAnnouncement")}
           </Button>
         }
       />
@@ -122,31 +122,31 @@ export default function ManageAnnouncements() {
         )}
 
         <StatBar>
-          <StatCell label="Total" value={totalCount} sub="Toutes annonces" />
+          <StatCell label={t("sg.total")} value={totalCount} sub={t("sg.subAllAnnouncements")} />
           <StatCell
-            label="Brouillons"
+            label={t("sg.drafts")}
             value={draftCount}
-            sub="Non publiés"
+            sub={t("sg.subNotPublished")}
             accent={draftCount > 0}
           />
           <StatCell
-            label="Publiées"
+            label={t("sg.published")}
             value={publishedCount}
-            sub="Visibles aux collaborateurs"
+            sub={t("sg.subVisibleToEmployees")}
           />
-          <StatCell label="Archivées" value={archivedCount} sub="Hors-circuit" />
+          <StatCell label={t("sg.archived")} value={archivedCount} sub={t("sg.subOffCircuit")} />
         </StatBar>
 
         <DataPanel
-          title="Liste des annonces"
-          subtitle="Toutes les annonces, du brouillon à l'archive"
+          title={t("sg.panelAnnouncementList")}
+          subtitle={t("sg.panelAnnouncementListSub")}
           badge={`${announcements.length}`}
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px]">
               <thead className="bg-[#0A0A0A]">
                 <tr>
-                  {["Titre", "Date", "Document", "Statut", "Actions"].map(
+                  {[t("sg.colTitle"), t("sg.colDate"), t("sg.colDocument"), t("sg.colStatus"), t("sg.colActions")].map(
                     (h, i) => (
                       <th
                         key={i}
@@ -162,13 +162,13 @@ export default function ManageAnnouncements() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : announcements.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucune annonce pour le moment.
+                      {t("sg.emptyAnnouncementsAll")}
                     </td>
                   </tr>
                 ) : (
@@ -189,7 +189,7 @@ export default function ManageAnnouncements() {
                         {formatDate(item)}
                       </td>
                       <td className="px-6 py-5 text-[12px] text-[#525252]">
-                        {item.document_path ? "Attaché" : "—"}
+                        {item.document_path ? t("sg.attached") : "—"}
                       </td>
                       <td className="px-6 py-5">
                         <StatusPill
@@ -210,7 +210,7 @@ export default function ManageAnnouncements() {
                               })
                             }
                           >
-                            Détails
+                            {t("sg.details")}
                           </Button>
                           {item.status === "DRAFT" && (
                             <Button
@@ -218,7 +218,7 @@ export default function ManageAnnouncements() {
                               variant="primary"
                               onClick={() => handlePublish(item.id)}
                             >
-                              Publier
+                              {t("sg.publish")}
                             </Button>
                           )}
                           <Button
@@ -232,7 +232,7 @@ export default function ManageAnnouncements() {
                               })
                             }
                           >
-                            Supprimer
+                            {t("sg.delete")}
                           </Button>
                         </div>
                       </td>
@@ -248,11 +248,11 @@ export default function ManageAnnouncements() {
       <Modal
         open={modal.open && modal.type === "details" && !!selected}
         onClose={closeModal}
-        title={selected?.title || "Détails"}
+        title={selected?.title || t("sg.details")}
         width="lg"
         footer={
           <Button variant="outline" size="md" onClick={closeModal}>
-            Fermer
+            {t("common.close")}
           </Button>
         }
       >
@@ -261,7 +261,7 @@ export default function ManageAnnouncements() {
             <div className="grid grid-cols-2 gap-4 text-[12px]">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-                  Date
+                  {t("sg.colDate")}
                 </p>
                 <p className="text-[13px] font-bold text-[#0A0A0A] tabular-nums">
                   {formatDate(selected)}
@@ -269,7 +269,7 @@ export default function ManageAnnouncements() {
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-                  Statut
+                  {t("sg.colStatus")}
                 </p>
                 <StatusPill
                   tone={STATUS_TONE[selected.status] || "neutral"}
@@ -278,16 +278,16 @@ export default function ManageAnnouncements() {
               </div>
               <div className="col-span-2">
                 <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-                  Document
+                  {t("sg.labelDocument")}
                 </p>
                 <p className="text-[13px] text-[#0A0A0A]">
-                  {selected.document_name || "Aucun"}
+                  {selected.document_name || t("sg.noneNeutral")}
                 </p>
               </div>
             </div>
             <div className="border-t border-[#E5E5E5] pt-4">
               <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-2">
-                Contenu
+                {t("sg.labelContent")}
               </p>
               <p className="text-[13px] text-[#0A0A0A] leading-[1.7] whitespace-pre-line">
                 {selected.content}
@@ -300,21 +300,21 @@ export default function ManageAnnouncements() {
       <Modal
         open={modal.open && modal.type === "delete" && !!selected}
         onClose={closeModal}
-        title="Supprimer l'annonce"
+        title={t("sg.deleteAnnouncementTitle")}
         description={
-          selected ? `Confirmer la suppression de « ${selected.title} » ?` : ""
+          selected ? `« ${selected.title} »` : ""
         }
         footer={
           <>
             <Button variant="outline" size="md" onClick={closeModal}>
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="danger"
               size="md"
               onClick={() => selected && handleDelete(selected.id)}
             >
-              Supprimer
+              {t("sg.delete")}
             </Button>
           </>
         }

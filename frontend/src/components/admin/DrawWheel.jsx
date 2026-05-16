@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import sonatrachLogo from "../../assets/logo/sonatrach_logo2-1024x1024.png";
 
 /**
  * Sonatrach presidential live-draw ceremony — V2 with premium SFX,
@@ -196,14 +197,13 @@ export default function DrawWheel({
       <div className="absolute top-0 inset-x-0 px-10 pt-8 z-40 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-lg tracking-tight relative overflow-hidden"
+            className="w-16 h-16 rounded-xl flex items-center justify-center relative overflow-hidden bg-white/95 p-1"
             style={{
-              background: "linear-gradient(135deg, #ED8D31 0%, #B5560F 100%)",
               boxShadow:
                 "0 0 30px rgba(237,141,49,0.4), inset 0 1px 0 rgba(255,255,255,0.3)",
             }}
           >
-            <span className="relative z-10">S</span>
+            <img src={sonatrachLogo} alt="Sonatrach" className="w-full h-full object-contain" />
           </div>
           <div>
             <p className="text-[#ED8D31] text-[10px] uppercase tracking-[0.35em] font-bold">
@@ -381,13 +381,12 @@ function SceneInit() {
   return (
     <div className="text-center" style={{ animation: "presIn 1.2s cubic-bezier(0.16, 1, 0.3, 1)" }}>
       <div
-        className="w-32 h-32 rounded-2xl mx-auto mb-8 flex items-center justify-center text-6xl font-bold text-white relative"
+        className="w-44 h-44 rounded-2xl mx-auto mb-8 flex items-center justify-center relative bg-white/95 p-3"
         style={{
-          background: "linear-gradient(135deg, #ED8D31 0%, #B5560F 100%)",
           animation: "pulseGlow 2s ease-in-out infinite",
         }}
       >
-        S
+        <img src={sonatrachLogo} alt="Sonatrach" className="w-full h-full object-contain" />
       </div>
       <p className="text-[#ED8D31] text-[11px] uppercase tracking-[0.4em] font-bold mb-3">
         Sonatrach National Lottery

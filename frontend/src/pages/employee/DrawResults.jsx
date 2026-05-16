@@ -23,15 +23,15 @@ function formatDate(value) {
   });
 }
 
-function outcomeFor(r) {
+function outcomeFor(r, t) {
   if (r.is_selected === 1 || r.is_selected === true)
-    return { label: "Sélectionné", tone: "accent" };
+    return { label: t("sg.selected"), tone: "accent" };
   if (r.is_substitute === 1 || r.is_substitute === true)
     return {
-      label: `Substitut #${r.substitute_rank ?? "—"}`,
+      label: `${t("sg.substitute")} #${r.substitute_rank ?? "—"}`,
       tone: "warn",
     };
-  return { label: "Non retenu", tone: "neutral" };
+  return { label: t("sg.notSelected"), tone: "neutral" };
 }
 
 export default function DrawResults() {
@@ -45,16 +45,16 @@ export default function DrawResults() {
   useEffect(() => {
     if (!userId) {
       setLoading(false);
-      setPageError("Veuillez vous connecter.");
+      setPageError(t("sg.error"));
       return;
     }
     apiGet(`/me/draw-results?user_id=${userId}`)
       .then((res) => setResults(res.data || []))
       .catch((err) =>
-        setPageError(err.message || "Impossible de charger les résultats.")
+        setPageError(err.message || t("sg.loadingFailed"))
       )
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [userId, t]);
 
   const stats = useMemo(
     () => ({
@@ -73,11 +73,11 @@ export default function DrawResults() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.myArea")}
-        title="Résultats des tirages"
-        subtitle="Issue de tous les tirages au sort auxquels vous avez participé."
+        title={t("sg.myDrawResults")}
+        subtitle={t("sg.subMyDrawResults")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Résultats de tirage" },
+          { label: t("sg.myDrawResults") },
         ]}
       />
 
@@ -89,22 +89,22 @@ export default function DrawResults() {
         )}
 
         <StatBar>
-          <StatCell label="Tirages" value={stats.total} sub="Auxquels j'ai participé" />
-          <StatCell label="Sélectionné" value={stats.selected} sub="Place obtenue" accent={stats.selected > 0} />
-          <StatCell label="Substitut" value={stats.substitute} sub="En attente de place" />
+          <StatCell label={t("sg.drawCenter")} value={stats.total} sub={t("sg.subFollowed")} />
+          <StatCell label={t("sg.selected")} value={stats.selected} sub={t("sg.selected")} accent={stats.selected > 0} />
+          <StatCell label={t("sg.substitute")} value={stats.substitute} sub={t("sg.subToReview")} />
         </StatBar>
 
-        <DataPanel title="Tous mes tirages" badge={`${results.length}`}>
+        <DataPanel title={t("sg.myDrawResults")} badge={`${results.length}`}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px]">
               <thead className="bg-[#0A0A0A]">
                 <tr>
                   {[
-                    "Activité",
-                    "Session",
-                    "Date du tirage",
-                    "Site",
-                    "Issue",
+                    t("sg.colActivity"),
+                    t("sg.colSession"),
+                    t("sg.colDate"),
+                    t("sg.colSite"),
+                    t("sg.colStatus"),
                   ].map((h, i) => (
                     <th
                       key={i}
@@ -119,18 +119,18 @@ export default function DrawResults() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : results.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Vous n'avez participé à aucun tirage pour le moment.
+                      {t("sg.emptyDraws")}
                     </td>
                   </tr>
                 ) : (
                   results.map((r) => {
-                    const out = outcomeFor(r);
+                    const out = outcomeFor(r, t);
                     return (
                       <tr
                         key={r.id}

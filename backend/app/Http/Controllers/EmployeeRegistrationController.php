@@ -116,17 +116,34 @@ class EmployeeRegistrationController extends Controller
             ], 409);
         }
 
-        $regId = DB::transaction(function () use ($data, $sessionId, $isEligible) {
+        // Auto-status: no manual admin validation required.
+        //  - Not eligible  → REJECTED (kept in history, won't enter draw)
+        //  - No draw       → CONFIRMED (e.g. Cross — open to all)
+        //  - Draw activity → VALIDATED (auto, eligible for draw)
+        $skipDraw = $activity && (int) $activity->draw_enabled === 0;
+        if (!$isEligible) {
+            $initialStatus = 'REJECTED';
+            $initialReason = 'Not eligible: seniority below required minimum';
+        } elseif ($skipDraw) {
+            $initialStatus = 'CONFIRMED';
+            $initialReason = 'Auto-confirmed: activity has no draw';
+        } else {
+            $initialStatus = 'VALIDATED';
+            $initialReason = 'Auto-validated: eligible for draw';
+        }
+
+        $regId = DB::transaction(function () use ($data, $sessionId, $isEligible, $initialStatus, $initialReason, $skipDraw) {
             $regId = DB::table('registrations')->insertGetId([
                 'user_id' => $data['user_id'],
                 'session_id' => $sessionId,
                 'registered_at' => now(),
-                'status' => 'PENDING',
+                'status' => $initialStatus,
                 'is_eligible' => $isEligible ? 1 : 0,
+                'confirmed_at' => $skipDraw ? now() : null,
                 'reference_number' => 'REG-' . strtoupper(uniqid()),
             ]);
 
-            // Insert site choices
+            // Insert site choices (ignored for non-draw activities but kept for audit)
             if (!empty($data['site_choices'])) {
                 $order = 1;
                 foreach ($data['site_choices'] as $ssId) {
@@ -143,8 +160,8 @@ class EmployeeRegistrationController extends Controller
             DB::table('registration_status_history')->insert([
                 'registration_id' => $regId,
                 'old_status' => null,
-                'new_status' => 'PENDING',
-                'reason' => 'Initial registration',
+                'new_status' => $initialStatus,
+                'reason' => $initialReason,
                 'changed_at' => now(),
             ]);
 

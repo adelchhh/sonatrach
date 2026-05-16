@@ -173,23 +173,23 @@ export default function ManageDocuments() {
           <StatCell
             label={t("admin.documents.statTotal")}
             value={stats.total}
-            sub="Téléversés"
+            sub={t("sg.subUploaded")}
           />
           <StatCell
             label={t("admin.documents.statPending")}
             value={stats.uploaded}
-            sub="En attente de validation"
+            sub={t("sg.subToReview")}
             accent={stats.uploaded > 0}
           />
           <StatCell
             label={t("admin.documents.statValidated")}
             value={stats.validated}
-            sub="Conformes"
+            sub={t("sg.validated")}
           />
           <StatCell
             label={t("admin.documents.statRejected")}
             value={stats.rejected}
-            sub="Non conformes"
+            sub={t("sg.rejected")}
           />
         </StatBar>
 
@@ -230,8 +230,8 @@ export default function ManageDocuments() {
         </Toolbar>
 
         <DataPanel
-          title="Documents"
-          subtitle="Validez, rejetez ou re-vérifiez les pièces justificatives"
+          title={t("sg.documents")}
+          subtitle={t("sg.operations")}
           badge={`${filtered.length} / ${documents.length}`}
         >
           <div className="overflow-x-auto">
@@ -395,7 +395,7 @@ export default function ManageDocuments() {
         }
       >
         <TextArea
-          label="Motif"
+          label={t("sg.colReason")}
           value={comment}
           onChange={setComment}
           placeholder={t("admin.documents.rejectModal.placeholder")}

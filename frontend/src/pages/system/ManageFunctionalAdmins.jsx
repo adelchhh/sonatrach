@@ -109,11 +109,11 @@ export default function ManageFunctionalAdmins() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.systemAdmin")}
-        title="Administrateurs fonctionnels"
-        subtitle="Recherchez un collaborateur par matricule et attribuez-lui le rôle d'administrateur fonctionnel."
+        title={t("sg.functionalAdmins")}
+        subtitle={t("sg.subSystemAdminFA")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Administrateurs fonctionnels" },
+          { label: t("sg.functionalAdmins") },
         ]}
       />
 
@@ -125,20 +125,20 @@ export default function ManageFunctionalAdmins() {
         )}
 
         <StatBar>
-          <StatCell label="Total" value={admins.length} sub="Comptes attribués" />
-          <StatCell label="Actifs" value={activeCount} sub="Connexions valides" accent={activeCount > 0} />
-          <StatCell label="Inactifs" value={admins.length - activeCount} sub="Suspendus" />
+          <StatCell label={t("sg.total")} value={admins.length} sub={t("sg.total")} />
+          <StatCell label={t("sg.active")} value={activeCount} sub={t("sg.subActive")} accent={activeCount > 0} />
+          <StatCell label={t("sg.inactive")} value={admins.length - activeCount} sub={t("sg.subInactive")} />
         </StatBar>
 
         <DataPanel
-          title="Attribuer le rôle"
-          subtitle="Saisissez le matricule du collaborateur à promouvoir"
+          title={t("sg.approve")}
+          subtitle={t("sg.colMatricule")}
         >
           <div className="p-6 space-y-5">
             <div className="flex gap-3 items-end">
               <div className="flex-1">
                 <TextField
-                  label="Matricule"
+                  label={t("sg.colMatricule")}
                   value={searchValue}
                   onChange={(v) => {
                     setSearchValue(v);
@@ -149,7 +149,7 @@ export default function ManageFunctionalAdmins() {
                 />
               </div>
               <Button variant="dark" size="md" onClick={handleSearch}>
-                Rechercher
+                {t("common.search")}
               </Button>
             </div>
 
@@ -164,7 +164,7 @@ export default function ManageFunctionalAdmins() {
                   </p>
                 </div>
                 <Button variant="primary" size="md" onClick={handleAssign}>
-                  Attribuer le rôle
+                  {t("sg.approve")}
                 </Button>
               </div>
             )}
@@ -172,15 +172,15 @@ export default function ManageFunctionalAdmins() {
         </DataPanel>
 
         <DataPanel
-          title="Administrateurs fonctionnels actuels"
-          subtitle="Comptes disposant du rôle"
+          title={t("sg.functionalAdmins")}
+          subtitle={t("sg.functionalAdmins")}
           badge={`${admins.length}`}
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead className="bg-[#0A0A0A]">
                 <tr>
-                  {["Nom", "Matricule", "Email", "Statut", "Action"].map(
+                  {[t("sg.colEmployee"), t("sg.colMatricule"), t("sg.colEmail"), t("sg.colStatus"), t("sg.colAction")].map(
                     (h, i) => (
                       <th
                         key={i}
@@ -196,13 +196,13 @@ export default function ManageFunctionalAdmins() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : admins.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucun administrateur fonctionnel.
+                      {t("sg.emptyUsers")}
                     </td>
                   </tr>
                 ) : (
@@ -223,7 +223,7 @@ export default function ManageFunctionalAdmins() {
                       <td className="px-6 py-4">
                         <StatusPill
                           tone={admin.active ? "success" : "neutral"}
-                          label={admin.active ? "Actif" : "Inactif"}
+                          label={admin.active ? t("sg.active") : t("sg.inactive")}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -234,7 +234,7 @@ export default function ManageFunctionalAdmins() {
                             setRemoveModal({ open: true, id: admin.id })
                           }
                         >
-                          Retirer
+                          {t("sg.remove")}
                         </Button>
                       </td>
                     </tr>
@@ -249,8 +249,8 @@ export default function ManageFunctionalAdmins() {
       <Modal
         open={removeModal.open}
         onClose={() => setRemoveModal({ open: false, id: null })}
-        title="Retirer le rôle"
-        description="Confirmer le retrait du rôle d'administrateur fonctionnel ?"
+        title={t("sg.remove")}
+        description={t("sg.confirmReason")}
         footer={
           <>
             <Button
@@ -258,7 +258,7 @@ export default function ManageFunctionalAdmins() {
               size="md"
               onClick={() => setRemoveModal({ open: false, id: null })}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button variant="danger" size="md" onClick={handleRemove}>
               Retirer

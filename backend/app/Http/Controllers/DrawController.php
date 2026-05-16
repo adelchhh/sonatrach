@@ -234,12 +234,13 @@ class DrawController extends Controller
         $unassigned = array_values($unassigned);
 
         // Substitute pool: from unassigned, take up to substitutes_count
+        // Everyone else is REJECTED (no waiting list anymore)
         shuffle($unassigned);
         $substituteIds = array_slice($unassigned, 0, (int) $session->substitutes_count);
-        $waitingIds = array_slice($unassigned, (int) $session->substitutes_count);
+        $rejectedIds = array_slice($unassigned, (int) $session->substitutes_count);
 
         $drawId = DB::transaction(function () use (
-            $session, $data, $assignments, $substituteIds, $waitingIds
+            $session, $data, $assignments, $substituteIds, $rejectedIds
         ) {
             $drawId = DB::table('draws')->insertGetId([
                 'session_id' => $session->id,
@@ -282,7 +283,7 @@ class DrawController extends Controller
                 $this->updateRegistrationStatus($regId, 'WAITING_LIST', 'Draw: substitute');
             }
 
-            foreach ($waitingIds as $regId) {
+            foreach ($rejectedIds as $regId) {
                 DB::table('draw_results')->insert([
                     'draw_id' => $drawId,
                     'registration_id' => $regId,
@@ -293,7 +294,7 @@ class DrawController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-                $this->updateRegistrationStatus($regId, 'WAITING_LIST', 'Draw: waiting list');
+                $this->updateRegistrationStatus($regId, 'REJECTED', 'Draw: not selected');
             }
 
             DB::table('activity_sessions')
@@ -316,7 +317,7 @@ class DrawController extends Controller
                 'mode' => $data['mode'] ?? 'BY_SITE',
                 'selected_count' => count($assignments),
                 'substitute_count' => count($substituteIds),
-                'waiting_count' => count($waitingIds),
+                'rejected_count' => count($rejectedIds),
             ],
             $request
         );
@@ -327,9 +328,9 @@ class DrawController extends Controller
             if ($userId) {
                 NotificationService::push(
                     $userId,
-                    "Congratulations! You've been selected for {$activityTitle}.",
+                    "Félicitations ! Vous avez été sélectionné(e) pour {$activityTitle}.",
                     'DRAW',
-                    'You are selected ✨',
+                    'Vous êtes sélectionné(e) ✨',
                     $session->activity_id,
                     $session->id
                 );
@@ -340,22 +341,22 @@ class DrawController extends Controller
             if ($userId) {
                 NotificationService::push(
                     $userId,
-                    "You are on the substitutes list for {$activityTitle}. You may be called if a selected employee withdraws.",
+                    "Vous êtes inscrit(e) sur la liste des suppléants pour {$activityTitle}. Vous serez appelé(e) si un sélectionné se désiste.",
                     'DRAW',
-                    'Substitute',
+                    'Suppléant',
                     $session->activity_id,
                     $session->id
                 );
             }
         }
-        foreach ($waitingIds as $regId) {
+        foreach ($rejectedIds as $regId) {
             $userId = DB::table('registrations')->where('id', $regId)->value('user_id');
             if ($userId) {
                 NotificationService::push(
                     $userId,
-                    "You are on the waiting list for {$activityTitle}.",
+                    "Vous n'avez pas été retenu(e) au tirage pour {$activityTitle}. Bonne chance la prochaine fois.",
                     'DRAW',
-                    'Waiting list',
+                    'Non retenu',
                     $session->activity_id,
                     $session->id
                 );
@@ -368,7 +369,7 @@ class DrawController extends Controller
                 'draw_id' => $drawId,
                 'selected_count' => count($assignments),
                 'substitute_count' => count($substituteIds),
-                'waiting_count' => count($waitingIds),
+                'rejected_count' => count($rejectedIds),
             ],
         ]);
     }

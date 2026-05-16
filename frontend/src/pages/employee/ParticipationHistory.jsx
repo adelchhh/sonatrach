@@ -34,16 +34,16 @@ export default function ParticipationHistory() {
   useEffect(() => {
     if (!userId) {
       setLoading(false);
-      setPageError("Veuillez vous connecter.");
+      setPageError(t("sg.error"));
       return;
     }
     apiGet(`/me/participations?user_id=${userId}`)
       .then((res) => setHistory(res.data || []))
       .catch((err) =>
-        setPageError(err.message || "Impossible de charger l'historique.")
+        setPageError(err.message || t("sg.loadingFailed"))
       )
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [userId, t]);
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -61,11 +61,11 @@ export default function ParticipationHistory() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.myArea")}
-        title="Historique de participation"
-        subtitle="Toutes les activités auxquelles vous avez participé, avec votre évaluation et vos certificats."
+        title={t("sg.myHistory")}
+        subtitle={t("sg.subMyHistory")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Historique" },
+          { label: t("sg.myHistory") },
         ]}
       />
 
@@ -77,22 +77,22 @@ export default function ParticipationHistory() {
         )}
 
         <StatBar>
-          <StatCell label="Activités" value={stats.total} sub="Suivies" />
-          <StatCell label="Note moyenne" value={stats.avgRating} sub="Mon évaluation moyenne" accent />
-          <StatCell label="Certificats" value={stats.certs} sub="Obtenus" />
+          <StatCell label={t("sg.activities")} value={stats.total} sub={t("sg.subFollowed")} />
+          <StatCell label={t("sg.labelRating")} value={stats.avgRating} sub={t("sg.colMyRating")} accent />
+          <StatCell label={t("sg.certificate")} value={stats.certs} sub={t("sg.subCertificates")} />
         </StatBar>
 
-        <DataPanel title="Mon parcours" badge={`${history.length}`}>
+        <DataPanel title={t("sg.myHistory")} badge={`${history.length}`}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px]">
               <thead className="bg-[#0A0A0A]">
                 <tr>
                   {[
-                    "Activité",
-                    "Période",
-                    "Site",
-                    "Mon évaluation",
-                    "Certificat",
+                    t("sg.colActivity"),
+                    t("sg.colPeriod"),
+                    t("sg.colSite"),
+                    t("sg.colMyRating"),
+                    t("sg.colCertificate"),
                   ].map((h, i) => (
                     <th
                       key={i}
@@ -107,13 +107,13 @@ export default function ParticipationHistory() {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : history.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucune participation passée.
+                      {t("sg.emptyHistory")}
                     </td>
                   </tr>
                 ) : (
@@ -146,7 +146,7 @@ export default function ParticipationHistory() {
                           </span>
                         ) : (
                           <span className="text-[11px] text-[#A3A3A3] italic">
-                            Non noté
+                            {t("common.notRated")}
                           </span>
                         )}
                       </td>
@@ -157,7 +157,7 @@ export default function ParticipationHistory() {
                           rel="noreferrer"
                           className="inline-flex items-center gap-2 px-3.5 py-2 text-[11px] uppercase tracking-[0.15em] font-bold bg-[#ED8D31] text-black hover:bg-[#fa9d40] transition-colors"
                         >
-                          Certificat ↓
+                          {t("sg.certificate")} ↓
                         </a>
                       </td>
                     </tr>

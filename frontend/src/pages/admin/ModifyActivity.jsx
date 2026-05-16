@@ -184,17 +184,17 @@ export default function ModifyActivity() {
       <PageHeader
         eyebrow={t("sg.administration")}
         title={`Modifier · ${form.title}`}
-        subtitle="Mettez à jour les informations, les règles et l'image de couverture."
+        subtitle={t("sg.generalInfo")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Activités", to: "/dashboard/admin/activities" },
+          { label: t("sg.activities"), to: "/dashboard/admin/activities" },
           { label: form.title },
         ]}
         actions={
           <>
             <StatusPill tone={STATUS_TONE[form.status] || "neutral"} label={statusTr} />
             <Button to="/dashboard/admin/activities" variant="outline" size="md">
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="primary"
@@ -202,7 +202,7 @@ export default function ModifyActivity() {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? "Enregistrement…" : "Enregistrer"}
+              {saving ? t("sg.processing") : t("sg.save")}
             </Button>
           </>
         }
@@ -218,24 +218,24 @@ export default function ModifyActivity() {
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
           <div className="space-y-6">
             <DataPanel
-              title="Informations générales"
-              subtitle="Détails de présentation"
+              title={t("sg.generalInfo")}
+              subtitle={t("sg.activities")}
             >
               <div className="p-6 space-y-5">
                 <TextField
-                  label="Titre"
+                  label={t("sg.colTitle")}
                   value={form.title}
                   onChange={(v) => update("title", v)}
                   required
                 />
                 <TextArea
-                  label="Description"
+                  label={t("sg.labelDescription")}
                   value={form.description}
                   onChange={(v) => update("description", v)}
                   rows={4}
                 />
                 <Select
-                  label="Catégorie"
+                  label={t("sg.labelType")}
                   value={form.category}
                   onChange={(v) => update("category", v)}
                   options={CATEGORY_OPTIONS}
@@ -244,29 +244,29 @@ export default function ModifyActivity() {
             </DataPanel>
 
             <DataPanel
-              title="Règles d'activité"
-              subtitle="Éligibilité et tirage au sort"
+              title={t("sg.operations")}
+              subtitle={t("sg.drawCenter")}
             >
               <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
                 <TextField
-                  label="Ancienneté min. (années)"
+                  label={t("sg.labelType")}
                   value={form.minimum_seniority}
                   onChange={(v) => update("minimum_seniority", v)}
                   type="number"
                 />
                 <Select
-                  label="Niveau de demande"
+                  label={t("sg.labelType")}
                   value={form.demand_level}
                   onChange={(v) => update("demand_level", v)}
                   options={DEMAND_OPTIONS}
                 />
                 <Select
-                  label="Tirage au sort"
+                  label={t("sg.drawCenter")}
                   value={form.draw_enabled ? "yes" : "no"}
                   onChange={(v) => update("draw_enabled", v === "yes")}
                   options={[
-                    { value: "yes", label: "Oui" },
-                    { value: "no", label: "Non" },
+                    { value: "yes", label: t("common.yes") },
+                    { value: "no", label: t("common.no") },
                   ]}
                 />
               </div>
@@ -274,18 +274,18 @@ export default function ModifyActivity() {
           </div>
 
           <div className="space-y-6">
-            <DataPanel title="Image de couverture" subtitle="Affichée dans le catalogue">
+            <DataPanel title={t("sg.coverImage")} subtitle={t("sg.preview")}>
               <div className="p-6 space-y-4">
                 {(imagePreview || form.image_url) && (
                   <img
                     src={imagePreview || imageUrlOf(form.image_url)}
-                    alt="Couverture"
+                    alt=""
                     className="w-full h-[180px] object-cover bg-[#1A1A1A]"
                   />
                 )}
                 <label className="block">
                   <span className="block bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] cursor-pointer text-center px-4 py-3 text-[12px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] transition-colors">
-                    Remplacer l'image
+                    {t("sg.replaceImage")}
                   </span>
                   <input
                     type="file"
@@ -297,25 +297,24 @@ export default function ModifyActivity() {
               </div>
             </DataPanel>
 
-            <DataPanel title="Statut" subtitle="Visibilité dans le catalogue">
+            <DataPanel title={t("sg.colStatus")} subtitle={t("sg.currentStatus")}>
               <div className="p-6">
                 <Select
-                  label="Statut courant"
+                  label={t("sg.currentStatus")}
                   value={form.status}
                   onChange={(v) => update("status", v)}
                   options={STATUS_OPTIONS}
-                  hint="Seul le statut Publié rend l'activité visible aux collaborateurs."
                 />
               </div>
             </DataPanel>
 
-            <DataPanel title="Zone dangereuse">
+            <DataPanel title={t("sg.dangerZone")}>
               <div className="p-6 space-y-3">
                 <Button variant="outline" size="md" onClick={handleArchive}>
-                  Archiver l'activité
+                  {t("sg.archive")}
                 </Button>
                 <Button variant="danger" size="md" onClick={handleDelete}>
-                  Supprimer définitivement
+                  {t("sg.delete")}
                 </Button>
               </div>
             </DataPanel>

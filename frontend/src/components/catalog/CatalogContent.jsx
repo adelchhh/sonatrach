@@ -204,13 +204,13 @@ function FeatureCard({ activity, t, index }) {
       <img
         src={imageOf(activity, index)}
         alt={activity.title}
-        className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700"
+        className="absolute inset-0 w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
         onError={(e) => {
           e.currentTarget.src = POSTER_FALLBACKS[index % POSTER_FALLBACKS.length];
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-transparent" />
 
       <div className="absolute top-5 left-5 flex items-center gap-3">
         <span className="px-3 py-1 bg-[#ED8D31] text-black text-[10px] uppercase tracking-[0.2em] font-bold">

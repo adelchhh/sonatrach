@@ -121,11 +121,11 @@ export default function ManageSurveys() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.communication")}
-        title="Sondages"
-        subtitle="Publiez les avis de sondage, suivez la participation et archivez les anciennes consultations."
+        title={t("sg.surveys")}
+        subtitle={t("sg.subSurveys")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Sondages" },
+          { label: t("sg.surveys") },
         ]}
         actions={
           <Button
@@ -134,7 +134,7 @@ export default function ManageSurveys() {
             size="md"
             icon={<span className="text-[14px] leading-none">＋</span>}
           >
-            Nouveau sondage
+            {t("sg.newSurvey")}
           </Button>
         }
       />
@@ -147,31 +147,31 @@ export default function ManageSurveys() {
         )}
 
         <StatBar>
-          <StatCell label="Total" value={totalCount} sub="Tous sondages" />
+          <StatCell label={t("sg.total")} value={totalCount} sub={t("sg.subAllSurveys")} />
           <StatCell
-            label="Brouillons"
+            label={t("sg.drafts")}
             value={draftCount}
-            sub="Non publiés"
+            sub={t("sg.subNotPublished")}
             accent={draftCount > 0}
           />
-          <StatCell label="Publiés" value={publishedCount} sub="Visibles" />
-          <StatCell label="Archivés" value={archivedCount} sub="Hors-circuit" />
+          <StatCell label={t("sg.published")} value={publishedCount} sub={t("sg.subVisible")} />
+          <StatCell label={t("sg.archived")} value={archivedCount} sub={t("sg.subOffCircuit")} />
         </StatBar>
 
         <Toolbar>
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Rechercher par titre, audience…"
+            placeholder={t("sg.phSearchTitleAudience")}
           />
           <SelectInput
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
-              { value: "all", label: "Tous statuts" },
-              { value: "DRAFT", label: "Brouillon" },
-              { value: "PUBLISHED", label: "Publié" },
-              { value: "ARCHIVED", label: "Archivé" },
+              { value: "all", label: t("sg.allStatuses") },
+              { value: "DRAFT", label: t("sg.statusDraftLabel") },
+              { value: "PUBLISHED", label: t("sg.statusPublishedLabel") },
+              { value: "ARCHIVED", label: t("sg.statusArchivedLabel") },
             ]}
           />
           <Button
@@ -182,13 +182,13 @@ export default function ManageSurveys() {
               setStatusFilter("all");
             }}
           >
-            Réinitialiser
+            {t("sg.reset")}
           </Button>
         </Toolbar>
 
         <DataPanel
-          title="Sondages publiés"
-          subtitle="Statut, audience et taux de participation"
+          title={t("sg.panelPublishedSurveys")}
+          subtitle={t("sg.panelPublishedSurveysSub")}
           badge={`${filtered.length}`}
         >
           <div className="overflow-x-auto">
@@ -196,12 +196,12 @@ export default function ManageSurveys() {
               <thead className="bg-[#0A0A0A]">
                 <tr>
                   {[
-                    "Titre",
-                    "Statut",
-                    "Audience",
-                    "Publication",
-                    "Participation",
-                    "Actions",
+                    t("sg.colTitle"),
+                    t("sg.colStatus"),
+                    t("sg.colAudience"),
+                    t("sg.colPublication"),
+                    t("sg.colParticipation"),
+                    t("sg.colActions"),
                   ].map((h, i) => (
                     <th
                       key={i}
@@ -216,13 +216,13 @@ export default function ManageSurveys() {
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
+                      {t("sg.loading")}
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucun sondage à afficher.
+                      {t("sg.emptySurveys")}
                     </td>
                   </tr>
                 ) : (
@@ -263,7 +263,7 @@ export default function ManageSurveys() {
                               setModal({ open: true, type: "details", id: item.id })
                             }
                           >
-                            Détails
+                            {t("sg.details")}
                           </Button>
                           {item.status === "DRAFT" && (
                             <Button
@@ -273,7 +273,7 @@ export default function ManageSurveys() {
                                 setModal({ open: true, type: "publish", id: item.id })
                               }
                             >
-                              Publier
+                              {t("sg.publish")}
                             </Button>
                           )}
                           {item.status !== "ARCHIVED" && (
@@ -284,7 +284,7 @@ export default function ManageSurveys() {
                                 setModal({ open: true, type: "archive", id: item.id })
                               }
                             >
-                              Archiver
+                              {t("sg.archive")}
                             </Button>
                           )}
                           <Button
@@ -294,7 +294,7 @@ export default function ManageSurveys() {
                               setModal({ open: true, type: "delete", id: item.id })
                             }
                           >
-                            Supprimer
+                            {t("sg.delete")}
                           </Button>
                         </div>
                       </td>
@@ -310,27 +310,27 @@ export default function ManageSurveys() {
       <Modal
         open={modal.open && modal.type === "details" && !!selected}
         onClose={closeModal}
-        title={selected?.title || "Détails"}
+        title={selected?.title || t("sg.details")}
         width="lg"
         footer={
           <Button variant="outline" size="md" onClick={closeModal}>
-            Fermer
+            {t("common.close")}
           </Button>
         }
       >
         {selected && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-[12px]">
-              <DetailItem label="Statut" value={selected.status} />
-              <DetailItem label="Audience" value={selected.target_audience || "—"} />
-              <DetailItem label="Publication" value={selected.publish_date || "—"} />
-              <DetailItem label="Échéance" value={selected.end_date || "—"} />
-              <DetailItem label="CTA" value={selected.cta_label || "—"} />
-              <DetailItem label="Participation" value={participationRate(selected)} />
+              <DetailItem label={t("sg.colStatus")} value={selected.status} />
+              <DetailItem label={t("sg.colAudience")} value={selected.target_audience || "—"} />
+              <DetailItem label={t("sg.colPublication")} value={selected.publish_date || "—"} />
+              <DetailItem label={t("sg.labelDeadline")} value={selected.end_date || "—"} />
+              <DetailItem label={t("sg.labelCta")} value={selected.cta_label || "—"} />
+              <DetailItem label={t("sg.colParticipation")} value={participationRate(selected)} />
             </div>
             <div className="border-t border-[#E5E5E5] pt-4">
               <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-2">
-                Question
+                {t("sg.labelQuestion")}
               </p>
               <p className="text-[13px] text-[#0A0A0A] leading-[1.7]">
                 {selected.question || "—"}
@@ -343,21 +343,21 @@ export default function ManageSurveys() {
       <Modal
         open={modal.open && modal.type === "publish" && !!selected}
         onClose={closeModal}
-        title="Publier le sondage"
+        title={t("sg.publishSurveyTitle")}
         description={
-          selected ? `Publier « ${selected.title} » pour ${selected.target_audience || "l'audience sélectionnée"} ?` : ""
+          selected ? `« ${selected.title} » — ${selected.target_audience || ""}` : ""
         }
         footer={
           <>
             <Button variant="outline" size="md" onClick={closeModal}>
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="primary"
               size="md"
               onClick={() => selected && performAction("publish", selected.id)}
             >
-              Publier
+              {t("sg.publish")}
             </Button>
           </>
         }
@@ -366,19 +366,19 @@ export default function ManageSurveys() {
       <Modal
         open={modal.open && modal.type === "archive" && !!selected}
         onClose={closeModal}
-        title="Archiver le sondage"
-        description={selected ? `Archiver « ${selected.title} » ?` : ""}
+        title={t("sg.archiveSurveyTitle")}
+        description={selected ? `« ${selected.title} »` : ""}
         footer={
           <>
             <Button variant="outline" size="md" onClick={closeModal}>
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="dark"
               size="md"
               onClick={() => selected && performAction("archive", selected.id)}
             >
-              Archiver
+              {t("sg.archive")}
             </Button>
           </>
         }
@@ -387,19 +387,19 @@ export default function ManageSurveys() {
       <Modal
         open={modal.open && modal.type === "delete" && !!selected}
         onClose={closeModal}
-        title="Supprimer le sondage"
-        description={selected ? `Supprimer définitivement « ${selected.title} » ?` : ""}
+        title={t("sg.deleteSurveyTitle")}
+        description={selected ? `« ${selected.title} »` : ""}
         footer={
           <>
             <Button variant="outline" size="md" onClick={closeModal}>
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="danger"
               size="md"
               onClick={() => selected && handleDelete(selected.id)}
             >
-              Supprimer
+              {t("sg.delete")}
             </Button>
           </>
         }

@@ -68,18 +68,18 @@ export default function CreateSurveyNotice() {
       setLoading(true);
       setError("");
       if (!form.title.trim()) {
-        setError("Le titre est obligatoire.");
+        setError(t("sg.titleRequired"));
         return;
       }
       if (!form.question.text.trim()) {
-        setError("La question est obligatoire.");
+        setError(t("sg.questionRequired"));
         return;
       }
       if (
         form.question.type === "single_choice" &&
         form.question.options.filter((o) => o.trim()).length < 2
       ) {
-        setError("Les questions à choix nécessitent au moins deux options.");
+        setError(t("sg.minTwoOptions"));
         return;
       }
       const payload = {
@@ -106,12 +106,12 @@ export default function CreateSurveyNotice() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || "Sauvegarde impossible.");
+        setError(data.message || t("sg.saveImpossible"));
         return;
       }
       navigate("/dashboard/communicator/surveys");
     } catch (err) {
-      setError("Erreur serveur lors de la sauvegarde.");
+      setError(t("sg.serverErrorSaving"));
     } finally {
       setLoading(false);
     }
@@ -121,12 +121,12 @@ export default function CreateSurveyNotice() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.communication")}
-        title="Créer un sondage"
-        subtitle="Créez un sondage avec une question à choix ou une question texte. La date de publication est générée automatiquement."
+        title={t("sg.newSurvey")}
+        subtitle={t("sg.subSurveys")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Sondages", to: "/dashboard/communicator/surveys" },
-          { label: "Nouveau" },
+          { label: t("sg.surveys"), to: "/dashboard/communicator/surveys" },
+          { label: t("sg.newRecord") },
         ]}
         actions={
           <>
@@ -135,7 +135,7 @@ export default function CreateSurveyNotice() {
               variant="outline"
               size="md"
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="outline"
@@ -143,7 +143,7 @@ export default function CreateSurveyNotice() {
               onClick={() => submitSurvey("DRAFT")}
               disabled={loading}
             >
-              Brouillon
+              {t("sg.statusDraftLabel")}
             </Button>
             <Button
               variant="primary"
@@ -151,7 +151,7 @@ export default function CreateSurveyNotice() {
               onClick={() => submitSurvey("PUBLISHED")}
               disabled={loading}
             >
-              Publier
+              {t("sg.publish")}
             </Button>
           </>
         }
@@ -166,47 +166,47 @@ export default function CreateSurveyNotice() {
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
           <div className="space-y-6">
-            <DataPanel title="Informations" subtitle="Identité du sondage">
+            <DataPanel title={t("sg.sectionInfo")} subtitle={t("sg.sectionInfoSurveySub")}>
               <div className="p-6 space-y-5">
                 <TextField
-                  label="Titre"
+                  label={t("sg.colTitle")}
                   value={form.title}
                   onChange={(v) => update("title", v)}
-                  placeholder="ex : Satisfaction activités hiver 2026"
+                  placeholder={t("sg.phTitle")}
                   required
                 />
                 <TextField
-                  label="Date limite"
+                  label={t("sg.labelDeadline")}
                   type="date"
                   value={form.deadline}
                   onChange={(v) => update("deadline", v)}
                 />
                 <TextArea
-                  label="Description courte"
+                  label={t("sg.summaryShort")}
                   value={form.summary}
                   onChange={(v) => update("summary", v)}
-                  placeholder="Expliquez l'objet du sondage…"
+                  placeholder={t("sg.phSummary")}
                   rows={3}
                 />
               </div>
             </DataPanel>
 
-            <DataPanel title="Question du sondage">
+            <DataPanel title={t("sg.sectionSurveyQuestion")}>
               <div className="p-6 space-y-5">
                 <Select
-                  label="Type"
+                  label={t("sg.labelType")}
                   value={form.question.type}
                   onChange={(v) => updateQuestion("type", v)}
                   options={[
-                    { value: "single_choice", label: "Question à choix" },
-                    { value: "text", label: "Question texte simple" },
+                    { value: "single_choice", label: t("sg.choiceQuestion") },
+                    { value: "text", label: t("sg.textQuestion") },
                   ]}
                 />
                 <TextArea
-                  label="Question"
+                  label={t("sg.labelQuestion")}
                   value={form.question.text}
                   onChange={(v) => updateQuestion("text", v)}
-                  placeholder="Rédigez la question…"
+                  placeholder={t("sg.phQuestion")}
                   rows={3}
                   required
                 />
@@ -215,14 +215,14 @@ export default function CreateSurveyNotice() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A]">
-                        Options
+                        {t("sg.labelOptions")}
                       </label>
                       <button
                         type="button"
                         onClick={addOption}
                         className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] hover:text-[#ED8D31] transition-colors"
                       >
-                        + Ajouter une option
+                        + {t("sg.addOption")}
                       </button>
                     </div>
                     {form.question.options.map((option, i) => (
@@ -231,7 +231,7 @@ export default function CreateSurveyNotice() {
                           type="text"
                           value={option}
                           onChange={(e) => handleOption(i, e.target.value)}
-                          placeholder={`Option ${i + 1}`}
+                          placeholder={`${t("sg.optionLabel")} ${i + 1}`}
                           className="flex-1 px-4 py-3 bg-[#FAFAFA] border border-[#E5E5E5] text-[14px] text-[#0A0A0A] placeholder:text-[#A3A3A3] outline-none focus:border-[#0A0A0A] focus:bg-white transition-colors"
                         />
                         {form.question.options.length > 2 && (
@@ -241,7 +241,7 @@ export default function CreateSurveyNotice() {
                             size="md"
                             onClick={() => removeOption(i)}
                           >
-                            Retirer
+                            {t("sg.removeOption")}
                           </Button>
                         )}
                       </div>
@@ -253,23 +253,23 @@ export default function CreateSurveyNotice() {
           </div>
 
           <div className="space-y-6">
-            <DataPanel title="Aperçu" subtitle="Résumé avant publication">
+            <DataPanel title={t("sg.preview")} subtitle={t("sg.sectionPreviewSub")}>
               <div className="p-6 space-y-2">
-                <SummaryRow label="Titre" value={form.title || "Non défini"} />
+                <SummaryRow label={t("sg.colTitle")} value={form.title || t("sg.notDefined")} />
                 <SummaryRow
-                  label="Échéance"
-                  value={form.deadline || "Non définie"}
+                  label={t("sg.labelDeadline")}
+                  value={form.deadline || t("sg.notDefined")}
                 />
                 <SummaryRow
-                  label="Type"
+                  label={t("sg.labelType")}
                   value={
                     form.question.type === "single_choice"
-                      ? "Choix"
-                      : "Texte"
+                      ? t("sg.choice")
+                      : t("sg.textType")
                   }
                 />
                 <SummaryRow
-                  label="Options"
+                  label={t("sg.labelOptions")}
                   value={
                     form.question.type === "single_choice"
                       ? form.question.options.filter((o) => o.trim()).length

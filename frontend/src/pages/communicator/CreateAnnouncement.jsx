@@ -40,7 +40,7 @@ export default function CreateAnnouncement() {
       });
       navigate("/dashboard/communicator/announcements");
     } catch (err) {
-      setError(err.message || "Création impossible.");
+      setError(err.message || t("sg.saveImpossible"));
     } finally {
       setLoading(false);
     }
@@ -50,15 +50,15 @@ export default function CreateAnnouncement() {
     <PageShell>
       <PageHeader
         eyebrow={t("sg.communication")}
-        title="Créer une annonce"
-        subtitle="Rédigez une nouvelle communication interne avec titre, contenu et document optionnel."
+        title={t("sg.newAnnouncement")}
+        subtitle={t("sg.subAnnouncements")}
         breadcrumbs={[
           { label: t("sg.dashboard"), to: "/dashboard" },
           {
-            label: "Annonces",
+            label: t("sg.announcements"),
             to: "/dashboard/communicator/announcements",
           },
-          { label: "Nouvelle" },
+          { label: t("sg.newRecord") },
         ]}
         actions={
           <Button
@@ -66,7 +66,7 @@ export default function CreateAnnouncement() {
             variant="outline"
             size="md"
           >
-            ← Retour
+            ← {t("sg.back")}
           </Button>
         }
       />
@@ -81,22 +81,22 @@ export default function CreateAnnouncement() {
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
           <div className="space-y-6">
             <DataPanel
-              title="Informations principales"
-              subtitle="Titre et contenu de l'annonce"
+              title={t("sg.sectionInfo")}
+              subtitle={t("sg.subAnnouncements")}
             >
               <div className="p-6 space-y-5">
                 <TextField
-                  label="Titre"
+                  label={t("sg.colTitle")}
                   value={form.title}
                   onChange={(v) => update("title", v)}
-                  placeholder="Saisissez le titre de l'annonce…"
+                  placeholder={t("sg.phTitle")}
                   required
                 />
                 <TextArea
-                  label="Contenu"
+                  label={t("sg.labelContent")}
                   value={form.content}
                   onChange={(v) => update("content", v)}
-                  placeholder="Rédigez le message complet pour les collaborateurs…"
+                  placeholder={t("sg.phContent")}
                   rows={10}
                   required
                 />
@@ -104,18 +104,17 @@ export default function CreateAnnouncement() {
             </DataPanel>
 
             <DataPanel
-              title="Document attaché (optionnel)"
-              subtitle="PDF, Word ou image"
+              title={t("sg.labelDocument")}
+              subtitle="PDF, Word, JPG, PNG"
             >
               <div className="p-6 space-y-5">
                 <div className="bg-[#FAFAFA] border border-[#E5E5E5] p-4 flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <p className="text-[14px] font-bold text-[#0A0A0A]">
-                      Joindre un document
+                      {t("sg.attached")}
                     </p>
                     <p className="text-[11px] text-[#737373] mt-1 leading-[1.55]">
-                      Activez pour téléverser un PDF, un fichier Word ou une
-                      image.
+                      PDF, Word, JPG, PNG
                     </p>
                   </div>
                   <button
@@ -136,7 +135,7 @@ export default function CreateAnnouncement() {
                 {form.hasDocument && (
                   <div>
                     <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
-                      Fichier
+                      {t("sg.labelDocument")}
                     </label>
                     <input
                       type="file"
@@ -146,7 +145,7 @@ export default function CreateAnnouncement() {
                     />
                     {form.document && (
                       <p className="text-[11px] text-[#737373] mt-2">
-                        Sélectionné : {form.document.name}
+                        {form.document.name}
                       </p>
                     )}
                   </div>
@@ -156,21 +155,21 @@ export default function CreateAnnouncement() {
           </div>
 
           <div className="space-y-6">
-            <DataPanel title="Aperçu" subtitle="Résumé avant publication">
+            <DataPanel title={t("sg.preview")} subtitle={t("sg.sectionPreviewSub")}>
               <div className="p-6 space-y-2">
-                <SummaryRow label="Titre" value={form.title || "Non défini"} />
+                <SummaryRow label={t("sg.colTitle")} value={form.title || t("sg.notDefined")} />
                 <SummaryRow
-                  label="Document"
-                  value={form.hasDocument ? "Attaché" : "Aucun"}
+                  label={t("sg.labelDocument")}
+                  value={form.hasDocument ? t("sg.attached") : t("sg.noneNeutral")}
                 />
                 <SummaryRow
-                  label="Caractères"
+                  label="N"
                   value={`${form.content.length}`}
                 />
               </div>
             </DataPanel>
 
-            <DataPanel title="Actions" subtitle="Brouillon ou publication directe">
+            <DataPanel title={t("sg.colActions")} subtitle={t("sg.sectionPreviewSub")}>
               <div className="p-6 space-y-3">
                 <Button
                   variant="outline"
@@ -178,7 +177,7 @@ export default function CreateAnnouncement() {
                   onClick={() => submitAnnouncement("DRAFT")}
                   disabled={loading}
                 >
-                  {loading ? "Enregistrement…" : "Sauvegarder en brouillon"}
+                  {loading ? t("sg.processing") : t("sg.saveDraft")}
                 </Button>
                 <Button
                   variant="primary"
@@ -186,7 +185,7 @@ export default function CreateAnnouncement() {
                   onClick={() => submitAnnouncement("PUBLISHED")}
                   disabled={loading}
                 >
-                  {loading ? "Publication…" : "Publier maintenant"}
+                  {loading ? t("sg.processing") : t("sg.publishNow")}
                 </Button>
               </div>
             </DataPanel>

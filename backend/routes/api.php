@@ -68,9 +68,6 @@ Route::post('/sessions/{sessionId}/register', [EmployeeRegistrationController::c
 // ----- EMPLOYEE DATA -----
 Route::get('/me/documents', [EmployeeController::class, 'myDocuments']);
 
-// ================= API PREFIX =================
-Route::prefix('api')->group(function () {
-
 // ===== SYSTEM =====
 Route::get('/system/roles/functional-admins', [SystemRoleController::class, 'functionalAdmins']);
 Route::get('/system/roles/communicators', [SystemRoleController::class, 'communicators']);
@@ -116,7 +113,6 @@ Route::delete('/system/users/{userId}/roles/system-admin', [SystemRoleController
     // ===== NOTIFICATIONS =====
     Route::get('/notifications/sent', [NotificationController::class, 'adminList']);
     Route::post('/notifications', [NotificationController::class, 'send']);
-});
 
 // =====================================================================
 // RESTORED ROUTES (root level, NOT under /api)

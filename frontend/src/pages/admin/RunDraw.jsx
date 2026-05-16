@@ -289,8 +289,8 @@ export default function RunDraw() {
                   <ResultStat label={t("sg.selected")} value={results.selected_count} />
                   <ResultStat label={t("sg.substitute")} value={results.substitute_count} />
                   <ResultStat
-                    label={t("sg.waitingList")}
-                    value={results.waiting_count}
+                    label={t("sg.notSelected")}
+                    value={results.rejected_count}
                   />
                 </div>
               </div>
@@ -309,7 +309,7 @@ export default function RunDraw() {
               t={t}
             />
             <ResultsList
-              title={t("sg.waitingList")}
+              title={t("sg.notSelected")}
               filter="waiting"
               items={drawDetails.results}
               t={t}
