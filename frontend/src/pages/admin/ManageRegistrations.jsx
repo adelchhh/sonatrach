@@ -1,39 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, apiPatch } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  Toolbar,
-  SearchInput,
-  SelectInput,
-  DataPanel,
-  StatusPill,
-  Modal,
-  Button,
-  Alert,
-  TextArea,
-} from "../../components/ui/Studio";
 
-const STATUS_TONE = {
-  PENDING: "warn",
-  VALIDATED: "info",
-  REJECTED: "danger",
-  SELECTED: "accent",
-  WAITING_LIST: "warn",
-  CONFIRMED: "success",
-  WITHDRAWN: "neutral",
-  CANCELLED: "neutral",
+const STATUS_STYLES = {
+  PENDING: "bg-[#FFF4D6] text-[#B98900]",
+  VALIDATED: "bg-[#E2F4D9] text-[#3D7B22]",
+  REJECTED: "bg-[#FBE1E1] text-[#A93B3B]",
+  SELECTED: "bg-[#DAE7FB] text-[#2A52BE]",
+  WAITING_LIST: "bg-[#F7E6CC] text-[#A9651E]",
+  CONFIRMED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  WITHDRAWN: "bg-[#F1F0EC] text-[#7A8088]",
+  CANCELLED: "bg-[#F1F0EC] text-[#7A8088]",
 };
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -52,7 +38,6 @@ export default function ManageRegistrations() {
     WITHDRAWN: t("statuses.WITHDRAWN"),
     CANCELLED: t("statuses.CANCELLED"),
   };
-
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -75,7 +60,7 @@ export default function ManageRegistrations() {
     apiGet("/registrations")
       .then((res) => setRegistrations(res.data || []))
       .catch((err) =>
-        setPageError(err.message || "Impossible de charger les inscriptions.")
+        setPageError(err.message || "Could not load registrations.")
       )
       .finally(() => setLoading(false));
   };
@@ -87,7 +72,9 @@ export default function ManageRegistrations() {
   const activities = useMemo(() => {
     const set = new Map();
     registrations.forEach((r) => {
-      if (r.activity_id) set.set(r.activity_id, r.activity_title);
+      if (r.activity_id) {
+        set.set(r.activity_id, r.activity_title);
+      }
     });
     return Array.from(set.entries());
   }, [registrations]);
@@ -96,7 +83,8 @@ export default function ManageRegistrations() {
     const set = new Map();
     registrations.forEach((r) => {
       if (r.session_id) {
-        set.set(r.session_id, `#${r.session_id} (${r.activity_title})`);
+        const label = `#${r.session_id} (${r.activity_title})`;
+        set.set(r.session_id, label);
       }
     });
     return Array.from(set.entries());
@@ -109,7 +97,7 @@ export default function ManageRegistrations() {
       if (filters.session !== "all" && r.session_id !== Number(filters.session)) return false;
       if (filters.status !== "all" && r.status !== filters.status) return false;
       if (q) {
-        const hay = [
+        const haystack = [
           r.employee_number,
           r.user_first_name,
           r.user_last_name,
@@ -120,7 +108,7 @@ export default function ManageRegistrations() {
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        if (!hay.includes(q)) return false;
+        if (!haystack.includes(q)) return false;
       }
       return true;
     });
@@ -129,11 +117,11 @@ export default function ManageRegistrations() {
   const stats = useMemo(() => {
     const total = registrations.length;
     const pending = registrations.filter((r) => r.status === "PENDING").length;
-    const validated = registrations.filter((r) =>
-      ["VALIDATED", "SELECTED", "CONFIRMED"].includes(r.status)
+    const validated = registrations.filter(
+      (r) => r.status === "VALIDATED" || r.status === "SELECTED" || r.status === "CONFIRMED"
     ).length;
-    const rejected = registrations.filter((r) =>
-      ["REJECTED", "CANCELLED"].includes(r.status)
+    const rejected = registrations.filter(
+      (r) => r.status === "REJECTED" || r.status === "CANCELLED"
     ).length;
     return { total, pending, validated, rejected };
   }, [registrations]);
@@ -145,7 +133,7 @@ export default function ManageRegistrations() {
       const res = await apiGet(`/registrations/${id}`);
       setDetails(res.data);
     } catch (err) {
-      setDetails({ error: err.message || "Détails indisponibles." });
+      setDetails({ error: err.message || "Could not load details." });
     }
   };
 
@@ -165,7 +153,7 @@ export default function ManageRegistrations() {
       await apiPost(`/registrations/${id}/validate`);
       load();
     } catch (err) {
-      alert(err.message || "Validation impossible.");
+      alert(err.message || "Could not validate registration.");
     } finally {
       setActingOn(null);
     }
@@ -173,7 +161,7 @@ export default function ManageRegistrations() {
 
   const submitReject = async () => {
     if (!rejectReason.trim()) {
-      alert("Veuillez préciser un motif.");
+      alert("Please provide a rejection reason.");
       return;
     }
     setActingOn(modal.id);
@@ -184,7 +172,7 @@ export default function ManageRegistrations() {
       closeModal();
       load();
     } catch (err) {
-      alert(err.message || "Rejet impossible.");
+      alert(err.message || "Could not reject registration.");
     } finally {
       setActingOn(null);
     }
@@ -196,440 +184,449 @@ export default function ManageRegistrations() {
       await apiPatch(`/registrations/${id}/status`, { status });
       load();
     } catch (err) {
-      alert(err.message || "Changement de statut impossible.");
+      alert(err.message || "Could not change status.");
     } finally {
       setActingOn(null);
     }
   };
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow="Administration"
-        title={t("admin.registrations.title")}
-        subtitle={t("admin.registrations.subtitle")}
-        breadcrumbs={[
-          { label: "Tableau de bord", to: "/dashboard" },
-          { label: "Inscriptions" },
-        ]}
-      />
+    <>
+      <div className="flex h-screen bg-[#F7F7F5]">
+        <DashboardSidebar />
 
-      <PageBody>
-        {pageError && (
-          <Alert tone="danger" title="Erreur">
-            {pageError}
-          </Alert>
-        )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardTopBar />
 
-        <StatBar>
-          <StatCell
-            label={t("admin.registrations.statTotal")}
-            value={stats.total}
-            sub="Toutes inscriptions"
-          />
-          <StatCell
-            label={t("admin.registrations.statPending")}
-            value={stats.pending}
-            sub="À valider"
-            accent={stats.pending > 0}
-          />
-          <StatCell
-            label={t("admin.registrations.statValidated")}
-            value={stats.validated}
-            sub="Validées / sélectionnées"
-          />
-          <StatCell
-            label={t("admin.registrations.statRejected")}
-            value={stats.rejected}
-            sub="Rejets / annulations"
-          />
-        </StatBar>
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                  {t("admin.registrations.title")}
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                  {t("admin.registrations.subtitle")}
+                </p>
+              </div>
 
-        <Toolbar>
-          <SearchInput
-            value={filters.search}
-            onChange={(v) => setFilters((f) => ({ ...f, search: v }))}
-            placeholder={t("admin.registrations.searchPlaceholder")}
-          />
-          <SelectInput
-            value={filters.activity}
-            onChange={(v) => setFilters((f) => ({ ...f, activity: v }))}
-            options={[
-              { value: "all", label: t("admin.registrations.allActivities") },
-              ...activities.map(([id, title]) => ({ value: id, label: title })),
-            ]}
-          />
-          <SelectInput
-            value={filters.session}
-            onChange={(v) => setFilters((f) => ({ ...f, session: v }))}
-            options={[
-              { value: "all", label: t("admin.registrations.allSessions") },
-              ...sessions.map(([id, label]) => ({ value: id, label })),
-            ]}
-          />
-          <SelectInput
-            value={filters.status}
-            onChange={(v) => setFilters((f) => ({ ...f, status: v }))}
-            options={[
-              { value: "all", label: t("common.allStatuses") },
-              ...Object.entries(STATUS_LABEL).map(([k, v]) => ({
-                value: k,
-                label: v,
-              })),
-            ]}
-          />
-          <Button
-            variant="outline"
-            size="md"
-            onClick={() =>
-              setFilters({
-                search: "",
-                activity: "all",
-                session: "all",
-                status: "all",
-              })
-            }
-          >
-            {t("common.reset")}
-          </Button>
-        </Toolbar>
+              {pageError && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {pageError}
+                </div>
+              )}
 
-        <DataPanel
-          title="Inscriptions"
-          subtitle="Validez, rejetez ou confirmez les inscriptions"
-          badge={`${filtered.length} / ${registrations.length}`}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard title={t("admin.registrations.statTotal")} value={stats.total} />
+                <StatCard title={t("admin.registrations.statPending")} value={stats.pending} />
+                <StatCard title={t("admin.registrations.statValidated")} value={stats.validated} />
+                <StatCard title={t("admin.registrations.statRejected")} value={stats.rejected} />
+              </div>
+
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                <div className="flex flex-wrap gap-3">
+                  <input
+                    type="text"
+                    value={filters.search}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, search: e.target.value }))
+                    }
+                    placeholder={t("admin.registrations.searchPlaceholder")}
+                    className="min-w-[220px] flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  />
+
+                  <select
+                    value={filters.activity}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, activity: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">{t("admin.registrations.allActivities")}</option>
+                    {activities.map(([id, title]) => (
+                      <option key={id} value={id}>
+                        {title}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.session}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, session: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">{t("admin.registrations.allSessions")}</option>
+                    {sessions.map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.status}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, status: e.target.value }))
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                  >
+                    <option value="all">{t("common.allStatuses")}</option>
+                    {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() =>
+                      setFilters({
+                        search: "",
+                        activity: "all",
+                        session: "all",
+                        status: "all",
+                      })
+                    }
+                    className="px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-sm font-medium text-[#2F343B]"
+                  >
+                    {t("common.reset")}
+                  </button>
+                </div>
+              </section>
+
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1100px]">
+                    <thead className="bg-[#FBFAF8]">
+                      <tr>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.registrations.col.employee")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.registrations.col.activitySession")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.registrations.col.submitted")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.registrations.col.documents")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("common.status")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("common.actions")}
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {loading && (
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            {t("admin.registrations.loading")}
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading && filtered.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            {t("admin.registrations.emptyFiltered")}
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading &&
+                        filtered.map((r) => (
+                          <tr
+                            key={r.id}
+                            className="border-t border-[#E5E2DC] align-top"
+                          >
+                            <td className="px-5 py-5">
+                              <p className="font-semibold text-[#2F343B] text-sm">
+                                {r.user_first_name} {r.user_last_name}
+                              </p>
+                              <p className="text-xs text-[#7A8088] mt-1">
+                                {t("admin.registrations.matricule", { number: r.employee_number })}
+                              </p>
+                            </td>
+
+                            <td className="px-5 py-5">
+                              <p className="text-sm font-medium text-[#2F343B]">
+                                {r.activity_title}
+                              </p>
+                              <p className="text-xs text-[#7A8088] mt-1">
+                                Session #{r.session_id} ·{" "}
+                                {formatDate(r.start_date)} →{" "}
+                                {formatDate(r.end_date)}
+                              </p>
+                            </td>
+
+                            <td className="px-5 py-5 text-sm text-[#7A8088]">
+                              {formatDate(r.registered_at)}
+                            </td>
+
+                            <td className="px-5 py-5 text-sm text-[#2F343B]">
+                              {t("admin.registrations.documentsValidated", {
+                                validated: r.documents_validated_count,
+                                total: r.documents_count,
+                              })}
+                            </td>
+
+                            <td className="px-5 py-5">
+                              <StatusBadge status={r.status} />
+                              {r.rejection_reason && (
+                                <p
+                                  className="text-xs text-red-600 mt-1 max-w-[180px]"
+                                  title={r.rejection_reason}
+                                >
+                                  {r.rejection_reason}
+                                </p>
+                              )}
+                            </td>
+
+                            <td className="px-5 py-5">
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => openDetails(r.id)}
+                                  className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] text-sm bg-white"
+                                >
+                                  {t("common.view")}
+                                </button>
+
+                                {r.status === "PENDING" && (
+                                  <>
+                                    <button
+                                      onClick={() => handleValidate(r.id)}
+                                      disabled={actingOn === r.id}
+                                      className="px-3 py-1.5 rounded-lg bg-[#2D7A4A] text-white text-sm font-medium disabled:opacity-60"
+                                    >
+                                      {t("admin.registrations.validate")}
+                                    </button>
+                                    <button
+                                      onClick={() => openReject(r.id)}
+                                      disabled={actingOn === r.id}
+                                      className="px-3 py-1.5 rounded-lg bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
+                                    >
+                                      {t("admin.registrations.reject")}
+                                    </button>
+                                  </>
+                                )}
+
+                                {r.status === "SELECTED" && (
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(r.id, "CONFIRMED")
+                                    }
+                                    disabled={actingOn === r.id}
+                                    className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm font-medium disabled:opacity-60"
+                                  >
+                                    {t("admin.registrations.markConfirmed")}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {modal.open && modal.type === "details" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px]">
-              <thead className="bg-[#0A0A0A]">
-                <tr>
-                  {[
-                    t("admin.registrations.col.employee"),
-                    t("admin.registrations.col.activitySession"),
-                    t("admin.registrations.col.submitted"),
-                    t("admin.registrations.col.documents"),
-                    t("common.status"),
-                    t("common.actions"),
-                  ].map((h, i) => (
-                    <th
-                      key={i}
-                      className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-14 text-center text-[13px] text-[#737373]"
-                    >
-                      {t("admin.registrations.loading")}
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-14 text-center text-[13px] text-[#737373]"
-                    >
-                      {t("admin.registrations.emptyFiltered")}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                    >
-                      <td className="px-6 py-5">
-                        <p className="text-[#0A0A0A] text-[14px] font-bold">
-                          {r.user_first_name} {r.user_last_name}
-                        </p>
-                        <p className="text-[11px] font-mono tabular-nums text-[#737373] mt-1">
-                          {t("admin.registrations.matricule", {
-                            number: r.employee_number,
-                          })}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5">
-                        <p className="text-[13px] font-semibold text-[#0A0A0A]">
-                          {r.activity_title}
-                        </p>
-                        <p className="text-[11px] text-[#737373] mt-1 tabular-nums">
-                          Session #{r.session_id} ·{" "}
-                          {formatDate(r.start_date)} → {formatDate(r.end_date)}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
-                        {formatDate(r.registered_at)}
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#0A0A0A]">
-                        {r.documents_validated_count} / {r.documents_count}
-                      </td>
-                      <td className="px-6 py-5">
-                        <StatusPill
-                          tone={STATUS_TONE[r.status] || "neutral"}
-                          label={STATUS_LABEL[r.status] || r.status}
-                        />
-                        {r.rejection_reason && (
-                          <p
-                            className="text-[11px] text-[#9F1F1F] mt-2 max-w-[200px]"
-                            title={r.rejection_reason}
-                          >
-                            {r.rejection_reason}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openDetails(r.id)}
-                          >
-                            {t("common.view")}
-                          </Button>
-                          {r.status === "PENDING" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="dark"
-                                onClick={() => handleValidate(r.id)}
-                                disabled={actingOn === r.id}
-                              >
-                                {t("admin.registrations.validate")}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="danger"
-                                onClick={() => openReject(r.id)}
-                                disabled={actingOn === r.id}
-                              >
-                                {t("admin.registrations.reject")}
-                              </Button>
-                            </>
-                          )}
-                          {r.status === "SELECTED" && (
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() =>
-                                handleStatusChange(r.id, "CONFIRMED")
-                              }
-                              disabled={actingOn === r.id}
-                            >
-                              {t("admin.registrations.markConfirmed")}
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </DataPanel>
-      </PageBody>
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[640px] shadow-lg max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-[#2F343B] mb-4">
+              {t("admin.registrations.details.title")}
+            </h2>
 
-      {/* DETAILS MODAL */}
-      <Modal
-        open={modal.open && modal.type === "details"}
-        onClose={closeModal}
-        title={t("admin.registrations.details.title")}
-        width="lg"
-        footer={
-          <Button variant="outline" size="md" onClick={closeModal}>
-            {t("common.close")}
-          </Button>
-        }
-      >
-        {!details && (
-          <p className="text-[13px] text-[#737373]">
-            {t("admin.registrations.details.loading")}
-          </p>
-        )}
-        {details?.error && (
-          <Alert tone="danger" title="Erreur">
-            {details.error}
-          </Alert>
-        )}
-        {details?.registration && (
-          <div className="space-y-5">
-            <DetailGrid>
-              <DetailRow
-                label={t("admin.registrations.details.employee")}
-                value={`${details.registration.user_first_name} ${details.registration.user_last_name} (${details.registration.employee_number})`}
-              />
-              <DetailRow
-                label={t("admin.registrations.details.email")}
-                value={details.registration.user_email}
-              />
-              <DetailRow
-                label={t("admin.registrations.details.activity")}
-                value={`${details.registration.activity_title} (${details.registration.activity_category})`}
-              />
-              <DetailRow
-                label={t("admin.registrations.details.session")}
-                value={`${formatDate(details.registration.start_date)} → ${formatDate(details.registration.end_date)}`}
-              />
-              <DetailRow
-                label={t("admin.registrations.details.status")}
-                value={STATUS_LABEL[details.registration.status]}
-              />
-              <DetailRow
-                label={t("admin.registrations.details.eligible")}
-                value={
-                  details.registration.is_eligible
-                    ? t("common.yes")
-                    : t("common.no")
-                }
-              />
-              <DetailRow
-                label={t("admin.registrations.details.submitted")}
-                value={formatDate(details.registration.registered_at)}
-              />
-              {details.registration.rejection_reason && (
+            {!details && (
+              <p className="text-sm text-[#7A8088]">{t("admin.registrations.details.loading")}</p>
+            )}
+
+            {details?.error && (
+              <p className="text-sm text-red-600">{details.error}</p>
+            )}
+
+            {details?.registration && (
+              <div className="space-y-4 text-sm">
                 <DetailRow
-                  label={t("admin.registrations.details.rejectionReason")}
-                  value={details.registration.rejection_reason}
+                  label={t("admin.registrations.details.employee")}
+                  value={`${details.registration.user_first_name} ${details.registration.user_last_name} (${details.registration.employee_number})`}
                 />
-              )}
-            </DetailGrid>
+                <DetailRow
+                  label={t("admin.registrations.details.email")}
+                  value={details.registration.user_email}
+                />
+                <DetailRow
+                  label={t("admin.registrations.details.activity")}
+                  value={`${details.registration.activity_title} (${details.registration.activity_category})`}
+                />
+                <DetailRow
+                  label={t("admin.registrations.details.session")}
+                  value={`${formatDate(details.registration.start_date)} → ${formatDate(details.registration.end_date)}`}
+                />
+                <DetailRow
+                  label={t("admin.registrations.details.status")}
+                  value={STATUS_LABEL[details.registration.status]}
+                />
+                <DetailRow
+                  label={t("admin.registrations.details.eligible")}
+                  value={details.registration.is_eligible ? t("common.yes") : t("common.no")}
+                />
+                <DetailRow
+                  label={t("admin.registrations.details.submitted")}
+                  value={formatDate(details.registration.registered_at)}
+                />
+                {details.registration.rejection_reason && (
+                  <DetailRow
+                    label={t("admin.registrations.details.rejectionReason")}
+                    value={details.registration.rejection_reason}
+                  />
+                )}
 
-            <SubBlock
-              title={`${t("admin.registrations.details.siteChoices")} · ${details.choices.length}`}
-            >
-              {details.choices.length === 0 ? (
-                <p className="text-[12px] text-[#737373] italic">
-                  {t("admin.registrations.details.noChoices")}
-                </p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {details.choices.map((c) => (
-                    <li
-                      key={c.id}
-                      className="flex items-baseline gap-3 text-[13px]"
-                    >
-                      <span className="text-[#ED8D31] font-bold tabular-nums">
-                        #{c.choice_order}
-                      </span>
-                      <span className="text-[#0A0A0A] font-semibold">
-                        {c.site_name}
-                      </span>
-                      <span className="text-[11px] text-[#737373]">
-                        quota {c.quota}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </SubBlock>
+                <div>
+                  <p className="text-xs text-[#7A8088] uppercase font-semibold mb-2">
+                    {t("admin.registrations.details.siteChoices")} ({details.choices.length})
+                  </p>
+                  {details.choices.length === 0 ? (
+                    <p className="text-[#7A8088]">{t("admin.registrations.details.noChoices")}</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {details.choices.map((c) => (
+                        <li key={c.id} className="text-[#2F343B]">
+                          #{c.choice_order} — {c.site_name} (quota {c.quota})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-            <SubBlock
-              title={`${t("admin.registrations.details.documents")} · ${details.documents.length}`}
-            >
-              {details.documents.length === 0 ? (
-                <p className="text-[12px] text-[#737373] italic">
-                  {t("admin.registrations.details.noDocs")}
-                </p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {details.documents.map((d) => (
-                    <li
-                      key={d.document_id}
-                      className="flex items-center justify-between gap-3 text-[13px]"
-                    >
-                      <span className="text-[#0A0A0A]">{d.file_name}</span>
-                      <StatusPill
-                        tone={
-                          d.status === "VALIDATED"
-                            ? "success"
-                            : d.status === "REJECTED"
-                            ? "danger"
-                            : "warn"
-                        }
-                        label={d.status}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </SubBlock>
+                <div>
+                  <p className="text-xs text-[#7A8088] uppercase font-semibold mb-2">
+                    {t("admin.registrations.details.documents")} ({details.documents.length})
+                  </p>
+                  {details.documents.length === 0 ? (
+                    <p className="text-[#7A8088]">{t("admin.registrations.details.noDocs")}</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {details.documents.map((d) => (
+                        <li key={d.document_id} className="text-[#2F343B]">
+                          {d.file_name} —{" "}
+                          <span className="text-[#7A8088]">{d.status}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
+              >
+                {t("common.close")}
+              </button>
+            </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
 
-      {/* REJECT MODAL */}
-      <Modal
-        open={modal.open && modal.type === "reject"}
-        onClose={closeModal}
-        title={t("admin.registrations.rejectModal.title")}
-        description={t("admin.registrations.rejectModal.text")}
-        footer={
-          <>
-            <Button
-              variant="outline"
-              size="md"
-              onClick={closeModal}
-              disabled={actingOn === modal.id}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="danger"
-              size="md"
-              onClick={submitReject}
-              disabled={actingOn === modal.id}
-            >
-              {actingOn === modal.id
-                ? t("admin.registrations.rejectModal.rejecting")
-                : t("admin.registrations.rejectModal.confirm")}
-            </Button>
-          </>
-        }
-      >
-        <TextArea
-          label="Motif du rejet"
-          value={rejectReason}
-          onChange={setRejectReason}
-          placeholder={t("admin.registrations.rejectModal.placeholder")}
-          rows={4}
-          required
-        />
-      </Modal>
-    </PageShell>
+      {modal.open && modal.type === "reject" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
+              {t("admin.registrations.rejectModal.title")}
+            </h2>
+
+            <p className="text-sm text-[#7A8088] mb-4">
+              {t("admin.registrations.rejectModal.text")}
+            </p>
+
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+              placeholder={t("admin.registrations.rejectModal.placeholder")}
+              className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+            />
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={closeModal}
+                disabled={actingOn === modal.id}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm disabled:opacity-60"
+              >
+                {t("common.cancel")}
+              </button>
+
+              <button
+                onClick={submitReject}
+                disabled={actingOn === modal.id}
+                className="px-4 py-2 rounded-[12px] bg-[#A93B3B] text-white text-sm font-medium disabled:opacity-60"
+              >
+                {actingOn === modal.id ? t("admin.registrations.rejectModal.rejecting") : t("admin.registrations.rejectModal.confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
-function DetailGrid({ children }) {
-  return <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">{children}</dl>;
-}
-
-function DetailRow({ label, value }) {
+function StatCard({ title, value }) {
   return (
-    <div>
-      <dt className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-        {label}
-      </dt>
-      <dd className="text-[13px] text-[#0A0A0A] font-semibold break-words">
-        {value}
-      </dd>
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
     </div>
   );
 }
 
-function SubBlock({ title, children }) {
+function StatusBadge({ status }) {
+  const t = useT();
+  const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
+  const tr = t(`statuses.${status}`);
+  const label = tr === `statuses.${status}` ? status : tr;
   return (
-    <div className="border-t border-[#E5E5E5] pt-5">
-      <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-3">
-        {title}
-      </p>
-      {children}
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span className="text-[#7A8088] min-w-[140px]">{label}:</span>
+      <span className="text-[#2F343B] font-medium break-words">{value}</span>
     </div>
   );
 }

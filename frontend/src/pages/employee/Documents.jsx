@@ -1,32 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiGet, apiPostForm, getCurrentUserId } from "../../api";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiGet, apiPostForm, getCurrentUserId, API_BASE_URL } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  StatusPill,
-  Button,
-  Alert,
-  TextField,
-  Select,
-} from "../../components/ui/Studio";
 
-const STATUS_TONE = {
-  UPLOADED: "warn",
-  VALIDATED: "success",
-  REJECTED: "danger",
+const STATUS_STYLES = {
+  UPLOADED: "bg-[#FFF4D6] text-[#B98900]",
+  VALIDATED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  REJECTED: "bg-[#FBE1E1] text-[#A93B3B]",
 };
-// status labels resolved via t() at render time
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -35,11 +23,12 @@ function formatDate(value) {
 
 export default function Documents() {
   const t = useT();
-  const statusLabel = (s) => ({
-    UPLOADED: t("sg.pending"),
-    VALIDATED: t("sg.validated"),
-    REJECTED: t("sg.rejected"),
-  }[s] || s);
+  const STATUS_LABEL = {
+    UPLOADED: t("employee.documents.statuses.UPLOADED"),
+    VALIDATED: t("employee.documents.statuses.VALIDATED"),
+    REJECTED: t("employee.documents.statuses.REJECTED"),
+  };
+
   const [documents, setDocuments] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +47,7 @@ export default function Documents() {
   const load = () => {
     if (!userId) {
       setLoading(false);
-      setPageError(t("sg.error"));
+      setPageError(t("common.pleaseLogin"));
       return;
     }
     setLoading(true);
@@ -71,9 +60,7 @@ export default function Documents() {
         setDocuments(docs.data || []);
         setRegistrations(regs.data || []);
       })
-      .catch((err) =>
-        setPageError(err.message || t("sg.loadingFailed"))
-      )
+      .catch((err) => setPageError(err.message || t("common.serverError")))
       .finally(() => setLoading(false));
   };
 
@@ -102,10 +89,12 @@ export default function Documents() {
   const handleUpload = async (e) => {
     e.preventDefault();
     setUploadError(null);
+
     if (!uploadForm.registration_id || !uploadForm.file) {
-      setUploadError(t("sg.error"));
+      setUploadError(t("common.genericError"));
       return;
     }
+
     setUploading(true);
     try {
       await apiPostForm(
@@ -120,193 +109,235 @@ export default function Documents() {
       if (input) input.value = "";
       load();
     } catch (err) {
-      setUploadError(err.message || t("sg.saveImpossible"));
+      setUploadError(err.message || t("common.serverError"));
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.myArea")}
-        title={t("sg.myDocuments")}
-        subtitle={t("sg.subMyDocuments")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.myDocuments") },
-        ]}
-      />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
 
-      <PageBody>
-        {pageError && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {pageError}
-          </Alert>
-        )}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
 
-        <StatBar>
-          <StatCell label={t("sg.subUploaded")} value={stats.total} sub={t("sg.total")} />
-          <StatCell
-            label={t("sg.pending")}
-            value={stats.pending}
-            sub={t("sg.toValidate")}
-            accent={stats.pending > 0}
-          />
-          <StatCell label={t("sg.validated")} value={stats.validated} sub={t("sg.validated")} />
-          <StatCell label={t("sg.rejected")} value={stats.rejected} sub={t("sg.rejected")} />
-        </StatBar>
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                {t("employee.documents.title")}
+              </h1>
+              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                {t("employee.documents.subtitle")}
+              </p>
+            </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6">
-          <DataPanel title={t("sg.myDocuments")} badge={`${documents.length}`}>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px]">
-                <thead className="bg-[#0A0A0A]">
-                  <tr>
-                    {[
-                      t("sg.colDocument"),
-                      t("sg.colActivity"),
-                      t("sg.subUploaded"),
-                      t("sg.colStatus"),
-                    ].map((h, i) => (
-                      <th
-                        key={i}
-                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        {t("sg.loading")}
-                      </td>
-                    </tr>
-                  ) : documents.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        {t("sg.emptyDocuments")}
-                      </td>
-                    </tr>
-                  ) : (
-                    documents.map((d) => (
-                      <tr
-                        key={d.id}
-                        className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                      >
-                        <td className="px-6 py-4">
-                          <p className="text-[#0A0A0A] text-[13px] font-bold break-all">
-                            {d.file_name}
-                          </p>
-                          <p className="text-[11px] text-[#737373] mt-1">
-                            {d.document_type || "—"}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4 text-[13px] text-[#0A0A0A]">
-                          {d.activity_title}
-                          <p className="text-[11px] text-[#737373] mt-0.5 tabular-nums">
-                            Session #{d.session_id}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4 text-[12px] tabular-nums text-[#525252]">
-                          {formatDate(d.uploaded_at)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusPill
-                            tone={STATUS_TONE[d.status] || "neutral"}
-                            label={statusLabel(d.status)}
-                          />
-                          {d.validation_comment && (
-                            <p className="text-[11px] text-[#9F1F1F] mt-2 max-w-[200px]">
-                              {d.validation_comment}
-                            </p>
-                          )}
-                        </td>
+            {pageError && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {pageError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <StatCard title={t("employee.documents.statUploaded")} value={stats.total} />
+              <StatCard title={t("employee.documents.statPending")} value={stats.pending} />
+              <StatCard title={t("employee.documents.statValidated")} value={stats.validated} />
+              <StatCard title={t("employee.documents.statRejected")} value={stats.rejected} />
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[2fr_340px] gap-6">
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                  <h2 className="text-[22px] font-bold text-[#2F343B]">
+                    {t("employee.documents.myDocs")}
+                  </h2>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[860px]">
+                    <thead className="bg-[#FBFAF8]">
+                      <tr>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("employee.documents.col.file")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("employee.documents.col.forActivity")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("employee.documents.col.uploaded")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("employee.documents.col.status")}
+                        </th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </DataPanel>
+                    </thead>
+                    <tbody>
+                      {loading && (
+                        <tr>
+                          <td colSpan="4" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                            {t("employee.documents.loading")}
+                          </td>
+                        </tr>
+                      )}
 
-          <DataPanel
-            title="Téléverser un document"
-            subtitle="Sélectionnez l'inscription concernée"
-          >
-            <div className="p-6">
-              {uploadableRegistrations.length === 0 ? (
-                <p className="text-[13px] text-[#737373] italic">
-                  Inscrivez-vous d'abord à une activité.
+                      {!loading && documents.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                            {t("employee.documents.empty")}
+                          </td>
+                        </tr>
+                      )}
+
+                      {documents.map((d) => (
+                        <tr key={d.id} className="border-t border-[#E5E2DC] align-top">
+                          <td className="px-5 py-4">
+                            <p className="font-semibold text-[#2F343B] text-sm break-all">
+                              {d.file_name}
+                            </p>
+                            <p className="text-xs text-[#7A8088] mt-1">
+                              {d.document_type || "—"}
+                            </p>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-[#2F343B]">
+                            {d.activity_title}
+                            <p className="text-xs text-[#7A8088] mt-1">
+                              Session #{d.session_id}
+                            </p>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-[#7A8088]">
+                            {formatDate(d.uploaded_at)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <StatusBadge status={d.status} labels={STATUS_LABEL} />
+                            {d.validation_comment && (
+                              <p className="text-xs text-[#A93B3B] mt-1 max-w-[180px]">
+                                {d.validation_comment}
+                              </p>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5 h-fit">
+                <h2 className="text-[22px] font-bold text-[#2F343B] mb-2">
+                  {t("employee.documents.uploadTitle")}
+                </h2>
+                <p className="text-sm text-[#7A8088] mb-4">
+                  {t("employee.documents.uploadHint")}
                 </p>
-              ) : (
-                <form onSubmit={handleUpload} className="space-y-5">
-                  {uploadError && (
-                    <Alert tone="danger" title={t("sg.error")}>
-                      {uploadError}
-                    </Alert>
-                  )}
-                  <Select
-                    label="Inscription"
-                    value={uploadForm.registration_id}
-                    onChange={(v) =>
-                      setUploadForm((p) => ({ ...p, registration_id: v }))
-                    }
-                    options={[
-                      { value: "", label: "Sélectionner…" },
-                      ...uploadableRegistrations.map((r) => ({
-                        value: r.id,
-                        label: `${r.activity_title} — ${formatDate(r.start_date)}`,
-                      })),
-                    ]}
-                    required
-                  />
-                  <TextField
-                    label="Type de document"
-                    value={uploadForm.document_type}
-                    onChange={(v) =>
-                      setUploadForm((p) => ({ ...p, document_type: v }))
-                    }
-                    placeholder="Ex : Passeport, certificat médical…"
-                  />
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
-                      Fichier
-                      <span className="text-[#ED8D31] ml-1">*</span>
-                    </label>
-                    <input
-                      id="doc-file-input"
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                      onChange={(e) =>
-                        setUploadForm((p) => ({
-                          ...p,
-                          file: e.target.files[0],
-                        }))
-                      }
-                      className="w-full text-[12px] text-[#0A0A0A] file:mr-3 file:bg-[#0A0A0A] file:text-white file:px-4 file:py-2 file:border-0 file:text-[11px] file:uppercase file:tracking-wider file:font-bold file:cursor-pointer hover:file:bg-black"
-                    />
-                    <p className="text-[11px] text-[#737373] mt-1.5">
-                      PDF, JPG, PNG, DOC. 10 Mo max.
-                    </p>
-                  </div>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="lg"
-                    disabled={uploading}
-                  >
-                    {uploading ? "Envoi…" : "Téléverser"}
-                  </Button>
-                </form>
-              )}
+
+                {uploadableRegistrations.length === 0 ? (
+                  <p className="text-sm text-[#7A8088] italic">
+                    {t("employee.documents.registerFirst")}
+                  </p>
+                ) : (
+                  <form onSubmit={handleUpload} className="space-y-4">
+                    {uploadError && (
+                      <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">
+                        {uploadError}
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                        {t("employee.documents.registration")}
+                      </label>
+                      <select
+                        value={uploadForm.registration_id}
+                        onChange={(e) =>
+                          setUploadForm((p) => ({
+                            ...p,
+                            registration_id: e.target.value,
+                          }))
+                        }
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                      >
+                        <option value="">{t("employee.documents.selectPlaceholder")}</option>
+                        {uploadableRegistrations.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.activity_title} — {formatDate(r.start_date)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                        {t("employee.documents.documentType")}
+                      </label>
+                      <input
+                        type="text"
+                        value={uploadForm.document_type}
+                        onChange={(e) =>
+                          setUploadForm((p) => ({
+                            ...p,
+                            document_type: e.target.value,
+                          }))
+                        }
+                        placeholder={t("employee.documents.documentTypePlaceholder")}
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                        {t("employee.documents.file")}
+                      </label>
+                      <input
+                        id="doc-file-input"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={(e) =>
+                          setUploadForm((p) => ({
+                            ...p,
+                            file: e.target.files[0],
+                          }))
+                        }
+                        className="w-full text-sm"
+                      />
+                      <p className="text-xs text-[#7A8088] mt-1">
+                        {t("employee.documents.fileHint")}
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={uploading}
+                      className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold disabled:opacity-60"
+                    >
+                      {uploading ? t("common.uploading") : t("employee.documents.uploadBtn")}
+                    </button>
+                  </form>
+                )}
+              </section>
             </div>
-          </DataPanel>
-        </div>
-      </PageBody>
-    </PageShell>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ status, labels = {} }) {
+  const cls = STATUS_STYLES[status] || "bg-[#F1F0EC] text-[#7A8088]";
+  const label = labels[status] || status;
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
+      {label}
+    </span>
   );
 }

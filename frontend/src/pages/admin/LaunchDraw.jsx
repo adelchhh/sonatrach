@@ -1,23 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  Button,
-  Alert,
-} from "../../components/ui/Studio";
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -42,7 +34,7 @@ export default function LaunchDraw() {
         setNotReady(res.data.not_ready || []);
       })
       .catch((err) =>
-        setPageError(err.message || t("sg.error"))
+        setPageError(err.message || "Could not load draw readiness.")
       )
       .finally(() => setLoading(false));
   };
@@ -62,216 +54,230 @@ export default function LaunchDraw() {
   );
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("admin.launchDraw.adminTools")}
-        title={t("admin.launchDraw.title")}
-        subtitle={t("admin.launchDraw.subtitle")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("admin.launchDraw.title") },
-        ]}
-      />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
 
-      <PageBody>
-        {pageError && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {pageError}
-          </Alert>
-        )}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
 
-        <StatBar>
-          <StatCell
-            label={t("admin.launchDraw.statTotal")}
-            value={stats.total}
-            sub={t("admin.launchDraw.statTotalHint")}
-          />
-          <StatCell
-            label={t("admin.launchDraw.statReady")}
-            value={stats.ready}
-            sub={t("admin.launchDraw.statReadyHint")}
-            accent={stats.ready > 0}
-          />
-          <StatCell
-            label={t("admin.launchDraw.statNotReady")}
-            value={stats.notReady}
-            sub={t("admin.launchDraw.statNotReadyHint")}
-          />
-          <StatCell
-            label={t("admin.launchDraw.statEligible")}
-            value={stats.eligible}
-            sub={t("admin.launchDraw.statEligibleHint")}
-          />
-        </StatBar>
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm font-semibold text-[#ED8D31] mb-2">
+                {t("admin.launchDraw.adminTools")}
+              </p>
+              <h1 className="text-[38px] font-extrabold text-[#2F343B] leading-[110%]">
+                {t("admin.launchDraw.title")}
+              </h1>
+              <p className="text-[#7A8088] text-sm mt-2 leading-[170%] max-w-[850px]">
+                {t("admin.launchDraw.subtitle")}
+              </p>
+            </div>
 
-        <DataPanel
-          title={t("admin.launchDraw.readyTitle")}
-          subtitle={t("admin.launchDraw.readyHint")}
-          badge={`${ready.length}`}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px]">
-              <thead className="bg-[#0A0A0A]">
-                <tr>
-                  {[
-                    t("admin.launchDraw.col.activity"),
-                    t("admin.launchDraw.col.session"),
-                    t("admin.launchDraw.col.drawDate"),
-                    t("admin.launchDraw.col.applicants"),
-                    t("admin.launchDraw.col.eligible"),
-                    t("admin.launchDraw.col.quota"),
-                    t("admin.launchDraw.col.action"),
-                  ].map((h, i) => (
-                    <th
-                      key={i}
-                      className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-14 text-center text-[13px] text-[#737373]"
-                    >
-                      {t("admin.launchDraw.loading")}
-                    </td>
-                  </tr>
-                ) : ready.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-14 text-center text-[13px] text-[#737373]"
-                    >
-                      {t("admin.launchDraw.noReady")}
-                    </td>
-                  </tr>
-                ) : (
-                  ready.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                    >
-                      <td className="px-6 py-5">
-                        <p className="text-[#0A0A0A] text-[14px] font-bold">
-                          {s.activity_title}
-                        </p>
-                        <p className="text-[11px] uppercase tracking-wider text-[#737373] mt-1">
-                          {s.activity_category}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
-                        #{s.id}
-                        <p className="text-[11px] text-[#A3A3A3] mt-0.5">
-                          {formatDate(s.start_date)} → {formatDate(s.end_date)}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#0A0A0A]">
-                        {formatDate(s.draw_date)}
-                        {s.draw_location && (
-                          <p className="text-[11px] text-[#737373] mt-0.5">
-                            {s.draw_location}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-6 py-5 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
-                        {s.applicants}
-                      </td>
-                      <td className="px-6 py-5 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
-                        {s.eligible_count}
-                      </td>
-                      <td className="px-6 py-5 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
-                        {s.total_quota}
-                      </td>
-                      <td className="px-6 py-5">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() =>
-                            navigate(`/dashboard/admin/draw/run/${s.id}`)
-                          }
+            {pageError && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {pageError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <StatCard
+                title={t("admin.launchDraw.statTotal")}
+                value={stats.total}
+                subtitle={t("admin.launchDraw.statTotalHint")}
+              />
+              <StatCard
+                title={t("admin.launchDraw.statReady")}
+                value={stats.ready}
+                subtitle={t("admin.launchDraw.statReadyHint")}
+              />
+              <StatCard
+                title={t("admin.launchDraw.statNotReady")}
+                value={stats.notReady}
+                subtitle={t("admin.launchDraw.statNotReadyHint")}
+              />
+              <StatCard
+                title={t("admin.launchDraw.statEligible")}
+                value={stats.eligible}
+                subtitle={t("admin.launchDraw.statEligibleHint")}
+              />
+            </div>
+
+            <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                <h2 className="text-[24px] font-bold text-[#2F343B]">
+                  {t("admin.launchDraw.readyTitle")}
+                </h2>
+                <p className="text-sm text-[#7A8088] mt-1">
+                  {t("admin.launchDraw.readyHint")}
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1100px]">
+                  <thead className="bg-[#FBFAF8]">
+                    <tr>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.activity")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.session")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.drawDate")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.applicants")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.eligible")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.quota")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.action")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading && (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="px-5 py-10 text-center text-sm text-[#7A8088]"
                         >
-                          {t("admin.launchDraw.runDraw")} →
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </DataPanel>
+                          {t("admin.launchDraw.loading")}
+                        </td>
+                      </tr>
+                    )}
 
-        <DataPanel
-          title={t("admin.launchDraw.notReadyTitle")}
-          subtitle={t("admin.launchDraw.notReadyHint")}
-          badge={`${notReady.length}`}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-[#0A0A0A]">
-                <tr>
-                  {[
-                    t("admin.launchDraw.col.activity"),
-                    t("admin.launchDraw.col.session"),
-                    t("admin.launchDraw.col.blocking"),
-                  ].map((h, i) => (
-                    <th
-                      key={i}
-                      className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {!loading && notReady.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="px-6 py-14 text-center text-[13px] text-[#737373]"
-                    >
-                      {t("admin.launchDraw.allReady")}
-                    </td>
-                  </tr>
-                ) : (
-                  notReady.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                    >
-                      <td className="px-6 py-5 text-[14px] font-bold text-[#0A0A0A]">
-                        {s.activity_title}
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
-                        #{s.id} · draw {formatDate(s.draw_date)}
-                      </td>
-                      <td className="px-6 py-5">
-                        <ul className="space-y-1.5">
-                          {(s.blocking_reasons || []).map((r, i) => (
-                            <li
-                              key={i}
-                              className="flex items-start gap-2 text-[12px] text-[#9F1F1F]"
-                            >
-                              <span className="inline-block w-1 h-1 rounded-full bg-[#9F1F1F] mt-1.5" />
-                              {r}
-                            </li>
-                          ))}
-                        </ul>
-                      </td>
+                    {!loading && ready.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                        >
+                          {t("admin.launchDraw.noReady")}
+                        </td>
+                      </tr>
+                    )}
+
+                    {ready.map((s) => (
+                      <tr key={s.id} className="border-t border-[#E5E2DC]">
+                        <td className="px-5 py-5 text-sm font-semibold text-[#2F343B]">
+                          {s.activity_title}
+                          <p className="text-xs text-[#7A8088] mt-1">
+                            {s.activity_category}
+                          </p>
+                        </td>
+                        <td className="px-5 py-5 text-sm text-[#7A8088]">
+                          #{s.id} ({formatDate(s.start_date)} →{" "}
+                          {formatDate(s.end_date)})
+                        </td>
+                        <td className="px-5 py-5 text-sm text-[#7A8088]">
+                          {formatDate(s.draw_date)}
+                          {s.draw_location && (
+                            <p className="text-xs mt-1">{s.draw_location}</p>
+                          )}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-medium text-[#2F343B]">
+                          {s.applicants}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-medium text-[#2F343B]">
+                          {s.eligible_count}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-medium text-[#2F343B]">
+                          {s.total_quota}
+                        </td>
+                        <td className="px-5 py-5">
+                          <button
+                            onClick={() =>
+                              navigate(`/dashboard/admin/draw/run/${s.id}`)
+                            }
+                            className="px-4 py-2 rounded-lg bg-[#ED8D31] text-white text-sm font-semibold"
+                          >
+                            {t("admin.launchDraw.runDraw")}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                <h2 className="text-[24px] font-bold text-[#2F343B]">
+                  {t("admin.launchDraw.notReadyTitle")}
+                </h2>
+                <p className="text-sm text-[#7A8088] mt-1">
+                  {t("admin.launchDraw.notReadyHint")}
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1000px]">
+                  <thead className="bg-[#FBFAF8]">
+                    <tr>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.activity")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.session")}
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                        {t("admin.launchDraw.col.blocking")}
+                      </th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {!loading && notReady.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan="3"
+                          className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                        >
+                          {t("admin.launchDraw.allReady")}
+                        </td>
+                      </tr>
+                    )}
+
+                    {notReady.map((s) => (
+                      <tr key={s.id} className="border-t border-[#E5E2DC]">
+                        <td className="px-5 py-5 text-sm font-semibold text-[#2F343B]">
+                          {s.activity_title}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-[#7A8088]">
+                          #{s.id} (draw date {formatDate(s.draw_date)})
+                        </td>
+                        <td className="px-5 py-5 text-sm text-[#A93B3B]">
+                          <ul className="list-disc list-inside">
+                            {(s.blocking_reasons || []).map((r, i) => (
+                              <li key={i}>{r}</li>
+                            ))}
+                          </ul>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
-        </DataPanel>
-      </PageBody>
-    </PageShell>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value, subtitle }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+      {subtitle && <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>}
+    </div>
   );
 }

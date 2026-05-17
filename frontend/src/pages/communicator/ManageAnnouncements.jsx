@@ -1,44 +1,26 @@
 import { useEffect, useState } from "react";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { Link } from "react-router-dom";
+import { publishAnnouncement } from "../../services/announcementService";
 import {
   getCommunicatorAnnouncements,
-  publishAnnouncement,
   deleteAnnouncement,
 } from "../../services/announcementService";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  StatusPill,
-  Modal,
-  Button,
-  Alert,
-} from "../../components/ui/Studio";
-
-const STATUS_TONE = {
-  DRAFT: "warn",
-  PUBLISHED: "success",
-  ARCHIVED: "neutral",
-};
-
-function formatDate(item) {
-  return item.publish_date || item.created_at?.slice(0, 10) || "—";
-}
-
-function shortText(text, max = 110) {
-  if (!text) return "";
-  return text.length > max ? text.slice(0, max) + "…" : text;
-}
 
 export default function ManageAnnouncements() {
   const t = useT();
   const [announcements, setAnnouncements] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [modal, setModal] = useState({ open: false, type: null, id: null });
+
+  const [modal, setModal] = useState({
+    open: false,
+    type: null,
+    announcementId: null,
+  });
 
   useEffect(() => {
     loadAnnouncements();
@@ -49,8 +31,9 @@ export default function ManageAnnouncements() {
       setLoading(true);
       const data = await getCommunicatorAnnouncements();
       setAnnouncements(data);
+      setSelectedId(data[0]?.id ?? null);
     } catch (err) {
-      setError(err.message || t("sg.loadingFailed"));
+      setError(err.message || t("communicator.announcements.loadingFailed"));
     } finally {
       setLoading(false);
     }
@@ -59,266 +42,350 @@ export default function ManageAnnouncements() {
   async function handlePublish(id) {
     try {
       const updated = await publishAnnouncement(id);
+  
       setAnnouncements((prev) =>
         prev.map((item) => (item.id === id ? updated : item))
       );
     } catch (err) {
-      setError(err.message || t("sg.publishImpossible"));
+      setError(err.message || t("communicator.announcements.publishImpossible"));
     }
   }
+
+  const selectedAnnouncement =
+    announcements.find(
+      (item) => item.id === (modal.announcementId ?? selectedId)
+    ) || null;
+
+  const totalCount = announcements.length;
+  const draftCount = announcements.filter((a) => a.status === "DRAFT").length;
+  const publishedCount = announcements.filter((a) => a.status === "PUBLISHED").length;
+  const archivedCount = announcements.filter((a) => a.status === "ARCHIVED").length;
+
+  const closeModal = () => {
+    setModal({ open: false, type: null, announcementId: null });
+  };
+
+  const openModal = (type, announcementId = selectedId) => {
+    setModal({ open: true, type, announcementId });
+  };
 
   async function handleDelete(id) {
     try {
       await deleteAnnouncement(id);
-      setAnnouncements((prev) => prev.filter((item) => item.id !== id));
+      const next = announcements.filter((item) => item.id !== id);
+      setAnnouncements(next);
+      setSelectedId(next[0]?.id ?? null);
       closeModal();
     } catch (err) {
-      setError(err.message || t("sg.deleteImpossible"));
+      setError(err.message || t("communicator.announcements.deleteImpossible"));
     }
   }
 
-  const closeModal = () =>
-    setModal({ open: false, type: null, id: null });
+  return (
+    <>
+      <div className="flex h-screen bg-[#F7F7F5]">
+        <DashboardSidebar />
 
-  const selected =
-    announcements.find((a) => a.id === modal.id) || null;
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardTopBar />
 
-  const totalCount = announcements.length;
-  const draftCount = announcements.filter((a) => a.status === "DRAFT").length;
-  const publishedCount = announcements.filter(
-    (a) => a.status === "PUBLISHED"
-  ).length;
-  const archivedCount = announcements.filter(
-    (a) => a.status === "ARCHIVED"
-  ).length;
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-6">
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[#ED8D31] mb-2">
+                    {t("dashboard.sidebar.communicatorTools")}
+                  </p>
+                  <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                    {t("communicator.announcements.title")}
+                  </h1>
+                  <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
+                    {t("communicator.announcements.subtitle")}
+                  </p>
+                </div>
+
+                <Link
+                  to="/dashboard/communicator/announcements/create"
+                  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors"
+                >
+                  {t("communicator.announcements.new")}
+                </Link>
+              </div>
+
+              {error && (
+                <div className="rounded-[16px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard title={t("communicator.announcements.statTotal")} value={totalCount} subtitle="" />
+                <StatCard title={t("communicator.announcements.statDrafts")} value={draftCount} subtitle="" />
+                <StatCard title={t("communicator.announcements.statPublished")} value={publishedCount} subtitle="" />
+                <StatCard title={t("communicator.announcements.statArchived")} value={archivedCount} subtitle="" />
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
+                    <div>
+                      <h3 className="text-[24px] font-bold text-[#2F343B]">
+                        {t("communicator.announcements.panelTitle")}
+                      </h3>
+                      <p className="text-sm text-[#7A8088] mt-1">
+                        {t("communicator.announcements.panelSub")}
+                      </p>
+                    </div>
+
+                    <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
+                      {announcements.length} items
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1050px]">
+                      <thead className="bg-[#FBFAF8]">
+                        <tr>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.announcements.col.title")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.announcements.col.date")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.announcements.col.document")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.announcements.col.status")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.announcements.col.actions")}</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {loading ? (
+                          <tr>
+                            <td colSpan="5" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                              {t("communicator.common.loading")}
+                            </td>
+                          </tr>
+                        ) : (
+                          announcements.map((item) => (
+                            <tr
+                              key={item.id}
+                              className={`border-t border-[#E5E2DC] align-top ${
+                                selectedId === item.id ? "bg-[#FCFBF9]" : ""
+                              }`}
+                            >
+                              <td className="px-5 py-5">
+                                <button onClick={() => setSelectedId(item.id)} className="text-left">
+                                  <p className="font-semibold text-[#2F343B] text-sm">
+                                    {item.title}
+                                  </p>
+                                  <p className="text-xs text-[#7A8088] mt-1 max-w-[320px]">
+                                    {shortText(item.content)}
+                                  </p>
+                                </button>
+                              </td>
+
+                              <td className="px-5 py-5 text-sm text-[#7A8088]">
+                                {formatDate(item)}
+                              </td>
+
+                              <td className="px-5 py-5 text-sm text-[#7A8088]">
+                                {item.document_path ? t("communicator.announcements.attached") : t("communicator.createAnnouncement.none")}
+                              </td>
+
+                              <td className="px-5 py-5">
+                                <StatusBadge status={item.status} label={t(`statuses.${item.status}`) || item.status} />
+                              </td>
+
+                              <td className="px-5 py-5">
+  <div className="flex flex-wrap gap-2">
+
+    <button
+      onClick={() => openModal("details", item.id)}
+      className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-[#2F343B] text-sm"
+    >
+      {t("communicator.common.details")}
+    </button>
+
+    {item.status === "DRAFT" && (
+      <button
+        onClick={() => handlePublish(item.id)}
+        className="px-3 py-1.5 rounded-lg bg-[#ED8D31] text-white text-sm"
+      >
+        {t("communicator.common.publish")}
+      </button>
+    )}
+
+    <button
+      onClick={() => openModal("delete", item.id)}
+      className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm"
+    >
+      {t("communicator.common.delete")}
+    </button>
+
+  </div>
+</td>
+                            </tr>
+                          ))
+                        )}
+
+                        {!loading && announcements.length === 0 && (
+                          <tr>
+                            <td colSpan="5" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                              {t("communicator.announcements.empty")}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <div className="space-y-5">
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                    <h3 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("admin.reports.outcomesTitle")}
+                    </h3>
+
+                    <div className="space-y-3 mt-4">
+                      <SummaryRow label={t("communicator.announcements.statDrafts")} value={draftCount} />
+                      <SummaryRow label={t("communicator.announcements.statPublished")} value={publishedCount} />
+                      <SummaryRow label={t("communicator.announcements.statArchived")} value={archivedCount} />
+                    </div>
+                  </section>
+
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                    <h3 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("communicator.common.details")}
+                    </h3>
+
+                    {selectedAnnouncement && (
+                      <div className="space-y-3 mt-4">
+                        <SummaryRow label={t("communicator.announcements.col.title")} value={selectedAnnouncement.title} />
+                        <SummaryRow label={t("communicator.announcements.col.status")} value={t(`statuses.${selectedAnnouncement.status}`) || selectedAnnouncement.status} />
+                        <SummaryRow label={t("communicator.announcements.col.date")} value={formatDate(selectedAnnouncement)} />
+                        <SummaryRow label={t("communicator.announcements.col.document")} value={selectedAnnouncement.document_path ? t("communicator.announcements.attached") : t("communicator.createAnnouncement.none")} />
+                      </div>
+                    )}
+                  </section>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {modal.open && modal.type === "details" && selectedAnnouncement && (
+        <ModalShell title={t("communicator.common.details")} closeLabel={t("communicator.surveys.close")} onClose={closeModal}>
+          <DetailRow label={t("communicator.announcements.col.title")} value={selectedAnnouncement.title} />
+          <DetailRow label={t("communicator.announcements.col.date")} value={formatDate(selectedAnnouncement)} />
+          <DetailRow label={t("communicator.announcements.col.status")} value={t(`statuses.${selectedAnnouncement.status}`) || selectedAnnouncement.status} />
+          <DetailRow label={t("communicator.announcements.col.document")} value={selectedAnnouncement.document_name || t("communicator.createAnnouncement.none")} />
+
+          <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
+            <p className="text-sm font-semibold text-[#2F343B] mb-2">{t("communicator.createAnnouncement.contentField")}</p>
+            <p className="text-sm text-[#7A8088] leading-[170%] whitespace-pre-line">
+              {selectedAnnouncement.content}
+            </p>
+          </div>
+        </ModalShell>
+      )}
+
+      {modal.open && modal.type === "delete" && selectedAnnouncement && (
+        <ConfirmModal
+          title={t("communicator.announcements.deleteTitle")}
+          message={t("communicator.announcements.confirmDelete")}
+          confirmLabel={t("communicator.common.delete")}
+          cancelLabel={t("communicator.common.cancel")}
+          onCancel={closeModal}
+          onConfirm={() => handleDelete(selectedAnnouncement.id)}
+        />
+      )}
+    </>
+  );
+}
+
+function formatDate(item) {
+  return item.publish_date || item.created_at?.slice(0, 10) || "-";
+}
+
+function shortText(text, max = 120) {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "..." : text;
+}
+
+function StatCard({ title, value, subtitle }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+      <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
+      <span className="text-sm text-[#7A8088]">{label}</span>
+      <span className="text-sm font-bold text-[#2F343B] text-right">{value}</span>
+    </div>
+  );
+}
+
+function StatusBadge({ status, label }) {
+  const styles = {
+    DRAFT: "bg-[#FFF4D6] text-[#B98900]",
+    PUBLISHED: "bg-[#D4F4DD] text-[#2D7A4A]",
+    ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
+  };
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.communication")}
-        title={t("sg.announcements")}
-        subtitle={t("sg.subAnnouncements")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.announcements") },
-        ]}
-        actions={
-          <Button
-            to="/dashboard/communicator/announcements/create"
-            variant="primary"
-            size="md"
-            icon={<span className="text-[14px] leading-none">＋</span>}
-          >
-            {t("sg.newAnnouncement")}
-          </Button>
-        }
-      />
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
+      {label || status}
+    </span>
+  );
+}
 
-      <PageBody>
-        {error && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {error}
-          </Alert>
-        )}
+function ModalShell({ title, children, onClose, closeLabel = "Close" }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-[20px] p-6 w-full max-w-[520px] shadow-lg">
+        <h2 className="text-xl font-bold text-[#2F343B] mb-4">{title}</h2>
+        <div className="space-y-3 mb-6">{children}</div>
+        <div className="flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 rounded-[12px] border border-[#E5E2DC]">
+            {closeLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        <StatBar>
-          <StatCell label={t("sg.total")} value={totalCount} sub={t("sg.subAllAnnouncements")} />
-          <StatCell
-            label={t("sg.drafts")}
-            value={draftCount}
-            sub={t("sg.subNotPublished")}
-            accent={draftCount > 0}
-          />
-          <StatCell
-            label={t("sg.published")}
-            value={publishedCount}
-            sub={t("sg.subVisibleToEmployees")}
-          />
-          <StatCell label={t("sg.archived")} value={archivedCount} sub={t("sg.subOffCircuit")} />
-        </StatBar>
+function ConfirmModal({ title, message, confirmLabel, cancelLabel = "Cancel", onCancel, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-[20px] p-6 w-full max-w-[420px] shadow-lg">
+        <h2 className="text-xl font-bold text-[#2F343B] mb-3">{title}</h2>
+        <p className="text-sm text-[#7A8088] mb-6 leading-[170%]">{message}</p>
 
-        <DataPanel
-          title={t("sg.panelAnnouncementList")}
-          subtitle={t("sg.panelAnnouncementListSub")}
-          badge={`${announcements.length}`}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px]">
-              <thead className="bg-[#0A0A0A]">
-                <tr>
-                  {[t("sg.colTitle"), t("sg.colDate"), t("sg.colDocument"), t("sg.colStatus"), t("sg.colActions")].map(
-                    (h, i) => (
-                      <th
-                        key={i}
-                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                      >
-                        {h}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      {t("sg.loading")}
-                    </td>
-                  </tr>
-                ) : announcements.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      {t("sg.emptyAnnouncementsAll")}
-                    </td>
-                  </tr>
-                ) : (
-                  announcements.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                    >
-                      <td className="px-6 py-5 max-w-[420px]">
-                        <p className="text-[#0A0A0A] text-[14px] font-bold">
-                          {item.title}
-                        </p>
-                        <p className="text-[12px] text-[#737373] mt-1 line-clamp-2">
-                          {shortText(item.content)}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
-                        {formatDate(item)}
-                      </td>
-                      <td className="px-6 py-5 text-[12px] text-[#525252]">
-                        {item.document_path ? t("sg.attached") : "—"}
-                      </td>
-                      <td className="px-6 py-5">
-                        <StatusPill
-                          tone={STATUS_TONE[item.status] || "neutral"}
-                          label={item.status}
-                        />
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setModal({
-                                open: true,
-                                type: "details",
-                                id: item.id,
-                              })
-                            }
-                          >
-                            {t("sg.details")}
-                          </Button>
-                          {item.status === "DRAFT" && (
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => handlePublish(item.id)}
-                            >
-                              {t("sg.publish")}
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() =>
-                              setModal({
-                                open: true,
-                                type: "delete",
-                                id: item.id,
-                              })
-                            }
-                          >
-                            {t("sg.delete")}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </DataPanel>
-      </PageBody>
+        <div className="flex justify-end gap-3">
+          <button onClick={onCancel} className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm">
+            {cancelLabel}
+          </button>
 
-      <Modal
-        open={modal.open && modal.type === "details" && !!selected}
-        onClose={closeModal}
-        title={selected?.title || t("sg.details")}
-        width="lg"
-        footer={
-          <Button variant="outline" size="md" onClick={closeModal}>
-            {t("common.close")}
-          </Button>
-        }
-      >
-        {selected && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-[12px]">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-                  {t("sg.colDate")}
-                </p>
-                <p className="text-[13px] font-bold text-[#0A0A0A] tabular-nums">
-                  {formatDate(selected)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-                  {t("sg.colStatus")}
-                </p>
-                <StatusPill
-                  tone={STATUS_TONE[selected.status] || "neutral"}
-                  label={selected.status}
-                />
-              </div>
-              <div className="col-span-2">
-                <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-                  {t("sg.labelDocument")}
-                </p>
-                <p className="text-[13px] text-[#0A0A0A]">
-                  {selected.document_name || t("sg.noneNeutral")}
-                </p>
-              </div>
-            </div>
-            <div className="border-t border-[#E5E5E5] pt-4">
-              <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-2">
-                {t("sg.labelContent")}
-              </p>
-              <p className="text-[13px] text-[#0A0A0A] leading-[1.7] whitespace-pre-line">
-                {selected.content}
-              </p>
-            </div>
-          </div>
-        )}
-      </Modal>
+          <button onClick={onConfirm} className="px-4 py-2 rounded-[12px] bg-red-600 text-white text-sm font-medium">
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      <Modal
-        open={modal.open && modal.type === "delete" && !!selected}
-        onClose={closeModal}
-        title={t("sg.deleteAnnouncementTitle")}
-        description={
-          selected ? `« ${selected.title} »` : ""
-        }
-        footer={
-          <>
-            <Button variant="outline" size="md" onClick={closeModal}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="danger"
-              size="md"
-              onClick={() => selected && handleDelete(selected.id)}
-            >
-              {t("sg.delete")}
-            </Button>
-          </>
-        }
-      />
-    </PageShell>
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
+      <span className="text-sm text-[#7A8088]">{label}</span>
+      <span className="text-sm font-semibold text-[#2F343B] text-right">
+        {value || "-"}
+      </span>
+    </div>
   );
 }

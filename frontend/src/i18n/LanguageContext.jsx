@@ -34,8 +34,10 @@ function lookup(dict, lang, key, vars) {
       break;
     }
   }
-  if (node === undefined && lang !== "en") {
-    return lookup(dict, "en", key, vars);
+  if (node === undefined) {
+    // Fallback chain: ar → fr → en
+    if (lang === "ar") return lookup(dict, "fr", key, vars);
+    if (lang !== "en") return lookup(dict, "en", key, vars);
   }
   if (typeof node !== "string") return key;
   if (!vars) return node;

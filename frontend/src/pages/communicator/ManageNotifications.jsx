@@ -1,31 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  createNotification,
-  getSentNotifications,
-} from "../../services/notificationService";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { createNotification, getSentNotifications } from "../../services/notificationService";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  StatusPill,
-  Button,
-  Alert,
-  TextField,
-  TextArea,
-} from "../../components/ui/Studio";
-
-function formatDate(item) {
-  return item.created_at?.slice(0, 10) || "—";
-}
-
-function shortText(text, max = 120) {
-  if (!text) return "";
-  return text.length > max ? text.slice(0, max) + "…" : text;
-}
 
 export default function ManageNotifications() {
   const t = useT();
@@ -43,33 +20,33 @@ export default function ManageNotifications() {
     try {
       setLoading(true);
       const response = await getSentNotifications();
-      const data = Array.isArray(response)
-        ? response
-        : response.data || response.notifications || [];
+      const data = Array.isArray(response) ? response : response.data || response.notifications || [];
       setNotifications(data);
     } catch (err) {
-      setError(err.message || t("sg.loadingFailed"));
+      setError(err.message || t("communicator.notifications.loadFailed"));
     } finally {
       setLoading(false);
     }
   }
 
+  function handleChange(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
   async function handleSend() {
     if (!form.title.trim() || !form.message.trim()) {
-      setError(t("sg.mandatoryFields"));
+      setError(t("communicator.notifications.requiredFields"));
       return;
     }
+
     try {
       setSending(true);
       setError("");
-      await createNotification({
-        title: form.title,
-        message: form.message,
-      });
+      await createNotification({ title: form.title, message: form.message });
       setForm({ title: "", message: "" });
       await loadNotifications();
     } catch (err) {
-      setError(err.message || t("sg.sendImpossible"));
+      setError(err.message || t("communicator.notifications.sendFailed"));
     } finally {
       setSending(false);
     }
@@ -78,129 +55,179 @@ export default function ManageNotifications() {
   const totalCount = notifications.length;
   const generalCount = notifications.filter((n) => n.type === "GENERAL").length;
   const surveyCount = notifications.filter((n) => n.type === "SURVEY").length;
-  const announcementCount = notifications.filter(
-    (n) => n.type === "ANNOUNCEMENT"
-  ).length;
+  const announcementCount = notifications.filter((n) => n.type === "ANNOUNCEMENT").length;
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.communication")}
-        title={t("sg.notifications")}
-        subtitle={t("sg.subNotifications")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.notifications") },
-        ]}
-      />
+    <>
+      <div className="flex h-screen bg-[#F7F7F5]">
+        <DashboardSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardTopBar />
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm font-semibold text-[#ED8D31] mb-2">
+                  {t("dashboard.sidebar.communicatorTools")}
+                </p>
+                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                  {t("communicator.notifications.title")}
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
+                  {t("communicator.notifications.subtitle")}
+                </p>
+              </div>
 
-      <PageBody>
-        {error && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {error}
-          </Alert>
-        )}
+              {error && (
+                <div className="rounded-[16px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
 
-        <StatBar>
-          <StatCell label={t("sg.total")} value={totalCount} sub={t("sg.subAllNotifs")} />
-          <StatCell label={t("sg.typeGeneral")} value={generalCount} sub={t("sg.subGeneric")} accent={generalCount > 0} />
-          <StatCell label={t("sg.typeSurvey")} value={surveyCount} sub={t("sg.subLinkedToSurveys")} />
-          <StatCell label={t("sg.typeAnnouncement")} value={announcementCount} sub={t("sg.subLinkedToAnnouncements")} />
-        </StatBar>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <StatCard title={t("communicator.notifications.statTotal")} value={totalCount} />
+                <StatCard title={t("communicator.notifications.statGeneral")} value={generalCount} />
+                <StatCard title={t("communicator.notifications.statSurvey")} value={surveyCount} />
+                <StatCard title={t("communicator.notifications.statAnnouncement")} value={announcementCount} />
+              </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-6">
-          <DataPanel
-            title={t("sg.panelSendNotif")}
-            subtitle={t("sg.panelSendNotifSub")}
-          >
-            <div className="p-6 space-y-5">
-              <TextField
-                label={t("sg.colTitle")}
-                value={form.title}
-                onChange={(v) => setForm((p) => ({ ...p, title: v }))}
-                placeholder={t("sg.phTitle")}
-                required
-              />
-              <TextArea
-                label={t("sg.labelMessage")}
-                value={form.message}
-                onChange={(v) => setForm((p) => ({ ...p, message: v }))}
-                placeholder={t("sg.phMessage")}
-                rows={7}
-                required
-              />
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={handleSend}
-                disabled={sending}
-              >
-                {sending ? t("sg.sending") : t("sg.sendNow")}
-              </Button>
+              <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6">
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                  <h2 className="text-[24px] font-bold text-[#2F343B]">
+                    {t("communicator.notifications.panelSend")}
+                  </h2>
+                  <p className="text-sm text-[#7A8088] mt-1 mb-5">
+                    {t("communicator.notifications.panelSendSub")}
+                  </p>
+
+                  <div className="space-y-5">
+                    <Field label={t("communicator.notifications.titleField")}>
+                      <input
+                        type="text"
+                        value={form.title}
+                        onChange={(e) => handleChange("title", e.target.value)}
+                        placeholder={t("communicator.notifications.titlePlaceholder")}
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                      />
+                    </Field>
+
+                    <Field label={t("communicator.notifications.messageField")}>
+                      <textarea
+                        value={form.message}
+                        onChange={(e) => handleChange("message", e.target.value)}
+                        rows={7}
+                        placeholder={t("communicator.notifications.messagePlaceholder")}
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+                      />
+                    </Field>
+
+                    <button
+                      onClick={handleSend}
+                      disabled={sending}
+                      className="w-full px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors disabled:opacity-60"
+                    >
+                      {sending ? t("communicator.notifications.sending") : t("communicator.notifications.send")}
+                    </button>
+                  </div>
+                </section>
+
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#E5E2DC] flex items-center justify-between">
+                    <div>
+                      <h2 className="text-[24px] font-bold text-[#2F343B]">
+                        {t("communicator.notifications.panelHistory")}
+                      </h2>
+                      <p className="text-sm text-[#7A8088] mt-1">
+                        {t("communicator.notifications.panelHistorySub")}
+                      </p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-[#F1F0EC] text-[#7A8088] text-xs font-semibold">
+                      {notifications.length}
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px]">
+                      <thead className="bg-[#FBFAF8]">
+                        <tr>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.notifications.col.title")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.notifications.col.message")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.notifications.col.type")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.notifications.col.sent")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loading ? (
+                          <tr>
+                            <td colSpan="4" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                              {t("communicator.common.loading")}
+                            </td>
+                          </tr>
+                        ) : (
+                          notifications.map((item) => (
+                            <tr key={item.id} className="border-t border-[#E5E2DC] align-top">
+                              <td className="px-5 py-5">
+                                <p className="font-semibold text-[#2F343B] text-sm">{item.title}</p>
+                              </td>
+                              <td className="px-5 py-5 text-sm text-[#7A8088] max-w-[360px]">
+                                {shortText(item.message)}
+                              </td>
+                              <td className="px-5 py-5">
+                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#F1F0EC] text-[#7A8088]">
+                                  {t(`notificationTypes.${item.type}`) || item.type}
+                                </span>
+                              </td>
+                              <td className="px-5 py-5 text-sm text-[#7A8088]">
+                                {formatDate(item)}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+
+                        {!loading && notifications.length === 0 && (
+                          <tr>
+                            <td colSpan="4" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                              {t("communicator.notifications.empty")}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
             </div>
-          </DataPanel>
-
-          <DataPanel
-            title={t("sg.sentHistory")}
-            subtitle={t("sg.subAllNotifs")}
-            badge={`${notifications.length}`}
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
-                <thead className="bg-[#0A0A0A]">
-                  <tr>
-                    {[t("sg.colTitle"), t("sg.colMessage"), t("sg.colType"), t("sg.colSent")].map((h, i) => (
-                      <th
-                        key={i}
-                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        {t("sg.loading")}
-                      </td>
-                    </tr>
-                  ) : notifications.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        {t("sg.emptySent")}
-                      </td>
-                    </tr>
-                  ) : (
-                    notifications.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                      >
-                        <td className="px-6 py-5">
-                          <p className="text-[#0A0A0A] text-[14px] font-bold">
-                            {item.title}
-                          </p>
-                        </td>
-                        <td className="px-6 py-5 text-[12px] text-[#525252] max-w-[360px]">
-                          {shortText(item.message)}
-                        </td>
-                        <td className="px-6 py-5">
-                          <StatusPill tone="info" label={item.type} />
-                        </td>
-                        <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
-                          {formatDate(item)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </DataPanel>
+          </main>
         </div>
-      </PageBody>
-    </PageShell>
+      </div>
+    </>
+  );
+}
+
+function formatDate(item) {
+  return item.created_at?.slice(0, 10) || "-";
+}
+
+function shortText(text, max = 120) {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "..." : text;
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function StatCard({ title, value }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+    </div>
   );
 }

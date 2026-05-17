@@ -4,22 +4,12 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { getPublicAnnouncements } from "../services/announcementService";
 
 function formatDate(item) {
-  const raw = item.publish_date || item.created_at?.slice(0, 10);
-  if (!raw) return "";
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return raw;
-  return d
-    .toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    })
-    .toUpperCase();
+  return item.publish_date || item.created_at?.slice(0, 10) || "";
 }
 
 function shortText(text, max = 140) {
   if (!text) return "";
-  return text.length > max ? text.slice(0, max) + "…" : text;
+  return text.length > max ? text.slice(0, max) + "..." : text;
 }
 
 export default function AnnouncementsSection() {
@@ -35,92 +25,85 @@ export default function AnnouncementsSection() {
       .finally(() => setLoading(false));
   }, []);
 
-  const scrollLeft = () =>
+  const scrollLeft = () => {
     railRef.current?.scrollBy({ left: -336, behavior: "smooth" });
-  const scrollRight = () =>
+  };
+
+  const scrollRight = () => {
     railRef.current?.scrollBy({ left: 336, behavior: "smooth" });
+  };
 
   return (
-    <section className="py-16 lg:py-20 bg-[#FAFAFA] border-y border-[#E5E5E5]">
-      <div className="max-w-[1400px] mx-auto px-8 lg:px-12">
-        <div className="flex items-end justify-between gap-6 mb-10 flex-wrap">
-          <div className="max-w-[680px]">
-            <p className="text-[#ED8D31] text-[11px] uppercase tracking-[0.35em] font-bold mb-3">
+    <section className="py-20 bg-[#F7F7F5]">
+      <div className="max-w-[1180px] mx-auto px-4">
+        <div className="flex items-end justify-between gap-6 mb-8">
+          <div>
+            <p className="text-sm font-bold text-[#ED8D31] uppercase tracking-[0.18em]">
               {t("homeSections.announcementsTag")}
             </p>
-            <h2 className="text-[#0A0A0A] text-[36px] lg:text-[42px] font-bold tracking-[-0.02em] leading-tight">
+
+            <h2 className="text-[38px] font-bold text-[#2F343B] mt-3">
               {t("homeSections.announcementsTitle")}
             </h2>
-            <p className="text-[#525252] text-[14px] mt-3 leading-[1.7] max-w-[620px]">
+
+            <p className="text-[#7A8088] mt-3 max-w-[620px]">
               {t("homeSections.announcementsSubtitle")}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              to="/announcements"
-              className="hidden md:inline-flex items-center px-5 py-2.5 bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] text-[11px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] transition-colors"
-            >
-              {t("homeSections.seeAll")} →
-            </Link>
-            <div className="hidden md:flex gap-1">
-              <button
-                onClick={scrollLeft}
-                className="w-9 h-9 flex items-center justify-center bg-white border border-[#E5E5E5] hover:bg-[#0A0A0A] hover:text-white hover:border-[#0A0A0A] transition-colors text-[#0A0A0A]"
-              >
-                ‹
-              </button>
-              <button
-                onClick={scrollRight}
-                className="w-9 h-9 flex items-center justify-center bg-white border border-[#E5E5E5] hover:bg-[#0A0A0A] hover:text-white hover:border-[#0A0A0A] transition-colors text-[#0A0A0A]"
-              >
-                ›
-              </button>
-            </div>
-          </div>
+          <Link
+            to="/announcements"
+            className="hidden md:inline-flex px-5 py-3 rounded-full bg-white border border-[#E5E2DC] text-sm font-semibold text-[#2F343B]"
+          >
+            {t("homeSections.seeAll")}
+          </Link>
+        </div>
+
+        <div className="flex justify-end gap-2 mb-4">
+          <button
+            onClick={scrollLeft}
+            className="w-10 h-10 rounded-full bg-white border border-[#E5E2DC]"
+          >
+            ◀
+          </button>
+          <button
+            onClick={scrollRight}
+            className="w-10 h-10 rounded-full bg-white border border-[#E5E2DC]"
+          >
+            ▶
+          </button>
         </div>
 
         {loading ? (
-          <div className="flex gap-5 overflow-hidden">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="min-w-[320px] h-[240px] bg-white border border-[#E5E5E5] animate-pulse"
-              />
-            ))}
-          </div>
+          <p className="text-[#7A8088]">Loading announcements...</p>
         ) : announcements.length === 0 ? (
-          <div className="border border-dashed border-[#E5E5E5] bg-white py-16 px-8 text-center">
-            <p className="text-[13px] text-[#737373]">
-              {t("homeSections.seeAll")}
-            </p>
-          </div>
+          <p className="text-[#7A8088]">No announcements available yet.</p>
         ) : (
           <div
             ref={railRef}
-            className="flex gap-5 overflow-x-auto pb-3 scroll-smooth"
-            style={{ scrollbarWidth: "none" }}
+            className="flex gap-5 overflow-x-auto pb-4 scroll-smooth"
           >
-            <style>{`section [ref] { scrollbar-width: none; } .hide-sb::-webkit-scrollbar { display: none; }`}</style>
             {announcements.map((item) => (
               <Link
                 key={item.id}
                 to={`/announcements/${item.id}`}
-                className="group min-w-[320px] bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] transition-colors p-6 relative overflow-hidden"
+                className="min-w-[310px] bg-white rounded-[24px] border border-[#E5E2DC] p-5 hover:shadow-md transition"
               >
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#ED8D31] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500" />
-                <div className="flex items-center justify-between gap-3 mb-5">
-                  <span className="px-2.5 py-1 bg-[#0A0A0A] text-white text-[10px] uppercase tracking-[0.18em] font-bold">
-                    {t("homeSections.announcementsTag")}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="px-3 py-1 rounded-full bg-[#F3C38F] text-[#2F343B] text-xs font-bold">
+                    Announcement
                   </span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#A3A3A3] tabular-nums">
+
+                  <span className="text-xs text-[#7A8088]">
                     {formatDate(item)}
                   </span>
                 </div>
-                <h3 className="text-[#0A0A0A] text-[18px] font-bold tracking-[-0.015em] leading-tight mb-3 group-hover:text-[#ED8D31] transition-colors line-clamp-2">
+
+                <h3 className="text-xl font-bold text-[#2F343B] mt-5">
                   {item.title}
                 </h3>
-                <p className="text-[13px] text-[#525252] leading-[1.7] line-clamp-3">
+
+                <p className="text-sm text-[#7A8088] mt-3 leading-[170%]">
                   {shortText(item.content)}
                 </p>
               </Link>
@@ -130,9 +113,9 @@ export default function AnnouncementsSection() {
 
         <Link
           to="/announcements"
-          className="md:hidden inline-flex mt-6 items-center px-5 py-2.5 bg-white border border-[#E5E5E5] text-[11px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A]"
+          className="md:hidden inline-flex mt-6 px-5 py-3 rounded-full bg-white border border-[#E5E2DC] text-sm font-semibold text-[#2F343B]"
         >
-          {t("homeSections.seeAll")} →
+          {t("homeSections.seeAll")}
         </Link>
       </div>
     </section>

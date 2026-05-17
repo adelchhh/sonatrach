@@ -1,20 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, apiDelete, apiPut } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  Modal,
-  Button,
-  Alert,
-  Select,
-  TextField,
-} from "../../components/ui/Studio";
 
 export default function SitesAndQuotas() {
   const t = useT();
@@ -39,7 +28,7 @@ export default function SitesAndQuotas() {
         setAvailableSites(res.data.available_sites || []);
       })
       .catch((err) =>
-        setPageError(err.message || "Impossible de charger les attributions.")
+        setPageError(err.message || "Could not load allocations.")
       )
       .finally(() => setLoading(false));
   };
@@ -65,10 +54,12 @@ export default function SitesAndQuotas() {
   const handleAddSite = async (e) => {
     e.preventDefault();
     setFormError(null);
+
     if (!form.site_id || !form.quota) {
-      setFormError("Sélectionnez un site et précisez un quota.");
+      setFormError("Please select a site and set a quota.");
       return;
     }
+
     setSubmitting(true);
     try {
       await apiPost(`/sessions/${sessionId}/sites`, {
@@ -78,7 +69,7 @@ export default function SitesAndQuotas() {
       setForm({ site_id: "", quota: "" });
       load();
     } catch (err) {
-      setFormError(err.message || "Attribution impossible.");
+      setFormError(err.message || "Could not assign site.");
     } finally {
       setSubmitting(false);
     }
@@ -91,7 +82,7 @@ export default function SitesAndQuotas() {
       await apiPut(`/session-sites/${allocation.id}`, { quota: value });
       load();
     } catch (err) {
-      alert(err.message || "Mise à jour du quota impossible.");
+      alert(err.message || "Could not update quota.");
     }
   };
 
@@ -101,235 +92,332 @@ export default function SitesAndQuotas() {
       setModal({ open: false, allocationId: null });
       load();
     } catch (err) {
-      alert(err.message || "Suppression impossible.");
+      alert(err.message || "Could not remove allocation.");
       setModal({ open: false, allocationId: null });
     }
   };
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.administration")}
-        title={t("admin.sitesQuotas.title")}
-        subtitle={t("admin.sitesQuotas.subtitle", { id: sessionId })}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: "Activités", to: "/dashboard/admin/activities" },
-          {
-            label: "Sessions",
-            to: `/dashboard/admin/activities/${id}/sessions`,
-          },
-          { label: t("admin.sessions.sitesQuotas") },
-        ]}
-        actions={
-          <Button
-            to={`/dashboard/admin/activities/${id}/sessions`}
-            variant="outline"
-            size="md"
-          >
-            {t("admin.sitesQuotas.backToSessions")}
-          </Button>
-        }
-      />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
 
-      <PageBody>
-        {pageError && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {pageError}
-          </Alert>
-        )}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
 
-        <StatBar>
-          <StatCell
-            label={t("admin.sitesQuotas.statSites")}
-            value={allocations.length}
-            sub={t("admin.sitesQuotas.statForSession", { id: sessionId })}
-          />
-          <StatCell
-            label={t("admin.sitesQuotas.statQuota")}
-            value={totalQuota}
-            sub={t("admin.sitesQuotas.statAllocated")}
-            accent={totalQuota > 0}
-          />
-          <StatCell
-            label={t("admin.sitesQuotas.statChoices")}
-            value={totalChoices}
-            sub={t("admin.sitesQuotas.statPickedByEmployees")}
-          />
-          <StatCell
-            label={t("admin.sitesQuotas.statRemaining")}
-            value={remainingPlaces}
-            sub={t("admin.sitesQuotas.statAfterSelections")}
-          />
-        </StatBar>
-
-        <div className="grid grid-cols-1 xl:grid-cols-[1.65fr_1fr] gap-6">
-          <DataPanel
-            title={t("admin.sitesQuotas.assigned")}
-            subtitle={t("admin.sitesQuotas.assignedHint")}
-            badge={`${allocations.length}`}
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px]">
-                <thead className="bg-[#0A0A0A]">
-                  <tr>
-                    {[
-                      t("admin.sitesQuotas.col.site"),
-                      t("admin.sitesQuotas.col.quota"),
-                      t("admin.sitesQuotas.col.choices"),
-                      t("admin.sitesQuotas.col.selected"),
-                      t("admin.sitesQuotas.col.action"),
-                    ].map((h, i) => (
-                      <th
-                        key={i}
-                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        {t("common.loading")}
-                      </td>
-                    </tr>
-                  ) : allocations.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                        {t("admin.sitesQuotas.emptyAllocations")}
-                      </td>
-                    </tr>
-                  ) : (
-                    allocations.map((alloc) => (
-                      <tr
-                        key={alloc.id}
-                        className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                      >
-                        <td className="px-6 py-5">
-                          <p className="text-[#0A0A0A] text-[14px] font-bold">
-                            {alloc.site_name}
-                          </p>
-                          <p className="text-[11px] text-[#737373] mt-1">
-                            {alloc.site_address || "—"}
-                          </p>
-                        </td>
-                        <td className="px-6 py-5">
-                          <input
-                            type="number"
-                            min="1"
-                            defaultValue={alloc.quota}
-                            onBlur={(e) => {
-                              if (Number(e.target.value) !== Number(alloc.quota)) {
-                                handleQuotaChange(alloc, e.target.value);
-                              }
-                            }}
-                            className="w-24 px-3 py-2 bg-[#FAFAFA] border border-[#E5E5E5] text-[14px] font-bold tabular-nums text-[#0A0A0A] outline-none focus:border-[#0A0A0A] focus:bg-white transition-colors"
-                          />
-                        </td>
-                        <td className="px-6 py-5 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
-                          {alloc.choices_count}
-                        </td>
-                        <td className="px-6 py-5 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
-                          {alloc.selected_count} / {alloc.quota}
-                        </td>
-                        <td className="px-6 py-5">
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() =>
-                              setModal({ open: true, allocationId: alloc.id })
-                            }
-                          >
-                            {t("common.delete")}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </DataPanel>
-
+        <main className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
-            <DataPanel
-              title={t("admin.sitesQuotas.assignSite")}
-              subtitle={t("admin.sitesQuotas.assignSiteHint")}
-            >
-              <form onSubmit={handleAddSite} className="p-6 space-y-5">
-                {formError && (
-                  <Alert tone="danger" title={t("sg.error")}>
-                    {formError}
-                  </Alert>
-                )}
-                <Select
-                  label={t("admin.sitesQuotas.siteLabel")}
-                  value={form.site_id}
-                  onChange={(v) => setForm((p) => ({ ...p, site_id: v }))}
-                  options={[
-                    {
-                      value: "",
-                      label:
-                        availableSites.length === 0
-                          ? t("admin.sitesQuotas.allAssigned")
-                          : t("admin.sitesQuotas.selectSite"),
-                    },
-                    ...availableSites.map((s) => ({
-                      value: s.id,
-                      label: s.name + (s.address ? ` — ${s.address}` : ""),
-                    })),
-                  ]}
-                />
-                <TextField
-                  label={t("admin.sitesQuotas.quotaLabel")}
-                  type="number"
-                  value={form.quota}
-                  onChange={(v) => setForm((p) => ({ ...p, quota: v }))}
-                  placeholder={t("admin.sitesQuotas.quotaPlaceholder")}
-                />
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  disabled={submitting || availableSites.length === 0}
-                >
-                  {submitting
-                    ? t("admin.sitesQuotas.adding")
-                    : t("admin.sitesQuotas.addToSession")}
-                </Button>
-              </form>
-            </DataPanel>
+            <div className="text-sm text-[#7A8088]">
+              <Link
+                to="/dashboard/admin/activities"
+                className="text-[#ED8D31] font-medium"
+              >
+                {t("admin.activities.title")}
+              </Link>
+              <span className="mx-2">›</span>
+              <Link
+                to={`/dashboard/admin/activities/${id}/sessions`}
+                className="text-[#ED8D31] font-medium"
+              >
+                {t("admin.createSession.backToSessions")}
+              </Link>
+              <span className="mx-2">›</span>
+              <span className="text-[#2F343B] font-medium">{t("admin.sessions.sitesQuotas")}</span>
+            </div>
 
-            <Alert tone="info" title={t("admin.sitesQuotas.addNote")}>
-              {t("admin.sitesQuotas.addNoteHint")}
-            </Alert>
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+              <div>
+                <h1 className="text-[38px] font-extrabold text-[#2F343B] leading-[110%]">
+                  {t("admin.sitesQuotas.title")}
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2 leading-[170%]">
+                  {t("admin.sitesQuotas.subtitle", { id: sessionId })}
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Link
+                  to={`/dashboard/admin/activities/${id}/sessions`}
+                  className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
+                >
+                  {t("admin.sitesQuotas.backToSessions")}
+                </Link>
+              </div>
+            </div>
+
+            {pageError && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {pageError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <StatCard
+                title={t("admin.sitesQuotas.statSites")}
+                value={allocations.length}
+                subtitle={t("admin.sitesQuotas.statForSession", { id: sessionId })}
+              />
+              <StatCard
+                title={t("admin.sitesQuotas.statQuota")}
+                value={totalQuota}
+                subtitle={t("admin.sitesQuotas.statAllocated")}
+              />
+              <StatCard
+                title={t("admin.sitesQuotas.statChoices")}
+                value={totalChoices}
+                subtitle={t("admin.sitesQuotas.statPickedByEmployees")}
+              />
+              <StatCard
+                title={t("admin.sitesQuotas.statRemaining")}
+                value={remainingPlaces}
+                subtitle={t("admin.sitesQuotas.statAfterSelections")}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[2fr_340px] gap-6">
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                  <h2 className="text-[28px] font-bold text-[#2F343B]">
+                    {t("admin.sitesQuotas.assigned")}
+                  </h2>
+                  <p className="text-sm text-[#7A8088] mt-1">
+                    {t("admin.sitesQuotas.assignedHint")}
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[860px]">
+                    <thead className="bg-[#FBFAF8]">
+                      <tr>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.sitesQuotas.col.site")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.sitesQuotas.col.quota")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.sitesQuotas.col.choices")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.sitesQuotas.col.selected")}
+                        </th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                          {t("admin.sitesQuotas.col.action")}
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {loading && (
+                        <tr>
+                          <td
+                            colSpan="5"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            {t("common.loading")}
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading && allocations.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan="5"
+                            className="px-5 py-10 text-center text-sm text-[#7A8088]"
+                          >
+                            {t("admin.sitesQuotas.emptyAllocations")}
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading &&
+                        allocations.map((alloc) => (
+                          <tr
+                            key={alloc.id}
+                            className="border-t border-[#E5E2DC] align-top"
+                          >
+                            <td className="px-5 py-5">
+                              <p className="font-semibold text-[#2F343B] text-sm">
+                                {alloc.site_name}
+                              </p>
+                              <p className="text-xs text-[#7A8088] mt-1">
+                                {alloc.site_address || "—"}
+                              </p>
+                            </td>
+
+                            <td className="px-5 py-5">
+                              <input
+                                type="number"
+                                min="1"
+                                defaultValue={alloc.quota}
+                                onBlur={(e) => {
+                                  if (Number(e.target.value) !== Number(alloc.quota)) {
+                                    handleQuotaChange(alloc, e.target.value);
+                                  }
+                                }}
+                                className="w-24 px-3 py-2 rounded-lg border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                              />
+                            </td>
+
+                            <td className="px-5 py-5 text-sm font-semibold text-[#2F343B]">
+                              {alloc.choices_count}
+                            </td>
+
+                            <td className="px-5 py-5 text-sm font-semibold text-[#2F343B]">
+                              {alloc.selected_count} / {alloc.quota}
+                            </td>
+
+                            <td className="px-5 py-5">
+                              <button
+                                onClick={() =>
+                                  setModal({
+                                    open: true,
+                                    allocationId: alloc.id,
+                                  })
+                                }
+                                className="w-9 h-9 rounded-lg border border-[#F0B1B1] bg-white text-[#D85C5C]"
+                                title="Remove allocation"
+                              >
+                                🗑
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <div className="space-y-6">
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                  <h3 className="text-[28px] font-bold text-[#2F343B]">
+                    {t("admin.sitesQuotas.assignSite")}
+                  </h3>
+                  <p className="text-sm text-[#7A8088] mt-1 mb-5">
+                    {t("admin.sitesQuotas.assignSiteHint")}
+                  </p>
+
+                  <form onSubmit={handleAddSite} className="space-y-4">
+                    {formError && (
+                      <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">
+                        {formError}
+                      </div>
+                    )}
+
+                    <Field label={t("admin.sitesQuotas.siteLabel")}>
+                      <select
+                        value={form.site_id}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            site_id: e.target.value,
+                          }))
+                        }
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
+                      >
+                        <option value="">
+                          {availableSites.length === 0
+                            ? t("admin.sitesQuotas.allAssigned")
+                            : t("admin.sitesQuotas.selectSite")}
+                        </option>
+                        {availableSites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {site.name}
+                            {site.address ? ` — ${site.address}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label={t("admin.sitesQuotas.quotaLabel")}>
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.quota}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            quota: e.target.value,
+                          }))
+                        }
+                        placeholder={t("admin.sitesQuotas.quotaPlaceholder")}
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none text-sm"
+                      />
+                    </Field>
+
+                    <button
+                      type="submit"
+                      disabled={submitting || availableSites.length === 0}
+                      className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors disabled:opacity-50"
+                    >
+                      {submitting ? t("admin.sitesQuotas.adding") : t("admin.sitesQuotas.addToSession")}
+                    </button>
+                  </form>
+                </section>
+
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                  <h3 className="text-lg font-bold text-[#2F343B] mb-2">
+                    💡 {t("admin.sitesQuotas.addNote")}
+                  </h3>
+                  <p className="text-sm text-[#7A8088] leading-[170%]">
+                    {t("admin.sitesQuotas.addNoteHint")}
+                  </p>
+                </section>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {modal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-[20px] p-6 w-full max-w-[400px] shadow-lg">
+            <h2 className="text-xl font-bold text-[#2F343B] mb-3">
+              {t("admin.sitesQuotas.removeModal.title")}
+            </h2>
+
+            <p className="text-sm text-[#7A8088] mb-6">
+              {t("admin.sitesQuotas.removeModal.text")}
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setModal({ open: false, allocationId: null })}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
+              >
+                {t("common.cancel")}
+              </button>
+
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 rounded-[12px] bg-[#ED8D31] text-white text-sm font-medium"
+              >
+                {t("common.confirm")}
+              </button>
+            </div>
           </div>
         </div>
-      </PageBody>
+      )}
+    </div>
+  );
+}
 
-      <Modal
-        open={modal.open}
-        onClose={() => setModal({ open: false, allocationId: null })}
-        title={t("admin.sitesQuotas.removeModal.title")}
-        description={t("admin.sitesQuotas.removeModal.text")}
-        footer={
-          <>
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => setModal({ open: false, allocationId: null })}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" size="md" onClick={handleDelete}>
-              {t("common.confirm")}
-            </Button>
-          </>
-        }
-      />
-    </PageShell>
+function StatCard({ title, value, subtitle }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+      <p className="text-xs text-[#7A8088] mt-2">{subtitle}</p>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }

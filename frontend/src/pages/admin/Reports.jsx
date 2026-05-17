@@ -1,72 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  CartesianGrid,
-  LineChart,
-  Line,
-} from "recharts";
-import { Download } from "lucide-react";
-import { API_BASE_URL, apiGet } from "../../api";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { apiGet } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  Alert,
-  Button,
-} from "../../components/ui/Studio";
 
-const DONUT_COLORS = [
-  "#0A0A0A",
-  "#ED8D31",
-  "#525252",
-  "#737373",
-  "#A3A3A3",
-  "#C4C4C4",
-  "#E5E5E5",
-  "#F5F5F5",
-];
+const STATUS_COLORS = {
+  PENDING: "#F2B54A",
+  VALIDATED: "#3FA56B",
+  REJECTED: "#D85C5C",
+  SELECTED: "#2A52BE",
+  WAITING_LIST: "#ED8D31",
+  CONFIRMED: "#2D7A4A",
+  WITHDRAWN: "#7A8088",
+  CANCELLED: "#7A8088",
+};
 
 function formatMonth(yyyymm) {
-  if (!yyyymm) return "";
+  if (!yyyymm) return "—";
   const [y, m] = yyyymm.split("-");
   const d = new Date(Number(y), Number(m) - 1, 1);
-  return d
-    .toLocaleDateString("fr-FR", { month: "short", year: "2-digit" })
-    .toUpperCase();
+  return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
 }
-
-const TooltipBox = ({ active, payload, label }) => {
-  if (!active || !payload || !payload.length) return null;
-  return (
-    <div className="bg-[#0A0A0A] text-white px-3 py-2 shadow-2xl">
-      {label && (
-        <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#A3A3A3] mb-1">
-          {label}
-        </p>
-      )}
-      {payload.map((p, i) => (
-        <p key={i} className="text-[13px] font-bold tabular-nums">
-          {p.name && (
-            <span className="text-[#A3A3A3] font-medium mr-2">{p.name}:</span>
-          )}
-          {p.value}
-        </p>
-      ))}
-    </div>
-  );
-};
 
 export default function Reports() {
   const t = useT();
@@ -74,371 +28,233 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
 
-  const STATUS_LABEL = {
-    PENDING: t("statuses.PENDING"),
-    VALIDATED: t("statuses.VALIDATED"),
-    REJECTED: t("statuses.REJECTED"),
-    SELECTED: t("statuses.SELECTED"),
-    WAITING_LIST: t("statuses.WAITING_LIST"),
-    CONFIRMED: t("statuses.CONFIRMED"),
-    WITHDRAWN: t("statuses.WITHDRAWN"),
-    CANCELLED: t("statuses.CANCELLED"),
-  };
-
   useEffect(() => {
     setLoading(true);
     setPageError(null);
     apiGet("/reports/summary")
       .then((res) => setSummary(res.data))
-      .catch((err) =>
-        setPageError(err.message || "Impossible de charger les rapports.")
-      )
+      .catch((err) => setPageError(err.message || t("common.serverError")))
       .finally(() => setLoading(false));
   }, []);
 
-  const monthly = useMemo(
-    () =>
-      (summary?.monthly_applications || []).map((m) => ({
-        month: formatMonth(m.month),
-        count: Number(m.count),
-      })),
-    [summary]
+  const monthly = summary?.monthly_applications || [];
+  const maxMonthly = useMemo(
+    () => Math.max(1, ...monthly.map((m) => Number(m.count))),
+    [monthly]
   );
 
-  const statusData = useMemo(
-    () =>
-      (summary?.status_breakdown || []).map((s) => ({
-        name: STATUS_LABEL[s.status] || s.status,
-        value: Number(s.count),
-      })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [summary]
-  );
-
-  const totalRegistrations = useMemo(
-    () => statusData.reduce((sum, s) => sum + s.value, 0),
-    [statusData]
-  );
+  const totalRegistrations = useMemo(() => {
+    if (!summary?.status_breakdown) return 0;
+    return summary.status_breakdown.reduce(
+      (s, r) => s + Number(r.count || 0),
+      0
+    );
+  }, [summary]);
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.administration")}
-        title={t("sg.reports")}
-        subtitle={
-          t("admin.reports.subtitle") === "admin.reports.subtitle"
-            ? null
-            : t("admin.reports.subtitle")
-        }
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.reports") },
-        ]}
-        actions={
-          <>
-            <a
-              href={`${API_BASE_URL}/export/registrations.csv`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] text-[11px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] transition-colors"
-            >
-              <Download size={13} strokeWidth={2.2} />
-              {t("sg.exportRegistrations")}
-            </a>
-            <a
-              href={`${API_BASE_URL}/export/draws.csv`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-[#E5E5E5] hover:border-[#0A0A0A] text-[11px] uppercase tracking-[0.15em] font-bold text-[#0A0A0A] transition-colors"
-            >
-              <Download size={13} strokeWidth={2.2} />
-              {t("sg.exportDraws")}
-            </a>
-            <a
-              href={`${API_BASE_URL}/export/audit-log.csv`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0A0A0A] text-white hover:bg-black text-[11px] uppercase tracking-[0.15em] font-bold transition-colors"
-            >
-              <Download size={13} strokeWidth={2.2} />
-              {t("sg.exportAuditLog")}
-            </a>
-          </>
-        }
-      />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
 
-      <PageBody>
-        {pageError && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {pageError}
-          </Alert>
-        )}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
 
-        {loading && (
-          <div className="border border-[#E5E5E5] bg-white p-14 text-center text-[13px] text-[#737373]">
-            {t("sg.loading")}
-          </div>
-        )}
-
-        {!loading && summary && (
-          <>
-            <StatBar>
-              <StatCell label={t("admin.reports.statUsers")} value={Number(summary.totals.total_users)} sub={t("sg.active")} />
-              <StatCell label={t("sg.activities")} value={Number(summary.totals.total_activities)} sub={t("sg.allStatuses")} />
-              <StatCell label={t("sg.sessions")} value={Number(summary.totals.total_sessions)} sub={t("sg.allStatuses")} />
-              <StatCell label={t("sg.registrations")} value={Number(summary.totals.total_registrations)} sub={t("sg.total")} />
-              <StatCell label={t("sg.documents")} value={Number(summary.totals.total_documents)} sub={t("admin.documents.statTotal")} />
-              <StatCell label={t("admin.drawHistory.title") || "Tirages"} value={Number(summary.totals.executed_draws)} sub={t("sg.executed")} accent />
-            </StatBar>
-
-            <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
-              <DataPanel
-                title={t("sg.monthlyApplications")}
-                subtitle={t("admin.reports.monthlySubtitle") === "admin.reports.monthlySubtitle" ? "" : t("admin.reports.monthlySubtitle")}
-              >
-                {monthly.length === 0 ? (
-                  <div className="p-8 text-[13px] text-[#737373]">
-                    {t("sg.empty")}
-                  </div>
-                ) : (
-                  <div className="p-6">
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart
-                        data={monthly}
-                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                      >
-                        <CartesianGrid
-                          stroke="#F5F5F5"
-                          strokeDasharray="0"
-                          vertical={false}
-                        />
-                        <XAxis
-                          dataKey="month"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{
-                            fill: "#737373",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: "0.05em",
-                          }}
-                          dy={8}
-                        />
-                        <YAxis
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{
-                            fill: "#A3A3A3",
-                            fontSize: 11,
-                          }}
-                          width={28}
-                        />
-                        <Tooltip
-                          cursor={{ fill: "rgba(237,141,49,0.05)" }}
-                          content={<TooltipBox />}
-                        />
-                        <Bar
-                          dataKey="count"
-                          fill="#0A0A0A"
-                          radius={[0, 0, 0, 0]}
-                          maxBarSize={42}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </DataPanel>
-
-              <DataPanel
-                title={t("sg.registrations") + " — " + t("sg.summary")}
-                subtitle=""
-              >
-                {totalRegistrations === 0 ? (
-                  <div className="p-8 text-[13px] text-[#737373]">
-                    {t("sg.empty")}
-                  </div>
-                ) : (
-                  <div className="p-6 flex flex-col lg:flex-row items-center gap-4">
-                    <ResponsiveContainer width={180} height={180}>
-                      <PieChart>
-                        <Pie
-                          data={statusData}
-                          dataKey="value"
-                          innerRadius={55}
-                          outerRadius={85}
-                          paddingAngle={2}
-                          strokeWidth={0}
-                        >
-                          {statusData.map((_, i) => (
-                            <Cell
-                              key={i}
-                              fill={DONUT_COLORS[i % DONUT_COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<TooltipBox />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <ul className="flex-1 space-y-2 w-full">
-                      {statusData.map((s, i) => {
-                        const pct = totalRegistrations
-                          ? Math.round((s.value / totalRegistrations) * 100)
-                          : 0;
-                        return (
-                          <li
-                            key={s.name}
-                            className="flex items-center gap-3 text-[12px]"
-                          >
-                            <span
-                              className="w-2.5 h-2.5 flex-shrink-0"
-                              style={{
-                                background:
-                                  DONUT_COLORS[i % DONUT_COLORS.length],
-                              }}
-                            />
-                            <span className="text-[#0A0A0A] uppercase tracking-wider font-bold text-[10px] flex-1 truncate">
-                              {s.name}
-                            </span>
-                            <span className="text-[#737373] tabular-nums">
-                              {s.value}
-                            </span>
-                            <span className="text-[#A3A3A3] tabular-nums w-9 text-right">
-                              {pct}%
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-              </DataPanel>
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                {t("admin.reports.title")}
+              </h1>
+              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                {t("admin.reports.subtitle")}
+              </p>
             </div>
 
-            <DataPanel
-              title={t("sg.activities") + " — Performance"}
-              subtitle=""
-              badge={`${summary.activity_performance.length}`}
-            >
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px]">
-                  <thead className="bg-[#0A0A0A]">
-                    <tr>
-                      {[
-                        t("sg.activities"),
-                        t("admin.activities.col.category"),
-                        t("admin.sessions.statQuota"),
-                        t("sg.registrations"),
-                        t("sg.validated"),
-                        "Taux",
-                        t("common.status"),
-                      ].map((h, i) => (
-                        <th
-                          key={i}
-                          className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.activity_performance.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                          {t("sg.empty")}
-                        </td>
-                      </tr>
+            {pageError && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {pageError}
+              </div>
+            )}
+
+            {loading && (
+              <div className="rounded-[14px] border border-[#E5E2DC] bg-white p-8 text-center text-sm text-[#7A8088]">
+                {t("admin.reports.loading")}
+              </div>
+            )}
+
+            {!loading && summary && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                  <StatCard label={t("admin.reports.statUsers")} value={summary.totals.total_users} />
+                  <StatCard label={t("admin.reports.statActivities")} value={summary.totals.total_activities} />
+                  <StatCard label={t("admin.reports.statSessions")} value={summary.totals.total_sessions} />
+                  <StatCard label={t("admin.reports.statRegistrations")} value={summary.totals.total_registrations} />
+                  <StatCard label={t("admin.reports.statDocuments")} value={summary.totals.total_documents} />
+                  <StatCard label={t("admin.reports.statDraws")} value={summary.totals.executed_draws} />
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6">
+                    <h2 className="text-[20px] font-bold text-[#2F343B] mb-4">
+                      {t("admin.reports.monthlyTitle")}
+                    </h2>
+                    {monthly.length === 0 ? (
+                      <p className="text-sm text-[#7A8088]">{t("admin.reports.noData")}</p>
                     ) : (
-                      summary.activity_performance.map((row) => (
-                        <tr
-                          key={row.id}
-                          className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors"
-                        >
-                          <td className="px-6 py-4 text-[14px] font-bold text-[#0A0A0A]">
-                            {row.title}
-                          </td>
-                          <td className="px-6 py-4 text-[11px] uppercase tracking-wider text-[#525252]">
-                            {row.category}
-                          </td>
-                          <td className="px-6 py-4 text-[13px] font-bold tabular-nums text-[#0A0A0A]">
-                            {row.total_quota}
-                          </td>
-                          <td className="px-6 py-4 text-[13px] font-bold tabular-nums text-[#0A0A0A]">
-                            {row.total_applications}
-                          </td>
-                          <td className="px-6 py-4 text-[13px] font-bold tabular-nums text-[#0A0A0A]">
-                            {row.approved_count}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-20 h-1.5 bg-[#F5F5F5] overflow-hidden">
+                      <div className="flex items-end gap-2 h-[220px]">
+                        {monthly.map((m) => {
+                          const pct = (Number(m.count) / maxMonthly) * 100;
+                          return (
+                            <div key={m.month} className="flex-1 flex flex-col items-center">
+                              <div
+                                className="w-full bg-[#ED8D31] rounded-t-md flex items-end justify-center text-white text-xs font-medium pb-1 transition-all"
+                                style={{ height: `${Math.max(pct, 4)}%` }}
+                              >
+                                {m.count}
+                              </div>
+                              <p className="text-xs text-[#7A8088] mt-2">
+                                {formatMonth(m.month)}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6">
+                    <h2 className="text-[20px] font-bold text-[#2F343B] mb-4">
+                      {t("admin.reports.outcomesTitle")}
+                    </h2>
+                    {totalRegistrations === 0 ? (
+                      <p className="text-sm text-[#7A8088]">{t("admin.reports.noData")}</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {summary.status_breakdown.map((row) => {
+                          const count = Number(row.count);
+                          const pct = totalRegistrations > 0
+                            ? Math.round((count / totalRegistrations) * 100)
+                            : 0;
+                          const color = STATUS_COLORS[row.status] || "#7A8088";
+                          return (
+                            <div key={row.status}>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-[#2F343B] font-medium">
+                                  {t(`statuses.${row.status}`) || row.status}
+                                </span>
+                                <span className="text-[#7A8088]">
+                                  {count} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="h-2 rounded-full bg-[#F1F0EC] mt-1">
                                 <div
-                                  className="h-full bg-[#ED8D31]"
-                                  style={{ width: `${Math.min(row.approval_rate, 100)}%` }}
+                                  className="h-2 rounded-full"
+                                  style={{ width: `${pct}%`, background: color }}
                                 />
                               </div>
-                              <span className="text-[13px] font-bold tabular-nums text-[#ED8D31]">
-                                {row.approval_rate}%
-                              </span>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373]">
-                            {row.status}
-                          </td>
-                        </tr>
-                      ))
+                          );
+                        })}
+                      </div>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </DataPanel>
+                  </section>
+                </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <DataPanel title={t("sg.withdrawals")}>
-                {summary.withdrawals_breakdown.length === 0 ? (
-                  <div className="p-8 text-[13px] text-[#737373]">
-                    {t("sg.empty")}
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                    <h2 className="text-[20px] font-bold text-[#2F343B]">
+                      {t("admin.reports.performanceTitle")}
+                    </h2>
                   </div>
-                ) : (
-                  <ul className="p-2">
-                    {summary.withdrawals_breakdown.map((w) => (
-                      <li
-                        key={w.status}
-                        className="flex justify-between items-baseline px-5 py-3.5 hover:bg-[#FAFAFA] transition-colors border-b border-[#F5F5F5] last:border-b-0"
-                      >
-                        <span className="text-[#0A0A0A] text-[12px] font-bold uppercase tracking-wider">
-                          {STATUS_LABEL[w.status] || w.status}
-                        </span>
-                        <span className="text-[18px] font-bold tabular-nums text-[#0A0A0A]">
-                          {w.count}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </DataPanel>
 
-              <DataPanel title={t("sg.documents")}>
-                {summary.documents_breakdown.length === 0 ? (
-                  <div className="p-8 text-[13px] text-[#737373]">
-                    {t("sg.empty")}
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[800px]">
+                      <thead className="bg-[#FBFAF8]">
+                        <tr>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.reports.performanceCol.activity")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.reports.performanceCol.category")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.reports.performanceCol.totalQuota")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.reports.performanceCol.applications")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.reports.performanceCol.approved")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.reports.performanceCol.approvalRate")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.reports.performanceCol.status")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary.activity_performance.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="px-5 py-8 text-center text-sm text-[#7A8088]">
+                              {t("admin.reports.noActivities")}
+                            </td>
+                          </tr>
+                        ) : (
+                          summary.activity_performance.map((row) => (
+                            <tr key={row.id} className="border-t border-[#E5E2DC]">
+                              <td className="px-5 py-3 text-sm font-semibold text-[#2F343B]">{row.title}</td>
+                              <td className="px-5 py-3 text-sm text-[#7A8088]">{row.category}</td>
+                              <td className="px-5 py-3 text-sm text-[#2F343B]">{row.total_quota}</td>
+                              <td className="px-5 py-3 text-sm text-[#2F343B]">{row.total_applications}</td>
+                              <td className="px-5 py-3 text-sm text-[#2F343B]">{row.approved_count}</td>
+                              <td className="px-5 py-3 text-sm font-semibold text-[#2D7A4A]">{row.approval_rate}%</td>
+                              <td className="px-5 py-3 text-xs uppercase font-semibold text-[#7A8088]">{t(`statuses.${row.status}`) || row.status}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                ) : (
-                  <ul className="p-2">
-                    {summary.documents_breakdown.map((d) => (
-                      <li
-                        key={d.status}
-                        className="flex justify-between items-baseline px-5 py-3.5 hover:bg-[#FAFAFA] transition-colors border-b border-[#F5F5F5] last:border-b-0"
-                      >
-                        <span className="text-[#0A0A0A] text-[12px] font-bold uppercase tracking-wider">
-                          {d.status}
-                        </span>
-                        <span className="text-[18px] font-bold tabular-nums text-[#0A0A0A]">
-                          {d.count}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </DataPanel>
-            </div>
-          </>
-        )}
-      </PageBody>
-    </PageShell>
+                </section>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6">
+                    <h2 className="text-[18px] font-bold text-[#2F343B] mb-4">
+                      {t("admin.reports.withdrawals")}
+                    </h2>
+                    {summary.withdrawals_breakdown.length === 0 ? (
+                      <p className="text-sm text-[#7A8088]">{t("admin.reports.noWithdrawals")}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {summary.withdrawals_breakdown.map((w) => (
+                          <li key={w.status} className="flex justify-between text-sm bg-[#F9F8F6] px-3 py-2 rounded-lg">
+                            <span className="text-[#2F343B] font-medium">{t(`statuses.${w.status}`) || w.status}</span>
+                            <span className="text-[#7A8088]">{w.count}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6">
+                    <h2 className="text-[18px] font-bold text-[#2F343B] mb-4">
+                      {t("admin.reports.documents")}
+                    </h2>
+                    {summary.documents_breakdown.length === 0 ? (
+                      <p className="text-sm text-[#7A8088]">{t("admin.reports.noDocuments")}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {summary.documents_breakdown.map((d) => (
+                          <li key={d.status} className="flex justify-between text-sm bg-[#F9F8F6] px-3 py-2 rounded-lg">
+                            <span className="text-[#2F343B] font-medium">{t(`statuses.${d.status}`) || d.status}</span>
+                            <span className="text-[#7A8088]">{d.count}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                </div>
+              </>
+            )}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-4">
+      <p className="text-xs font-semibold text-[#7A8088] uppercase">{label}</p>
+      <p className="text-2xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+    </div>
   );
 }

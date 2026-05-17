@@ -1,40 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet, apiPost, getCurrentUserId } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  StatusPill,
-  Button,
-  Alert,
-  TextArea,
-  Select,
-} from "../../components/ui/Studio";
 
-const CATEGORY_OPTIONS = [
-  { value: "ACTIVITIES", label: "Activités" },
-  { value: "SERVICES", label: "Services" },
-  { value: "COMMUNICATION", label: "Communication" },
-  { value: "WORKPLACE", label: "Lieu de travail" },
-  { value: "WELLBEING", label: "Bien-être" },
-];
-
-const STATUS_TONE = {
-  UNDER_REVIEW: "warn",
-  ACCEPTED: "success",
-  ARCHIVED: "neutral",
+const STATUS_STYLES = {
+  UNDER_REVIEW: "bg-[#FFF4D6] text-[#B98900]",
+  ACCEPTED: "bg-[#D4F4DD] text-[#2D7A4A]",
+  ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
 };
-// status labels resolved via t() at render time
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -43,11 +23,19 @@ function formatDate(value) {
 
 export default function IdeaBox() {
   const t = useT();
-  const statusLabel = (s) => ({
-    UNDER_REVIEW: t("sg.pending"),
-    ACCEPTED: t("sg.validated"),
-    ARCHIVED: t("sg.archived"),
-  }[s] || s);
+  const CATEGORY_OPTIONS = [
+    { value: "ACTIVITIES", label: t("ideaCategories.ACTIVITIES") },
+    { value: "SERVICES", label: t("ideaCategories.SERVICES") },
+    { value: "COMMUNICATION", label: t("ideaCategories.COMMUNICATION") },
+    { value: "WORKPLACE", label: t("ideaCategories.WORKPLACE") },
+    { value: "WELLBEING", label: t("ideaCategories.WELLBEING") },
+  ];
+  const STATUS_LABEL = {
+    UNDER_REVIEW: t("employee.ideas.statuses.UNDER_REVIEW"),
+    ACCEPTED: t("employee.ideas.statuses.ACCEPTED"),
+    ARCHIVED: t("employee.ideas.statuses.ARCHIVED"),
+  };
+
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -62,15 +50,13 @@ export default function IdeaBox() {
   const load = () => {
     if (!userId) {
       setLoading(false);
-      setPageError(t("sg.error"));
+      setPageError(t("common.pleaseLogin"));
       return;
     }
     setLoading(true);
     apiGet(`/me/ideas?user_id=${userId}`)
       .then((res) => setIdeas(res.data || []))
-      .catch((err) =>
-        setPageError(err.message || t("sg.loadingFailed"))
-      )
+      .catch((err) => setPageError(err.message || t("common.serverError")))
       .finally(() => setLoading(false));
   };
 
@@ -91,10 +77,12 @@ export default function IdeaBox() {
     e.preventDefault();
     setFormError(null);
     setSuccess(null);
+
     if (!form.content.trim()) {
-      setFormError(t("sg.error"));
+      setFormError(t("employee.ideas.alertEmpty"));
       return;
     }
+
     setSubmitting(true);
     try {
       await apiPost("/ideas", {
@@ -103,131 +91,182 @@ export default function IdeaBox() {
         category: form.category,
       });
       setForm({ category: "ACTIVITIES", content: "" });
-      setSuccess(t("sg.ideaSent"));
+      setSuccess(t("employee.ideas.successText"));
       load();
     } catch (err) {
-      setFormError(err.message || t("sg.saveImpossible"));
+      setFormError(err.message || t("common.serverError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.myArea")}
-        title={t("sg.myIdeas")}
-        subtitle={t("sg.subMyIdeas")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.myIdeas") },
-        ]}
-      />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
 
-      <PageBody>
-        {pageError && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {pageError}
-          </Alert>
-        )}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
 
-        <StatBar>
-          <StatCell label={t("sg.myIdeas")} value={stats.total} sub={t("sg.subRecorded")} />
-          <StatCell label={t("sg.pending")} value={stats.review} sub={t("sg.subToReview")} />
-          <StatCell label={t("sg.validated")} value={stats.accepted} sub={t("sg.validated")} accent={stats.accepted > 0} />
-        </StatBar>
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                {t("employee.ideas.title")}
+              </h1>
+              <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                {t("employee.ideas.subtitle")}
+              </p>
+            </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.65fr] gap-6">
-          <DataPanel
-            title={t("sg.submitIdea")}
-            subtitle={t("sg.subMyIdeas")}
-          >
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {success && (
-                <Alert tone="success" title={t("sg.ideaSent")}>
-                  {success}
-                </Alert>
-              )}
-              {formError && (
-                <Alert tone="danger" title={t("sg.error")}>
-                  {formError}
-                </Alert>
-              )}
-              <Select
-                label={t("sg.labelType")}
-                value={form.category}
-                onChange={(v) => setForm((p) => ({ ...p, category: v }))}
-                options={CATEGORY_OPTIONS}
-              />
-              <div>
-                <TextArea
-                  label={t("sg.colIdea")}
-                  value={form.content}
-                  onChange={(v) => setForm((p) => ({ ...p, content: v }))}
-                  placeholder={t("sg.phIdeaContent")}
-                  rows={6}
-                  required
-                />
-                <p className="text-[11px] text-[#A3A3A3] mt-1.5 tabular-nums text-right">
-                  {form.content.length} / 2000
-                </p>
-              </div>
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                disabled={submitting}
-              >
-                {submitting ? t("sg.sending") : t("sg.submitIdea")}
-              </Button>
-            </form>
-          </DataPanel>
-
-          <DataPanel title={t("sg.myIdeas")} badge={`${ideas.length}`}>
-            {loading ? (
-              <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                {t("sg.loading")}
-              </div>
-            ) : ideas.length === 0 ? (
-              <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                {t("sg.emptyIdeas")}
-              </div>
-            ) : (
-              <div className="divide-y divide-[#E5E5E5]">
-                {ideas.map((i) => (
-                  <div key={i.id} className="px-6 py-5">
-                    <div className="flex justify-between items-start gap-3 mb-3">
-                      <span className="px-2.5 py-1 bg-[#F5F5F5] text-[#525252] text-[10px] uppercase tracking-[0.15em] font-bold">
-                        {i.category}
-                      </span>
-                      <StatusPill
-                        tone={STATUS_TONE[i.status] || "neutral"}
-                        label={statusLabel(i.status)}
-                      />
-                    </div>
-                    <p className="text-[13px] text-[#0A0A0A] leading-[1.7]">
-                      {i.content}
-                    </p>
-                    <p className="text-[11px] text-[#A3A3A3] mt-3 uppercase tracking-wider tabular-nums">
-                      Soumise le {formatDate(i.submitted_at)}
-                    </p>
-                    {i.moderator_response && (
-                      <div className="mt-4 bg-[#FAFAFA] border-l-2 border-[#0A0A0A] px-4 py-3">
-                        <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#737373] mb-1.5">
-                          Réponse du comité
-                        </p>
-                        <p className="text-[12px] text-[#0A0A0A] leading-[1.6]">
-                          {i.moderator_response}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {pageError && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {pageError}
               </div>
             )}
-          </DataPanel>
-        </div>
-      </PageBody>
-    </PageShell>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard title={t("employee.ideas.statMine")} value={stats.total} />
+              <StatCard title={t("employee.ideas.statReview")} value={stats.review} />
+              <StatCard title={t("employee.ideas.statAccepted")} value={stats.accepted} />
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_2fr] gap-6">
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-6 h-fit">
+                <h2 className="text-[22px] font-bold text-[#2F343B] mb-2">
+                  {t("employee.ideas.submitTitle")}
+                </h2>
+                <p className="text-sm text-[#7A8088] mb-4">
+                  {t("employee.ideas.submitHint")}
+                </p>
+
+                {success && (
+                  <div className="rounded-[12px] border border-green-200 bg-green-50 text-green-700 px-3 py-2 text-sm mb-3">
+                    {success}
+                  </div>
+                )}
+
+                {formError && (
+                  <div className="rounded-[12px] border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm mb-3">
+                    {formError}
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                      {t("employee.ideas.category")}
+                    </label>
+                    <select
+                      value={form.category}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, category: e.target.value }))
+                      }
+                      className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                    >
+                      {CATEGORY_OPTIONS.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                      {t("employee.ideas.ideaLabel")}
+                    </label>
+                    <textarea
+                      value={form.content}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, content: e.target.value }))
+                      }
+                      rows={6}
+                      placeholder={t("employee.ideas.ideaPlaceholder")}
+                      maxLength={2000}
+                      className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+                    />
+                    <p className="text-xs text-[#7A8088] mt-1">
+                      {form.content.length} / 2000
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full px-4 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold disabled:opacity-60"
+                  >
+                    {submitting ? t("common.submitting") : t("employee.ideas.submitBtn")}
+                  </button>
+                </form>
+              </section>
+
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                  <h2 className="text-[22px] font-bold text-[#2F343B]">
+                    {t("employee.ideas.myIdeas")}
+                  </h2>
+                </div>
+
+                {loading && (
+                  <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                    {t("employee.ideas.loading")}
+                  </p>
+                )}
+
+                {!loading && ideas.length === 0 && (
+                  <p className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                    {t("employee.ideas.empty")}
+                  </p>
+                )}
+
+                <div className="divide-y divide-[#E5E2DC]">
+                  {ideas.map((i) => (
+                    <div key={i.id} className="px-5 py-4">
+                      <div className="flex justify-between items-start gap-3 mb-2">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#F1F0EC] text-[#7A8088]">
+                          {t(`ideaCategories.${i.category}`) || i.category}
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            STATUS_STYLES[i.status] || ""
+                          }`}
+                        >
+                          {STATUS_LABEL[i.status] || i.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#2F343B] leading-[170%]">
+                        {i.content}
+                      </p>
+                      <p className="text-xs text-[#7A8088] mt-2">
+                        {t("employee.ideas.submittedOn", { date: formatDate(i.submitted_at) })}
+                      </p>
+                      {i.moderator_response && (
+                        <div className="mt-3 rounded-[12px] bg-[#F9F8F6] px-3 py-2 text-sm">
+                          <p className="text-xs text-[#7A8088] uppercase font-semibold mb-1">
+                            {t("employee.ideas.moderatorResponse")}
+                          </p>
+                          <p className="text-[#2F343B]">
+                            {i.moderator_response}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value }) {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
+    </div>
   );
 }

@@ -1,17 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
+import { Link, useNavigate } from "react-router-dom";
 import { createAnnouncement } from "../../services/announcementService";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  DataPanel,
-  Button,
-  Alert,
-  TextField,
-  TextArea,
-} from "../../components/ui/Studio";
 
 export default function CreateAnnouncement() {
   const t = useT();
@@ -23,14 +15,21 @@ export default function CreateAnnouncement() {
     hasDocument: false,
     document: null,
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const handleChange = (field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const submitAnnouncement = async (status) => {
     setLoading(true);
     setError("");
+
     try {
       await createAnnouncement({
         title: form.title,
@@ -38,171 +37,222 @@ export default function CreateAnnouncement() {
         status,
         document: form.hasDocument ? form.document : null,
       });
+
       navigate("/dashboard/communicator/announcements");
     } catch (err) {
-      setError(err.message || t("sg.saveImpossible"));
+      setError(err.message || t("communicator.createAnnouncement.createImpossible"));
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSaveDraft = () => {
+    submitAnnouncement("DRAFT");
+  };
+
+  const handlePublish = () => {
+    submitAnnouncement("PUBLISHED");
+  };
+
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.communication")}
-        title={t("sg.newAnnouncement")}
-        subtitle={t("sg.subAnnouncements")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          {
-            label: t("sg.announcements"),
-            to: "/dashboard/communicator/announcements",
-          },
-          { label: t("sg.newRecord") },
-        ]}
-        actions={
-          <Button
-            to="/dashboard/communicator/announcements"
-            variant="outline"
-            size="md"
-          >
-            ← {t("sg.back")}
-          </Button>
-        }
-      />
+    <>
+      <div className="flex h-screen bg-[#F7F7F5]">
+        <DashboardSidebar />
 
-      <PageBody>
-        {error && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {error}
-          </Alert>
-        )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardTopBar />
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
-          <div className="space-y-6">
-            <DataPanel
-              title={t("sg.sectionInfo")}
-              subtitle={t("sg.subAnnouncements")}
-            >
-              <div className="p-6 space-y-5">
-                <TextField
-                  label={t("sg.colTitle")}
-                  value={form.title}
-                  onChange={(v) => update("title", v)}
-                  placeholder={t("sg.phTitle")}
-                  required
-                />
-                <TextArea
-                  label={t("sg.labelContent")}
-                  value={form.content}
-                  onChange={(v) => update("content", v)}
-                  placeholder={t("sg.phContent")}
-                  rows={10}
-                  required
-                />
-              </div>
-            </DataPanel>
-
-            <DataPanel
-              title={t("sg.labelDocument")}
-              subtitle="PDF, Word, JPG, PNG"
-            >
-              <div className="p-6 space-y-5">
-                <div className="bg-[#FAFAFA] border border-[#E5E5E5] p-4 flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-[14px] font-bold text-[#0A0A0A]">
-                      {t("sg.attached")}
-                    </p>
-                    <p className="text-[11px] text-[#737373] mt-1 leading-[1.55]">
-                      PDF, Word, JPG, PNG
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => update("hasDocument", !form.hasDocument)}
-                    className={`relative w-11 h-6 transition-colors ${
-                      form.hasDocument ? "bg-[#0A0A0A]" : "bg-[#E5E5E5]"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-5 h-5 bg-white transition-all ${
-                        form.hasDocument ? "left-[22px]" : "left-0.5"
-                      }`}
-                    />
-                  </button>
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-6">
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[#ED8D31] mb-2">
+                    {t("dashboard.sidebar.communicatorTools")}
+                  </p>
+                  <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                    {t("communicator.createAnnouncement.title")}
+                  </h1>
+                  <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
+                    {t("communicator.createAnnouncement.subtitle")}
+                  </p>
                 </div>
 
-                {form.hasDocument && (
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[#0A0A0A] mb-2">
-                      {t("sg.labelDocument")}
-                    </label>
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                      onChange={(e) => update("document", e.target.files[0])}
-                      className="w-full text-[12px] text-[#0A0A0A] file:mr-3 file:bg-[#0A0A0A] file:text-white file:px-4 file:py-2 file:border-0 file:text-[11px] file:uppercase file:tracking-wider file:font-bold file:cursor-pointer hover:file:bg-black"
-                    />
-                    {form.document && (
-                      <p className="text-[11px] text-[#737373] mt-2">
-                        {form.document.name}
-                      </p>
+                <Link
+                  to="/dashboard/communicator/announcements"
+                  className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors"
+                >
+                  {t("communicator.createAnnouncement.back")}
+                </Link>
+              </div>
+
+              {error && (
+                <div className="rounded-[16px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 xl:grid-cols-[2fr_320px] gap-6">
+                <div className="space-y-6">
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                    <h2 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("communicator.createAnnouncement.sectionInfo")}
+                    </h2>
+                    <p className="text-sm text-[#7A8088] mt-1 mb-5">
+                      {t("communicator.createAnnouncement.sectionInfoSub")}
+                    </p>
+
+                    <div className="space-y-5">
+                      <Field label={t("communicator.createAnnouncement.titleField")}>
+                        <input
+                          type="text"
+                          value={form.title}
+                          onChange={(e) => handleChange("title", e.target.value)}
+                          placeholder={t("communicator.createAnnouncement.titlePlaceholder")}
+                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                        />
+                      </Field>
+                    </div>
+                  </section>
+
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                    <h2 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("communicator.createAnnouncement.contentField")}
+                    </h2>
+
+                    <Field label={t("communicator.createAnnouncement.contentField")}>
+                      <textarea
+                        value={form.content}
+                        onChange={(e) => handleChange("content", e.target.value)}
+                        placeholder={t("communicator.createAnnouncement.contentPlaceholder")}
+                        rows={10}
+                        className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none mt-5"
+                      />
+                    </Field>
+                  </section>
+
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                    <h2 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("communicator.createAnnouncement.sectionDoc")}
+                    </h2>
+                    <p className="text-sm text-[#7A8088] mt-1 mb-5">
+                      {t("communicator.createAnnouncement.sectionDocSub")}
+                    </p>
+
+                    <div className="rounded-[18px] border border-[#E5E2DC] bg-[#FBFAF8] p-4 flex items-center justify-between gap-4 mb-5">
+                      <div>
+                        <p className="text-sm font-semibold text-[#2F343B]">
+                          {t("communicator.createAnnouncement.attachDoc")}
+                        </p>
+                        <p className="text-xs text-[#7A8088] mt-1">
+                          {t("communicator.createAnnouncement.attachDocHint")}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleChange("hasDocument", !form.hasDocument)
+                        }
+                        className={`relative w-10 h-6 rounded-full transition-colors ${
+                          form.hasDocument ? "bg-[#ED8D31]" : "bg-[#E5E2DC]"
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
+                            form.hasDocument ? "left-5" : "left-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {form.hasDocument && (
+                      <Field label={t("communicator.createAnnouncement.fileLabel")}>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                          onChange={(e) => handleChange("document", e.target.files[0])}
+                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none"
+                        />
+                        {form.document && (
+                          <p className="text-xs text-[#7A8088] mt-2">
+                            {t("communicator.createAnnouncement.selected", { name: form.document.name })}
+                          </p>
+                        )}
+                      </Field>
                     )}
-                  </div>
-                )}
-              </div>
-            </DataPanel>
-          </div>
+                  </section>
+                </div>
 
-          <div className="space-y-6">
-            <DataPanel title={t("sg.preview")} subtitle={t("sg.sectionPreviewSub")}>
-              <div className="p-6 space-y-2">
-                <SummaryRow label={t("sg.colTitle")} value={form.title || t("sg.notDefined")} />
-                <SummaryRow
-                  label={t("sg.labelDocument")}
-                  value={form.hasDocument ? t("sg.attached") : t("sg.noneNeutral")}
-                />
-                <SummaryRow
-                  label="N"
-                  value={`${form.content.length}`}
-                />
-              </div>
-            </DataPanel>
+                <div className="space-y-5">
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                    <h3 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("communicator.createAnnouncement.sectionPreview")}
+                    </h3>
+                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
+                      {t("communicator.createAnnouncement.sectionPreviewSub")}
+                    </p>
 
-            <DataPanel title={t("sg.colActions")} subtitle={t("sg.sectionPreviewSub")}>
-              <div className="p-6 space-y-3">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => submitAnnouncement("DRAFT")}
-                  disabled={loading}
-                >
-                  {loading ? t("sg.processing") : t("sg.saveDraft")}
-                </Button>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => submitAnnouncement("PUBLISHED")}
-                  disabled={loading}
-                >
-                  {loading ? t("sg.processing") : t("sg.publishNow")}
-                </Button>
+                    <div className="space-y-3">
+                      <SummaryRow label={t("communicator.createAnnouncement.summaryTitle")} value={form.title || t("communicator.createAnnouncement.notDefined")} />
+                      <SummaryRow
+                        label={t("communicator.createAnnouncement.summaryDoc")}
+                        value={form.hasDocument ? t("communicator.announcements.attached") : t("communicator.createAnnouncement.none")}
+                      />
+                    </div>
+                  </section>
+
+                  <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                    <h3 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("communicator.createAnnouncement.sectionActions")}
+                    </h3>
+                    <p className="text-sm text-[#7A8088] mt-1 mb-4">
+                      {t("communicator.createAnnouncement.sectionActionsSub")}
+                    </p>
+
+                    <div className="space-y-3">
+                      <button
+                        onClick={handleSaveDraft}
+                        disabled={loading}
+                        className="w-full px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold hover:bg-[#F8F7F4] transition-colors disabled:opacity-60"
+                      >
+                        {loading ? t("communicator.createAnnouncement.savingDraft") : t("communicator.createAnnouncement.saveDraft")}
+                      </button>
+
+                      <button
+                        onClick={handlePublish}
+                        disabled={loading}
+                        className="w-full px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors disabled:opacity-60"
+                      >
+                        {loading ? t("communicator.createAnnouncement.publishing") : t("communicator.createAnnouncement.publishNow")}
+                      </button>
+                    </div>
+                  </section>
+                </div>
               </div>
-            </DataPanel>
-          </div>
+            </div>
+          </main>
         </div>
-      </PageBody>
-    </PageShell>
+      </div>
+    </>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
 
 function SummaryRow({ label, value }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-2.5 border-b border-[#F5F5F5] last:border-b-0">
-      <span className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#737373]">
-        {label}
-      </span>
-      <span className="text-[13px] font-bold text-[#0A0A0A] text-right truncate">
+    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
+      <span className="text-sm text-[#7A8088]">{label}</span>
+      <span className="text-sm font-bold text-[#2F343B] text-right">
         {value}
       </span>
     </div>

@@ -1,348 +1,245 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { apiGet, apiPost, getCurrentUser, getCurrentUserId } from "../../api";
+import { apiGet, getCurrentUserId } from "../../api";
 
 export default function DashboardRightPanel() {
-  const user = getCurrentUser();
+  const [dashboardData, setDashboardData] = useState(null);
   const [surveys, setSurveys] = useState([]);
-  const [drawResults, setDrawResults] = useState([]);
-  const [docs, setDocs] = useState([]);
-  const [ideaForm, setIdeaForm] = useState({ title: "", description: "" });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState(null);
-
-  const roles = (user?.roles || []).map((r) =>
-    typeof r === "string" ? r : r?.name || r?.role
-  );
-  const isAdmin =
-    roles.includes("FUNCTIONAL_ADMIN") || roles.includes("SYSTEM_ADMIN");
+  const [ideaForm, setIdeaForm] = useState({
+    title: "",
+    description: "",
+  });
 
   useEffect(() => {
-    const userId = getCurrentUserId();
-    if (!userId) return;
-    const safe = (p) => p.catch(() => ({ data: [] }));
+    fetch("http://127.0.0.1:8001/api/dashboard")
+      .then((res) => res.json())
+      .then((data) => {
+        setDashboardData(data.data);
+      })
+      .catch((error) => {
+        console.error("Right panel dashboard error:", error);
+      });
 
-    Promise.all([
-      safe(apiGet(`/surveys?user_id=${userId}`)),
-      safe(apiGet(`/me/draw-results?user_id=${userId}`)),
-      safe(apiGet(`/me/documents?user_id=${userId}`)),
-    ]).then(([s, d, doc]) => {
-      setSurveys(s?.data || []);
-      setDrawResults(d?.data || []);
-      setDocs(doc?.data || []);
-    });
+    const userId = getCurrentUserId();
+    if (userId) {
+      apiGet(`/surveys?user_id=${userId}`)
+        .then((res) => {
+          setSurveys(res.data || []);
+        })
+        .catch((error) => {
+          console.error("Right panel surveys error:", error);
+        });
+    }
   }, []);
 
-  const latestDrawResult = drawResults?.[0] || null;
-  const pendingDocs = (docs || []).filter(
-    (d) => d.status === "PENDING" || d.status === "REQUIRED"
-  );
-
-  const handleSubmitIdea = async (e) => {
+  const handleSubmitIdea = (e) => {
     e.preventDefault();
-    if (!ideaForm.title.trim() || !ideaForm.description.trim()) return;
-    const userId = getCurrentUserId();
-    if (!userId) {
-      setSubmitMessage({ ok: false, text: "Connectez-vous d'abord." });
-      return;
-    }
-    setSubmitting(true);
-    setSubmitMessage(null);
-    try {
-      await apiPost("/ideas", {
-        user_id: userId,
-        title: ideaForm.title,
-        description: ideaForm.description,
-      });
-      setIdeaForm({ title: "", description: "" });
-      setSubmitMessage({ ok: true, text: "Idée transmise. Merci." });
-    } catch (err) {
-      setSubmitMessage({
-        ok: false,
-        text: err.message || "Envoi impossible pour le moment.",
-      });
-    } finally {
-      setSubmitting(false);
-    }
+
+    console.log("Idea submitted:", ideaForm);
+
+    setIdeaForm({
+      title: "",
+      description: "",
+    });
   };
 
   return (
-    <aside className="w-[320px] min-w-[320px] bg-[#FAFAF8] border-l border-[#E4E4E7] overflow-y-auto">
-      <div className="px-7 py-10 space-y-12">
-        {/* ─── DRAW RESULT ──────────────────────────────── */}
-        <Section number="A" title={isAdmin ? "Dernier tirage" : "Mon dernier tirage"}>
-          {latestDrawResult ? (
-            <DrawResultCard result={latestDrawResult} />
-          ) : (
-            <Placeholder
-              eyebrow="Aucun résultat"
-              text={
-                isAdmin
-                  ? "Les tirages exécutés apparaîtront ici."
-                  : "Vos résultats de tirage apparaîtront ici dès leur publication."
-              }
-              link={{
-                to: isAdmin ? "/dashboard/admin/draw-history" : "/dashboard/draw",
-                label: isAdmin ? "Historique des tirages" : "Voir mes tirages",
-              }}
-            />
-          )}
-        </Section>
-
-        {/* ─── DOCUMENTS ───────────────────────────────── */}
-        <Section
-          number="B"
-          title={isAdmin ? "Documents à valider" : "Documents à fournir"}
-        >
-          {pendingDocs.length === 0 ? (
-            <Placeholder
-              eyebrow="Aucun document"
-              text={
-                isAdmin
-                  ? "Les pièces déposées par les collaborateurs apparaîtront ici."
-                  : "Les pièces requises pour vos inscriptions apparaîtront ici."
-              }
-              link={{
-                to: isAdmin
-                  ? "/dashboard/admin/documents"
-                  : "/dashboard/documents",
-                label: isAdmin ? "Gérer les documents" : "Mes documents",
-              }}
-            />
-          ) : (
-            <DocList items={pendingDocs.slice(0, 4)} isAdmin={isAdmin} />
-          )}
-        </Section>
-
-        {/* ─── SURVEYS ─────────────────────────────────── */}
-        <Section number="C" title="Sondages actifs">
-          {surveys.length === 0 ? (
-            <Placeholder
-              eyebrow="Aucun sondage"
-              text="Les sondages publiés apparaîtront ici dès leur ouverture."
-              link={{
-                to: "/dashboard/surveys",
-                label: "Tous les sondages",
-              }}
-            />
-          ) : (
-            <ul className="space-y-5">
-              {surveys.slice(0, 3).map((s, i) => (
-                <SurveyItem key={s.id} survey={s} index={i + 1} />
-              ))}
-            </ul>
-          )}
-        </Section>
-
-        {/* ─── IDEA BOX ────────────────────────────────── */}
-        <Section number="D" title="Boîte à idées">
-          <p className="text-[12px] leading-[1.7] text-[#52525B] mb-5">
-            Proposez de nouvelles activités, des destinations de voyage ou
-            toute amélioration utile à la vie sociale de Sonatrach.
-          </p>
-
-          <form onSubmit={handleSubmitIdea} className="space-y-4">
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#71717A] mb-2 block">
-                Titre
-              </label>
-              <input
-                type="text"
-                value={ideaForm.title}
-                onChange={(e) =>
-                  setIdeaForm({ ...ideaForm, title: e.target.value })
-                }
-                placeholder="Une voile à Tipaza…"
-                className="w-full bg-transparent border-b border-[#0A0A0A] py-2 text-[13px] text-[#0A0A0A] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#ED8D31] transition-colors"
+    <aside className="w-[300px] min-w-[300px] bg-white border-l border-[#E5E2DC] p-5 overflow-y-auto space-y-6">
+      {/* Draw Results */}
+      <div className="rounded-[20px] bg-gradient-to-br from-[#F5F4F1] to-white border border-[#E5E2DC] p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0 border border-[#E5E2DC]">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1z"
+                stroke="#3FA56B"
+                strokeWidth="1.2"
               />
-            </div>
-
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#71717A] mb-2 block">
-                Description
-              </label>
-              <textarea
-                value={ideaForm.description}
-                onChange={(e) =>
-                  setIdeaForm({ ...ideaForm, description: e.target.value })
-                }
-                placeholder="Décrivez votre idée en quelques lignes…"
-                rows={4}
-                className="w-full bg-transparent border-b border-[#0A0A0A] py-2 text-[13px] text-[#0A0A0A] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#ED8D31] transition-colors resize-none"
+              <path
+                d="M5 8l2 2 4-4"
+                stroke="#3FA56B"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-3 text-[10px] uppercase tracking-[0.28em] font-bold text-[#0A0A0A] hover:text-[#ED8D31] transition-colors disabled:opacity-50"
-            >
-              <span className="inline-block w-5 h-px bg-[#0A0A0A]" />
-              {submitting ? "Envoi…" : "Transmettre l'idée →"}
-            </button>
-
-            {submitMessage && (
-              <p
-                className={`text-[11px] mt-3 ${
-                  submitMessage.ok ? "text-[#15803D]" : "text-[#B91C1C]"
-                }`}
-              >
-                {submitMessage.text}
-              </p>
-            )}
-          </form>
-        </Section>
-      </div>
-    </aside>
-  );
-}
-
-/* ════════════════════════════════════════════════ */
-/*  SUB-COMPONENTS                                  */
-/* ════════════════════════════════════════════════ */
-
-function Section({ number, title, children }) {
-  return (
-    <div>
-      <div className="flex items-baseline gap-3 pb-3 border-b border-[#E4E4E7] mb-5">
-        <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#71717A]">
-          §{number}
-        </p>
-        <h3 className="text-[14px] font-medium tracking-[-0.01em] text-[#0A0A0A]">
-          {title}
-        </h3>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Placeholder({ eyebrow, text, link }) {
-  return (
-    <div>
-      <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#A1A1AA] mb-2">
-        {eyebrow}
-      </p>
-      <p className="text-[12px] leading-[1.65] text-[#52525B] mb-4">{text}</p>
-      {link && (
-        <Link
-          to={link.to}
-          className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] font-semibold text-[#0A0A0A] hover:text-[#ED8D31] transition-colors"
-        >
-          <span className="inline-block w-4 h-px bg-current" />
-          {link.label} →
-        </Link>
-      )}
-    </div>
-  );
-}
-
-function DrawResultCard({ result }) {
-  const kind = result.is_selected
-    ? "selected"
-    : result.is_substitute
-    ? "substitute"
-    : "waiting";
-  const kindLabel = {
-    selected: "Sélectionné",
-    substitute: "Suppléant",
-    waiting: "Non retenu",
-  }[kind];
-  const kindColor = {
-    selected: "#15803D",
-    substitute: "#ED8D31",
-    waiting: "#71717A",
-  }[kind];
-
-  return (
-    <div>
-      <p
-        className="text-[10px] uppercase tracking-[0.28em] font-bold mb-2"
-        style={{ color: kindColor }}
-      >
-        {kindLabel}
-      </p>
-      <p className="text-[15px] font-medium text-[#0A0A0A] leading-snug mb-2">
-        {result.activity_title || result.session_title || "Tirage récent"}
-      </p>
-      {result.draw_date && (
-        <p className="text-[11px] uppercase tracking-[0.2em] tabular-nums text-[#71717A] mb-4">
-          {new Date(result.draw_date).toLocaleDateString("fr-FR", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}
-        </p>
-      )}
-      <Link
-        to="/dashboard/draw"
-        className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] font-semibold text-[#0A0A0A] hover:text-[#ED8D31] transition-colors"
-      >
-        <span className="inline-block w-4 h-px bg-current" />
-        Voir le détail →
-      </Link>
-    </div>
-  );
-}
-
-function DocList({ items, isAdmin }) {
-  return (
-    <ul className="space-y-4">
-      {items.map((d, i) => (
-        <li
-          key={d.id || i}
-          className="flex items-baseline gap-3 pb-3 border-b border-[#E4E4E7] last:border-0"
-        >
-          <p className="text-[10px] tabular-nums font-bold text-[#A1A1AA]">
-            {String(i + 1).padStart(2, "0")}
-          </p>
-          <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-medium text-[#0A0A0A] truncate">
-              {d.document_name || d.title || "Document"}
-            </p>
-            {d.activity_title && (
-              <p className="text-[10px] text-[#71717A] mt-0.5 truncate">
-                {d.activity_title}
-              </p>
-            )}
+            </svg>
           </div>
-        </li>
-      ))}
-      <li>
-        <Link
-          to={isAdmin ? "/dashboard/admin/documents" : "/dashboard/documents"}
-          className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] font-semibold text-[#0A0A0A] hover:text-[#ED8D31] transition-colors"
-        >
-          <span className="inline-block w-4 h-px bg-current" />
-          Tout voir →
-        </Link>
-      </li>
-    </ul>
-  );
-}
 
-function SurveyItem({ survey, index }) {
-  return (
-    <li className="border-b border-[#E4E4E7] pb-4 last:border-0">
-      <div className="flex items-baseline gap-3">
-        <p className="text-[10px] tabular-nums font-bold text-[#A1A1AA]">
-          {String(index).padStart(2, "0")}
-        </p>
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-medium text-[#0A0A0A] leading-snug mb-1.5">
-            {survey.title || "Sondage"}
+          <div>
+            <h3 className="font-bold text-[#2F343B] text-sm">Draw Result</h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-[#E5E2DC] p-4 mb-4">
+          <p className="text-xs font-semibold text-[#2F343B] mb-2">
+            No draw result yet
           </p>
-          <p className="text-[11px] text-[#71717A] leading-[1.55] line-clamp-2">
-            {survey.question || survey.description}
+          <p className="text-xs text-[#7A8088] leading-relaxed">
+            Your latest draw result will appear here after registrations and draw
+            launch are connected.
           </p>
-          <Link
-            to={`/dashboard/surveys`}
-            className="inline-flex items-center gap-2 mt-2 text-[10px] uppercase tracking-[0.25em] font-semibold text-[#0A0A0A] hover:text-[#ED8D31] transition-colors"
-          >
-            Répondre →
-          </Link>
+        </div>
+
+        <button className="w-full px-4 py-2.5 rounded-lg bg-[#ED8D31] text-white text-sm font-semibold hover:bg-[#d97d26] transition-colors">
+          View result details
+        </button>
+      </div>
+
+      {/* Documents to Provide */}
+      <div>
+        <h3 className="font-bold text-[#2F343B] text-sm mb-4">
+          Documents to provide
+        </h3>
+
+        <div className="rounded-lg bg-[#F5F4F1] border border-[#E5E2DC] p-3">
+          <p className="text-xs font-semibold text-[#2F343B] mb-1">
+            No pending documents
+          </p>
+          <p className="text-xs text-[#7A8088] leading-relaxed">
+            Required documents will appear here after the documents module is
+            connected.
+          </p>
         </div>
       </div>
-    </li>
+
+      {/* Active Surveys */}
+      <div>
+        <h3 className="font-bold text-[#2F343B] text-sm mb-4">
+          Active surveys
+        </h3>
+
+        {surveys.length === 0 ? (
+          <div className="rounded-lg border border-[#E5E2DC] p-3 bg-white hover:shadow-sm transition-shadow">
+            <div className="flex items-start gap-2 mb-2">
+              <div className="w-6 h-6 rounded-lg bg-[#ED8D31] flex items-center justify-center flex-shrink-0">
+                <span className="text-xs text-white font-bold">📋</span>
+              </div>
+
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-[#2F343B]">
+                  No active surveys yet
+                </p>
+                <p className="text-xs text-[#7A8088] mt-0.5">
+                  Surveys will appear when communicator tools are connected.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {surveys.slice(0, 3).map((survey) => (
+              <div
+                key={survey.id}
+                className="rounded-lg border border-[#E5E2DC] p-3 bg-white hover:shadow-sm transition-shadow"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#ED8D31] flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs text-white font-bold">📋</span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-[#2F343B] truncate">
+                      {survey.title || "Survey"}
+                    </p>
+                    <p className="text-xs text-[#7A8088] mt-0.5 line-clamp-2">
+                      {survey.question}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Platform Summary */}
+      <div className="rounded-[20px] bg-[#F5F4F1] border border-[#E5E2DC] p-5">
+        <h3 className="font-bold text-[#2F343B] text-sm mb-4">
+          Platform summary
+        </h3>
+
+        <div className="space-y-3 text-xs">
+          <div className="flex justify-between">
+            <span className="text-[#7A8088]">Activities</span>
+            <span className="font-semibold text-[#2F343B]">
+              {dashboardData?.total_activities ?? 0}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-[#7A8088]">Open activities</span>
+            <span className="font-semibold text-[#2F343B]">
+              {dashboardData?.active_activities ?? 0}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-[#7A8088]">Pending requests</span>
+            <span className="font-semibold text-[#2F343B]">
+              {dashboardData?.pending_registrations ?? 0}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Idea Box */}
+      <div className="rounded-[20px] bg-gradient-to-b from-[#ED8D31] to-[#d97d26] text-white p-5">
+        <div className="flex items-start gap-2 mb-3">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <g clipPath="url(#clip_idea_panel)">
+              <path
+                d="M11.25 10.5C11.4 9.75 11.775 9.225 12.375 8.625C13.125 7.95 13.5 6.975 13.5 6C13.5 3.516 11.484 1.5 9 1.5C6.516 1.5 4.5 3.516 4.5 6C4.5 6.75 4.65 7.65 5.625 8.625C6.15 9.15 6.6 9.75 6.75 10.5M6.75 13.5H11.25M7.5 16.5H10.5"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </g>
+            <defs>
+              <clipPath id="clip_idea_panel">
+                <rect width="18" height="18" fill="white" />
+              </clipPath>
+            </defs>
+          </svg>
+
+          <div>
+            <h3 className="font-bold text-sm">Have an idea?</h3>
+          </div>
+        </div>
+
+        <p className="text-xs opacity-90 mb-4">
+          Share your suggestions for new activities, trips, or ways to improve
+          the employee experience.
+        </p>
+
+        <form onSubmit={handleSubmitIdea} className="space-y-3">
+          <input
+            type="text"
+            value={ideaForm.title}
+            onChange={(e) =>
+              setIdeaForm({ ...ideaForm, title: e.target.value })
+            }
+            placeholder="Your idea title..."
+            className="w-full px-3 py-2 rounded-lg bg-white text-[#2F343B] text-xs placeholder:text-[#7A8088] focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
+          />
+
+          <textarea
+            value={ideaForm.description}
+            onChange={(e) =>
+              setIdeaForm({ ...ideaForm, description: e.target.value })
+            }
+            placeholder="Describe your idea..."
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg bg-white text-[#2F343B] text-xs placeholder:text-[#7A8088] focus:outline-none focus:ring-2 focus:ring-white/50 transition-all resize-none"
+          />
+
+          <button
+            type="submit"
+            className="w-full px-4 py-2 rounded-lg bg-white text-[#ED8D31] font-semibold text-sm hover:bg-opacity-95 transition-colors"
+          >
+            Submit an idea
+          </button>
+        </form>
+      </div>
+    </aside>
   );
 }

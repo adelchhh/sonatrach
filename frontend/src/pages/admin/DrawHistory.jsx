@@ -1,22 +1,14 @@
 import { useEffect, useState } from "react";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  DataPanel,
-  StatusPill,
-  Modal,
-  Button,
-  Alert,
-} from "../../components/ui/Studio";
 
 function formatDateTime(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString("fr-FR", {
+  return d.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -40,7 +32,7 @@ export default function DrawHistory() {
     apiGet("/draws/history")
       .then((res) => setDraws(res.data || []))
       .catch((err) =>
-        setPageError(err.message || "Impossible de charger l'historique.")
+        setPageError(err.message || t("common.serverError"))
       )
       .finally(() => setLoading(false));
   };
@@ -56,7 +48,7 @@ export default function DrawHistory() {
       const res = await apiGet(`/draws/${drawId}`);
       setDetails(res.data);
     } catch (err) {
-      setDetails({ error: err.message || "Détails indisponibles." });
+      setDetails({ error: err.message || t("common.serverError") });
     }
   };
 
@@ -66,216 +58,209 @@ export default function DrawHistory() {
   };
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.administration")}
-        title={t("sg.drawHistory")}
-        subtitle={t("sg.subAuditLog")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.drawHistory") },
-        ]}
-      />
+    <>
+      <div className="flex h-screen bg-[#F7F7F5]">
+        <DashboardSidebar />
 
-      <PageBody>
-        {pageError && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {pageError}
-          </Alert>
-        )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardTopBar />
 
-        <DataPanel
-          title={t("sg.executed")}
-          subtitle={t("sg.subAuditLog")}
-          badge={`${draws.length}`}
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                  {t("admin.drawHistory.title")}
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2 max-w-[760px] leading-[170%]">
+                  {t("admin.drawHistory.subtitle")}
+                </p>
+              </div>
+
+              {pageError && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {pageError}
+                </div>
+              )}
+
+              <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1100px]">
+                    <thead className="bg-[#FBFAF8]">
+                      <tr>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.drawHistory.col.executedAt")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.drawHistory.col.activity")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.drawHistory.col.session")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.drawHistory.col.mode")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.drawHistory.col.admin")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.drawHistory.col.results")}</th>
+                        <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("admin.drawHistory.col.action")}</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {loading && (
+                        <tr>
+                          <td colSpan="7" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                            {t("admin.drawHistory.loading")}
+                          </td>
+                        </tr>
+                      )}
+
+                      {!loading && draws.length === 0 && (
+                        <tr>
+                          <td colSpan="7" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                            {t("admin.drawHistory.empty")}
+                          </td>
+                        </tr>
+                      )}
+
+                      {draws.map((d) => (
+                        <tr key={d.draw_id} className="border-t border-[#E5E2DC] hover:bg-[#FCFBF9]">
+                          <td className="px-5 py-5 text-sm text-[#7A8088]">
+                            {formatDateTime(d.executed_at)}
+                          </td>
+                          <td className="px-5 py-5 text-sm font-semibold text-[#2F343B]">
+                            {d.activity_title}
+                            <p className="text-xs text-[#7A8088] mt-1">
+                              {d.activity_category}
+                            </p>
+                          </td>
+                          <td className="px-5 py-5 text-sm text-[#7A8088]">
+                            #{d.session_id}
+                            <p className="text-xs mt-1">{d.draw_location || "—"}</p>
+                          </td>
+                          <td className="px-5 py-5 text-sm text-[#2F343B]">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F1F0EC]">
+                              {d.mode}
+                            </span>
+                          </td>
+                          <td className="px-5 py-5 text-sm text-[#2F343B]">
+                            {d.admin_first_name} {d.admin_last_name}
+                          </td>
+                          <td className="px-5 py-5 text-sm text-[#2F343B]">
+                            <span className="text-green-700 font-semibold">
+                              {d.selected_count} {t("admin.drawHistory.suffix.selected")}
+                            </span>{" "}
+                            ·{" "}
+                            <span className="text-orange-600 font-medium">
+                              {d.substitute_count} {t("admin.drawHistory.suffix.sub")}
+                            </span>{" "}
+                            ·{" "}
+                            <span className="text-[#7A8088]">
+                              {d.waiting_count} {t("admin.drawHistory.suffix.wait")}
+                            </span>
+                          </td>
+                          <td className="px-5 py-5">
+                            <button
+                              onClick={() => openDetails(d.draw_id)}
+                              className="px-3 py-1.5 rounded-lg border border-[#E5E2DC] bg-white text-sm text-[#2F343B]"
+                            >
+                              {t("common.view")}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {modal.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeModal}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px]">
-              <thead className="bg-[#0A0A0A]">
-                <tr>
-                  {[
-                    "Exécuté le",
-                    "Activité",
-                    "Session",
-                    "Mode",
-                    "Administrateur",
-                    "Résultats",
-                    "Action",
-                  ].map((h, i) => (
-                    <th
-                      key={i}
-                      className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Chargement…
-                    </td>
-                  </tr>
-                ) : draws.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      Aucun tirage exécuté pour le moment.
-                    </td>
-                  </tr>
-                ) : (
-                  draws.map((d) => (
-                    <tr
-                      key={d.draw_id}
-                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors align-top"
-                    >
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#0A0A0A]">
-                        {formatDateTime(d.executed_at)}
-                      </td>
-                      <td className="px-6 py-5">
-                        <p className="text-[#0A0A0A] text-[14px] font-bold">
-                          {d.activity_title}
-                        </p>
-                        <p className="text-[11px] uppercase tracking-wider text-[#737373] mt-1">
-                          {d.activity_category}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
-                        #{d.session_id}
-                        <p className="text-[11px] text-[#A3A3A3] mt-0.5">
-                          {d.draw_location || "—"}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5">
-                        <StatusPill tone="info" label={d.mode} />
-                      </td>
-                      <td className="px-6 py-5 text-[13px] text-[#0A0A0A]">
-                        {d.admin_first_name} {d.admin_last_name}
-                      </td>
-                      <td className="px-6 py-5 text-[12px] tabular-nums">
-                        <span className="text-[#0A0A0A] font-bold">
-                          {d.selected_count}
-                        </span>
-                        <span className="text-[#A3A3A3]"> sélect.</span>
-                        <span className="mx-1.5 text-[#E5E5E5]">·</span>
-                        <span className="text-[#ED8D31] font-bold">
-                          {d.substitute_count}
-                        </span>
-                        <span className="text-[#A3A3A3]"> subst.</span>
-                        <span className="mx-1.5 text-[#E5E5E5]">·</span>
-                        <span className="text-[#737373] font-bold">
-                          {d.waiting_count}
-                        </span>
-                        <span className="text-[#A3A3A3]"> non retenu</span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openDetails(d.draw_id)}
-                        >
-                          Détails
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </DataPanel>
-      </PageBody>
+          <div
+            className="bg-white rounded-[20px] p-6 w-full max-w-[720px] shadow-lg max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-[#2F343B] mb-4">
+              {t("admin.drawHistory.modalTitle", { id: modal.drawId })}
+            </h2>
 
-      <Modal
-        open={modal.open}
-        onClose={closeModal}
-        title={`Tirage #${modal.drawId} — résultats complets`}
-        width="lg"
-        footer={
-          <Button variant="outline" size="md" onClick={closeModal}>
-            Fermer
-          </Button>
-        }
-      >
-        {!details && (
-          <p className="text-[13px] text-[#737373]">Chargement…</p>
-        )}
-        {details?.error && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {details.error}
-          </Alert>
-        )}
-        {details?.results && (
-          <div className="space-y-6">
-            <ResultsBlock
-              title={t("sg.selected")}
-              tone="dark"
-              items={details.results.filter(
-                (r) => r.is_selected === 1 || r.is_selected === true
-              )}
-              showSite
-            />
-            <ResultsBlock
-              title={t("sg.substitute")}
-              tone="accent"
-              items={details.results.filter(
-                (r) =>
-                  (r.is_substitute === 1 || r.is_substitute === true) &&
-                  !(r.is_selected === 1 || r.is_selected === true)
-              )}
-              showRank
-            />
+            {!details && (
+              <p className="text-sm text-[#7A8088]">{t("admin.drawHistory.loadingDetails")}</p>
+            )}
+
+            {details?.error && (
+              <p className="text-sm text-red-600">{details.error}</p>
+            )}
+
+            {details?.results && (
+              <div className="space-y-4">
+                <ResultsBlock
+                  title={t("admin.drawHistory.sectionSelected")}
+                  items={details.results.filter(
+                    (r) => r.is_selected === 1 || r.is_selected === true
+                  )}
+                  showSite
+                  emptyLabel={t("common.none")}
+                />
+                <ResultsBlock
+                  title={t("admin.drawHistory.sectionSubstitutes")}
+                  items={details.results.filter(
+                    (r) =>
+                      (r.is_substitute === 1 || r.is_substitute === true) &&
+                      !(r.is_selected === 1 || r.is_selected === true)
+                  )}
+                  showRank
+                  emptyLabel={t("common.none")}
+                  rankLabel={t("admin.runDraw.resultsCol.rank")}
+                />
+                <ResultsBlock
+                  title={t("admin.drawHistory.sectionWaiting")}
+                  items={details.results.filter(
+                    (r) =>
+                      (r.is_selected === 0 || r.is_selected === false) &&
+                      (r.is_substitute === 0 || r.is_substitute === false)
+                  )}
+                  emptyLabel={t("common.none")}
+                />
+              </div>
+            )}
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 rounded-[12px] border border-[#E5E2DC] text-sm"
+              >
+                {t("common.close")}
+              </button>
+            </div>
           </div>
-        )}
-      </Modal>
-    </PageShell>
+        </div>
+      )}
+    </>
   );
 }
 
-function ResultsBlock({ title, items, tone, showSite, showRank }) {
-  const accent = {
-    dark: "bg-[#0A0A0A] text-white",
-    accent: "bg-[#ED8D31] text-black",
-    neutral: "bg-[#F5F5F5] text-[#0A0A0A]",
-  }[tone];
-
+function ResultsBlock({ title, items, showSite, showRank, emptyLabel = "None.", rankLabel = "Rank" }) {
   return (
     <div>
-      <div className="flex items-center gap-3 mb-3">
-        <span className={`px-3 py-1 text-[10px] uppercase tracking-[0.18em] font-bold ${accent}`}>
-          {title}
-        </span>
-        <span className="text-[12px] tabular-nums text-[#737373]">
-          {items.length}
-        </span>
-      </div>
+      <p className="text-xs uppercase font-semibold text-[#7A8088] mb-2">
+        {title} ({items.length})
+      </p>
       {items.length === 0 ? (
-        <p className="text-[12px] text-[#A3A3A3] italic">Aucun.</p>
+        <p className="text-sm text-[#7A8088]">{emptyLabel}</p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="space-y-1">
           {items.map((r) => (
             <li
               key={r.id}
-              className="text-[13px] text-[#0A0A0A] px-3 py-2 bg-[#FAFAFA] border border-[#E5E5E5] flex justify-between items-baseline gap-3"
+              className="text-sm text-[#2F343B] px-3 py-2 rounded-lg bg-[#F9F8F6] flex justify-between"
             >
-              <span className="truncate">
-                <span className="font-semibold">
-                  {r.user_first_name} {r.user_last_name}
-                </span>
-                <span className="text-[11px] font-mono tabular-nums text-[#737373] ml-2">
-                  {r.employee_number}
-                </span>
+              <span>
+                {r.user_first_name} {r.user_last_name} ({r.employee_number})
               </span>
               {showSite && r.site_name && (
-                <span className="text-[11px] text-[#737373] uppercase tracking-wider">
-                  {r.site_name}
-                </span>
+                <span className="text-[#7A8088]">{r.site_name}</span>
               )}
               {showRank && r.substitute_rank && (
-                <span className="text-[11px] text-[#ED8D31] uppercase tracking-wider font-bold tabular-nums">
-                  Rang #{r.substitute_rank}
-                </span>
+                <span className="text-[#7A8088]">{rankLabel} #{r.substitute_rank}</span>
               )}
             </li>
           ))}

@@ -1,35 +1,8 @@
 import { useEffect, useState } from "react";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { getIdeas, moderateIdea } from "../../services/ideaService";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  StatusPill,
-  Button,
-  Alert,
-  TextArea,
-} from "../../components/ui/Studio";
-
-const STATUS_TONE = {
-  PENDING: "warn",
-  REVIEWED: "success",
-  ARCHIVED: "neutral",
-};
-
-// status labels resolved via t() at render time
-
-function formatDate(idea) {
-  return idea.submitted_at || idea.created_at?.slice(0, 10) || "—";
-}
-
-function shortText(text, max = 120) {
-  if (!text) return "";
-  return text.length > max ? text.slice(0, max) + "…" : text;
-}
 
 export default function IdeaBoxModeration() {
   const t = useT();
@@ -40,11 +13,6 @@ export default function IdeaBoxModeration() {
   const [error, setError] = useState("");
 
   const selectedIdea = ideas.find((idea) => idea.id === selectedId) || null;
-  const statusLabel = (s) => ({
-    PENDING: t("sg.statusPendingLabel"),
-    REVIEWED: t("sg.statusReviewedLabel"),
-    ARCHIVED: t("sg.statusArchivedLabel"),
-  }[s] || s);
 
   useEffect(() => {
     loadIdeas();
@@ -54,14 +22,11 @@ export default function IdeaBoxModeration() {
     try {
       setLoading(true);
       const response = await getIdeas();
-      const data = Array.isArray(response)
-        ? response
-        : response.data || response.ideas || [];
+      const data = Array.isArray(response) ? response : response.data || response.ideas || [];
       setIdeas(data);
       setSelectedId(data[0]?.id ?? null);
-      setFeedback(data[0]?.moderator_response || "");
     } catch (err) {
-      setError(err.message || t("sg.loadingFailed"));
+      setError(err.message || t("communicator.ideaModeration.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -70,211 +35,232 @@ export default function IdeaBoxModeration() {
   async function handleModerate(status) {
     if (!selectedIdea) return;
     try {
-      const updated = await moderateIdea(selectedIdea.id, {
-        status,
-        moderator_response: feedback || null,
-      });
-      setIdeas((prev) =>
-        prev.map((idea) => (idea.id === selectedIdea.id ? updated : idea))
-      );
+      const updated = await moderateIdea(selectedIdea.id, { status, moderator_response: feedback || null });
+      setIdeas((prev) => prev.map((idea) => (idea.id === selectedIdea.id ? updated : idea)));
       setFeedback("");
     } catch (err) {
-      setError(err.message || t("sg.moderationImpossible"));
+      setError(err.message || t("communicator.ideaModeration.moderationFailed"));
     }
   }
+
+  const statusLabel = (s) => t(`communicator.ideaModeration.statusLabels.${s}`) || s;
 
   const pendingCount = ideas.filter((i) => i.status === "PENDING").length;
   const reviewedCount = ideas.filter((i) => i.status === "REVIEWED").length;
   const archivedCount = ideas.filter((i) => i.status === "ARCHIVED").length;
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.communication")}
-        title={t("sg.ideaModeration")}
-        subtitle={t("sg.subIdeaBox")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.ideaModeration") },
-        ]}
-      />
-
-      <PageBody>
-        {error && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {error}
-          </Alert>
-        )}
-
-        <StatBar>
-          <StatCell
-            label={t("sg.pending")}
-            value={pendingCount}
-            sub={t("sg.subToReview")}
-            accent={pendingCount > 0}
-          />
-          <StatCell label={t("sg.statusReviewedLabel")} value={reviewedCount} sub={t("sg.subWithFeedback")} />
-          <StatCell label={t("sg.archived")} value={archivedCount} sub={t("sg.subOffCircuit")} />
-        </StatBar>
-
-        <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
-          <DataPanel
-            title={t("sg.panelIdeasSubmitted")}
-            subtitle={t("sg.panelIdeasSubmittedSub")}
-            badge={`${ideas.length}`}
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-[#0A0A0A]">
-                  <tr>
-                    {[t("sg.colIdea"), t("sg.colAuthor"), t("sg.colSubmitted"), t("sg.colStatus")].map((h, i) => (
-                      <th
-                        key={i}
-                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-6 py-14 text-center text-[13px] text-[#737373]"
-                      >
-                        {t("sg.loading")}
-                      </td>
-                    </tr>
-                  ) : ideas.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-6 py-14 text-center text-[13px] text-[#737373]"
-                      >
-                        {t("sg.emptyIdeasSubmitted")}
-                      </td>
-                    </tr>
-                  ) : (
-                    ideas.map((idea) => (
-                      <tr
-                        key={idea.id}
-                        onClick={() => {
-                          setSelectedId(idea.id);
-                          setFeedback(idea.moderator_response || "");
-                        }}
-                        className={`border-b border-[#E5E5E5] last:border-b-0 cursor-pointer transition-colors align-top ${
-                          selectedId === idea.id
-                            ? "bg-[#FFF7E8]"
-                            : "hover:bg-[#FAFAFA]"
-                        }`}
-                      >
-                        <td className="px-6 py-5 max-w-[400px]">
-                          <p className="text-[#0A0A0A] text-[14px] font-bold">
-                            {idea.title}
-                          </p>
-                          <p className="text-[11px] text-[#737373] mt-1 line-clamp-2">
-                            {shortText(idea.content)}
-                          </p>
-                        </td>
-                        <td className="px-6 py-5 text-[12px] text-[#525252]">
-                          {idea.user?.name || idea.author || t("sg.collaborator")}
-                        </td>
-                        <td className="px-6 py-5 text-[12px] tabular-nums text-[#525252]">
-                          {formatDate(idea)}
-                        </td>
-                        <td className="px-6 py-5">
-                          <StatusPill
-                            tone={STATUS_TONE[idea.status] || "neutral"}
-                            label={statusLabel(idea.status)}
-                          />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </DataPanel>
-
-          <DataPanel
-            title={t("sg.moderationPanel")}
-            subtitle={
-              selectedIdea
-                ? t("sg.panelModerationActiveSub")
-                : t("sg.panelModerationEmptySub")
-            }
-          >
-            <div className="p-6">
-              {!selectedIdea ? (
-                <p className="text-[13px] text-[#737373] italic">
-                  {t("sg.moderationHint")}
+    <>
+      <div className="flex h-screen bg-[#F7F7F5]">
+        <DashboardSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardTopBar />
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm font-semibold text-[#ED8D31] mb-2">
+                  {t("dashboard.sidebar.communicatorTools")}
                 </p>
-              ) : (
-                <div className="space-y-5">
-                  <DetailRow label={t("sg.colTitle")} value={selectedIdea.title} />
-                  <DetailRow
-                    label={t("sg.colStatus")}
-                    value={
-                      statusLabel(selectedIdea.status)
-                    }
-                  />
-                  <DetailRow
-                    label={t("sg.colSubmitted")}
-                    value={formatDate(selectedIdea)}
-                  />
+                <h1 className="text-[36px] font-extrabold text-[#2F343B] leading-[110%]">
+                  {t("communicator.ideaModeration.title")}
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2 max-w-[780px] leading-[170%]">
+                  {t("communicator.ideaModeration.subtitle")}
+                </p>
+              </div>
 
-                  <div className="border-t border-[#E5E5E5] pt-5">
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#737373] mb-2">
-                      {t("sg.ideaContent")}
-                    </p>
-                    <p className="text-[13px] text-[#0A0A0A] leading-[1.7] whitespace-pre-line">
-                      {selectedIdea.content}
-                    </p>
-                  </div>
-
-                  <TextArea
-                    label={t("sg.moderatorFeedback")}
-                    value={feedback}
-                    onChange={setFeedback}
-                    placeholder={t("sg.phFeedback")}
-                    rows={5}
-                  />
-
-                  <div className="space-y-3">
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={() => handleModerate("REVIEWED")}
-                    >
-                      {t("sg.markReviewed")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => handleModerate("ARCHIVED")}
-                    >
-                      {t("sg.archive")}
-                    </Button>
-                  </div>
+              {error && (
+                <div className="rounded-[16px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                  {error}
                 </div>
               )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard title={t("communicator.ideaModeration.statPending")} value={pendingCount} />
+                <StatCard title={t("communicator.ideaModeration.statReviewed")} value={reviewedCount} />
+                <StatCard title={t("communicator.ideaModeration.statArchived")} value={archivedCount} />
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-[2fr_360px] gap-6">
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                    <h2 className="text-[24px] font-bold text-[#2F343B]">
+                      {t("communicator.ideaModeration.panelTitle")}
+                    </h2>
+                    <p className="text-sm text-[#7A8088] mt-1">
+                      {t("communicator.ideaModeration.panelSub")}
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[850px]">
+                      <thead className="bg-[#FBFAF8]">
+                        <tr>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.ideaModeration.col.idea")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.ideaModeration.col.author")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.ideaModeration.col.submitted")}</th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold text-[#7A8088] uppercase">{t("communicator.ideaModeration.col.status")}</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {loading ? (
+                          <tr>
+                            <td colSpan="4" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                              {t("communicator.common.loading")}
+                            </td>
+                          </tr>
+                        ) : (
+                          ideas.map((idea) => (
+                            <tr
+                              key={idea.id}
+                              onClick={() => {
+                                setSelectedId(idea.id);
+                                setFeedback(idea.moderator_response || "");
+                              }}
+                              className={`border-t border-[#E5E2DC] cursor-pointer align-top ${
+                                selectedId === idea.id ? "bg-[#FCFBF9]" : ""
+                              }`}
+                            >
+                              <td className="px-5 py-5">
+                                <p className="font-semibold text-[#2F343B] text-sm">{idea.title}</p>
+                                <p className="text-xs text-[#7A8088] mt-1 max-w-[360px]">
+                                  {shortText(idea.content)}
+                                </p>
+                              </td>
+                              <td className="px-5 py-5 text-sm text-[#7A8088]">
+                                {idea.user?.name || idea.author || t("communicator.ideaModeration.collaborator")}
+                              </td>
+                              <td className="px-5 py-5 text-sm text-[#7A8088]">
+                                {formatDate(idea)}
+                              </td>
+                              <td className="px-5 py-5">
+                                <StatusBadge status={idea.status} label={statusLabel(idea.status)} />
+                              </td>
+                            </tr>
+                          ))
+                        )}
+
+                        {!loading && ideas.length === 0 && (
+                          <tr>
+                            <td colSpan="4" className="px-5 py-10 text-center text-sm text-[#7A8088]">
+                              {t("communicator.ideaModeration.empty")}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+                  <h3 className="text-[24px] font-bold text-[#2F343B]">
+                    {t("communicator.ideaModeration.moderationPanel")}
+                  </h3>
+                  <p className="text-sm text-[#7A8088] mt-1 mb-5">
+                    {selectedIdea
+                      ? t("communicator.ideaModeration.moderationPanelActive")
+                      : t("communicator.ideaModeration.moderationPanelEmpty")}
+                  </p>
+
+                  {selectedIdea ? (
+                    <div className="space-y-4">
+                      <SummaryRow label={t("communicator.ideaModeration.titleLabel")} value={selectedIdea.title} />
+                      <SummaryRow label={t("system.common.status")} value={statusLabel(selectedIdea.status)} />
+                      <SummaryRow label={t("communicator.ideaModeration.submittedLabel")} value={formatDate(selectedIdea)} />
+
+                      <div className="rounded-[14px] bg-[#F9F8F6] px-4 py-3">
+                        <p className="text-sm font-semibold text-[#2F343B] mb-2">
+                          {t("communicator.ideaModeration.contentLabel")}
+                        </p>
+                        <p className="text-sm text-[#7A8088] leading-[170%] whitespace-pre-line">
+                          {selectedIdea.content}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-[#2F343B] mb-2">
+                          {t("communicator.ideaModeration.feedbackLabel")}
+                        </label>
+                        <textarea
+                          value={feedback}
+                          onChange={(e) => setFeedback(e.target.value)}
+                          rows={5}
+                          placeholder={t("communicator.ideaModeration.feedbackPlaceholder")}
+                          className="w-full px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] text-sm outline-none resize-none"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => handleModerate("REVIEWED")}
+                          className="w-full px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold"
+                        >
+                          {t("communicator.ideaModeration.markReviewed")}
+                        </button>
+
+                        <button
+                          onClick={() => handleModerate("ARCHIVED")}
+                          className="w-full px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
+                        >
+                          {t("communicator.ideaModeration.archive")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#7A8088]">
+                      {t("communicator.ideaModeration.hint")}
+                    </p>
+                  )}
+                </section>
+              </div>
             </div>
-          </DataPanel>
+          </main>
         </div>
-      </PageBody>
-    </PageShell>
+      </div>
+    </>
   );
 }
 
-function DetailRow({ label, value }) {
+function formatDate(idea) {
+  return idea.submitted_at || idea.created_at?.slice(0, 10) || "-";
+}
+
+function shortText(text, max = 120) {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "..." : text;
+}
+
+function StatCard({ title, value }) {
   return (
-    <div>
-      <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#737373] mb-1">
-        {label}
-      </p>
-      <p className="text-[13px] font-bold text-[#0A0A0A] break-words">{value}</p>
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{title}</p>
+      <p className="text-3xl font-extrabold text-[#2F343B] mt-2">{value}</p>
     </div>
+  );
+}
+
+function SummaryRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between rounded-[14px] bg-[#F9F8F6] px-4 py-3 gap-4">
+      <span className="text-sm text-[#7A8088]">{label}</span>
+      <span className="text-sm font-bold text-[#2F343B] text-right">
+        {value || "-"}
+      </span>
+    </div>
+  );
+}
+
+function StatusBadge({ status, label }) {
+  const styles = {
+    PENDING: "bg-[#FFF4D6] text-[#B98900]",
+    REVIEWED: "bg-[#D4F4DD] text-[#2D7A4A]",
+    ARCHIVED: "bg-[#F1F0EC] text-[#7A8088]",
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status] || "bg-[#F1F0EC] text-[#7A8088]"}`}>
+      {label || status}
+    </span>
   );
 }

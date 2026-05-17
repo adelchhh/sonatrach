@@ -1,273 +1,196 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../../api";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  StatBar,
-  StatCell,
-  DataPanel,
-  StatusPill,
-  Modal,
-  Button,
-  Alert,
-  TextField,
-} from "../../components/ui/Studio";
 
-const API_URL = `${API_BASE_URL}/api`;
-const ROLE_PATH = "communicator";
-const ROLE_PATH_PLURAL = "communicators";
+const API_URL = "http://127.0.0.1:8000/api";
 
 export default function ManageCommunicators() {
   const t = useT();
-  const [users, setUsers] = useState([]);
+  const [communicators, setCommunicators] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [foundEmployee, setFoundEmployee] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [removeModal, setRemoveModal] = useState({ open: false, id: null });
 
-  const load = async () => {
+  const loadCommunicators = async () => {
     try {
-      setLoading(true);
-      const res = await fetch(`${API_URL}/system/roles/${ROLE_PATH_PLURAL}`);
+      const res = await fetch(`${API_URL}/system/roles/communicators`);
       const data = await res.json();
-      setUsers(data.data || []);
-    } catch {
-      setError("Impossible de charger les communicants.");
+      setCommunicators(data.data || []);
+    } catch (err) {
+      console.error(err);
+      setError(t("system.manageCommunicators.errorLoad"));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    loadCommunicators();
   }, []);
 
   const handleSearch = async () => {
     setError("");
     setFoundEmployee(null);
+
     if (!searchValue.trim()) {
-      setError("Saisissez un matricule.");
+      setError(t("system.common.emptySearch"));
       return;
     }
+
     try {
-      const res = await fetch(
-        `${API_URL}/system/employees/search?query=${searchValue}`
-      );
+      const res = await fetch(`${API_URL}/system/employees/search?query=${searchValue}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || "Collaborateur introuvable.");
+        setError(data.message || t("system.common.notFound"));
         return;
       }
       setFoundEmployee(data.data);
-    } catch {
-      setError("La recherche a échoué.");
+    } catch (err) {
+      console.error(err);
+      setError(t("system.common.searchFailed"));
     }
   };
 
   const handleAssign = async () => {
     if (!foundEmployee) return;
     try {
-      const res = await fetch(
-        `${API_URL}/system/users/${foundEmployee.id}/roles/${ROLE_PATH}`,
-        { method: "POST" }
-      );
+      const res = await fetch(`${API_URL}/system/users/${foundEmployee.id}/roles/communicator`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || "Attribution impossible.");
+        setError(data.message || t("system.manageCommunicators.errorAssign"));
         return;
       }
       setFoundEmployee(null);
       setSearchValue("");
-      await load();
-    } catch {
-      setError("Attribution impossible.");
+      await loadCommunicators();
+    } catch (err) {
+      console.error(err);
+      setError(t("system.manageCommunicators.errorAssign"));
     }
   };
 
-  const handleRemove = async () => {
+  const handleRemove = async (id) => {
     try {
-      const res = await fetch(
-        `${API_URL}/system/users/${removeModal.id}/roles/${ROLE_PATH}`,
-        { method: "DELETE" }
-      );
+      const res = await fetch(`${API_URL}/system/users/${id}/roles/communicator`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || "Retrait impossible.");
+        setError(data.message || t("system.manageCommunicators.errorRemove"));
         return;
       }
-      setRemoveModal({ open: false, id: null });
-      await load();
-    } catch {
-      setError("Retrait impossible.");
+      await loadCommunicators();
+    } catch (err) {
+      console.error(err);
+      setError(t("system.manageCommunicators.errorRemove"));
     }
   };
 
-  const activeCount = users.filter((u) => u.active).length;
-
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.systemAdmin")}
-        title={t("sg.communicators")}
-        subtitle={t("sg.subSystemAdminCom")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("sg.communicators") },
-        ]}
-      />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
+        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div>
+            <p className="text-sm font-semibold text-[#ED8D31] mb-2">
+              {t("system.adminTools")}
+            </p>
+            <h1 className="text-[36px] font-extrabold text-[#2F343B]">
+              {t("system.manageCommunicators.title")}
+            </h1>
+            <p className="text-[#7A8088] text-sm mt-2">
+              {t("system.manageCommunicators.subtitle")}
+            </p>
+          </div>
 
-      <PageBody>
-        {error && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {error}
-          </Alert>
-        )}
+          <section className="rounded-[24px] bg-white border border-[#E5E2DC] p-5">
+            <h2 className="text-[22px] font-bold text-[#2F343B] mb-4">
+              {t("system.manageCommunicators.assignTitle")}
+            </h2>
 
-        <StatBar>
-          <StatCell label={t("sg.total")} value={users.length} sub={t("sg.total")} />
-          <StatCell label={t("sg.active")} value={activeCount} sub={t("sg.subActive")} accent={activeCount > 0} />
-          <StatCell label={t("sg.inactive")} value={users.length - activeCount} sub={t("sg.subInactive")} />
-        </StatBar>
-
-        <DataPanel
-          title={t("sg.approve")}
-          subtitle={t("sg.colMatricule")}
-        >
-          <div className="p-6 space-y-5">
-            <div className="flex gap-3 items-end">
-              <div className="flex-1">
-                <TextField
-                  label={t("sg.colMatricule")}
-                  value={searchValue}
-                  onChange={(v) => {
-                    setSearchValue(v);
-                    setFoundEmployee(null);
-                    setError("");
-                  }}
-                  placeholder="ex : 002017"
-                />
-              </div>
-              <Button variant="dark" size="md" onClick={handleSearch}>
-                {t("common.search")}
-              </Button>
+            <div className="flex gap-3">
+              <input
+                value={searchValue}
+                onChange={(e) => {
+                  setSearchValue(e.target.value);
+                  setFoundEmployee(null);
+                  setError("");
+                }}
+                placeholder={t("system.manageCommunicators.searchPlaceholder")}
+                className="flex-1 px-4 py-3 rounded-[14px] border border-[#E5E2DC] bg-[#F7F7F5] outline-none"
+              />
+              <button onClick={handleSearch} className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white hover:bg-[#F7F7F5]">
+                {t("system.common.search")}
+              </button>
             </div>
 
+            {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+
             {foundEmployee && (
-              <div className="bg-[#FFF7E8] border border-[#ED8D31] p-4 flex justify-between items-center gap-4">
+              <div className="mt-4 flex justify-between items-center border border-[#E5E2DC] bg-[#FBFAF8] p-4 rounded-[14px]">
                 <div>
-                  <p className="text-[14px] font-bold text-[#0A0A0A]">
-                    {foundEmployee.first_name} {foundEmployee.name}
+                  <p className="font-semibold text-[#2F343B]">
+                    {foundEmployee.name} {foundEmployee.first_name}
                   </p>
-                  <p className="text-[11px] text-[#737373] mt-1 tabular-nums">
-                    Matricule {foundEmployee.employee_number} · {foundEmployee.email}
+                  <p className="text-xs text-[#7A8088]">
+                    {foundEmployee.employee_number} · {foundEmployee.email}
                   </p>
                 </div>
-                <Button variant="primary" size="md" onClick={handleAssign}>
-                  {t("sg.approve")}
-                </Button>
+                <button onClick={handleAssign} className="px-4 py-2 bg-[#ED8D31] text-white rounded-[10px]">
+                  {t("system.common.addRole")}
+                </button>
               </div>
             )}
-          </div>
-        </DataPanel>
+          </section>
 
-        <DataPanel
-          title={t("sg.communicators")}
-          subtitle={t("sg.communicators")}
-          badge={`${users.length}`}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-[#0A0A0A]">
-                <tr>
-                  {[t("sg.colEmployee"), t("sg.colMatricule"), t("sg.colEmail"), t("sg.colStatus"), t("sg.colAction")].map(
-                    (h, i) => (
-                      <th
-                        key={i}
-                        className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                      >
-                        {h}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
+          <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+            <div className="px-5 py-4 border-b">
+              <h2 className="font-bold text-lg text-[#2F343B]">
+                {t("system.manageCommunicators.currentTitle")}
+              </h2>
+            </div>
+
+            {loading ? (
+              <div className="p-6 text-[#7A8088]">{t("communicator.common.loading")}</div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-[#FBFAF8] text-xs text-gray-500">
                   <tr>
-                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      {t("sg.loading")}
-                    </td>
+                    <th className="px-5 py-3 text-left">{t("system.common.name")}</th>
+                    <th className="px-5 py-3 text-left">{t("system.common.employeeNumber")}</th>
+                    <th className="px-5 py-3 text-left">{t("system.common.email")}</th>
+                    <th className="px-5 py-3 text-left">{t("system.common.status")}</th>
+                    <th className="px-5 py-3 text-left">{t("system.common.action")}</th>
                   </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                      {t("sg.emptyUsers")}
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors"
-                    >
-                      <td className="px-6 py-4 text-[14px] font-bold text-[#0A0A0A]">
-                        {u.first_name} {u.name}
-                      </td>
-                      <td className="px-6 py-4 text-[12px] font-mono tabular-nums text-[#525252]">
-                        {u.employee_number}
-                      </td>
-                      <td className="px-6 py-4 text-[12px] text-[#525252]">
-                        {u.email}
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusPill
-                          tone={u.active ? "success" : "neutral"}
-                          label={u.active ? t("sg.active") : t("sg.inactive")}
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() =>
-                            setRemoveModal({ open: true, id: u.id })
-                          }
-                        >
-                          {t("sg.remove")}
-                        </Button>
+                </thead>
+                <tbody>
+                  {communicators.map((c) => (
+                    <tr key={c.id} className="border-t">
+                      <td className="px-5 py-4">{c.name} {c.first_name}</td>
+                      <td className="px-5 py-4">{c.employee_number}</td>
+                      <td className="px-5 py-4">{c.email}</td>
+                      <td className="px-5 py-4">{c.active ? t("system.common.active") : t("system.common.inactive")}</td>
+                      <td className="px-5 py-4">
+                        <button onClick={() => handleRemove(c.id)} className="text-red-500 font-semibold">
+                          {t("system.common.remove")}
+                        </button>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </DataPanel>
-      </PageBody>
-
-      <Modal
-        open={removeModal.open}
-        onClose={() => setRemoveModal({ open: false, id: null })}
-        title={t("sg.remove")}
-        description={t("sg.confirmReason")}
-        footer={
-          <>
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => setRemoveModal({ open: false, id: null })}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" size="md" onClick={handleRemove}>
-              Retirer
-            </Button>
-          </>
-        }
-      />
-    </PageShell>
+                  ))}
+                  {communicators.length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="text-center py-6 text-gray-400">
+                        {t("system.manageCommunicators.emptyText")}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </main>
+      </div>
+    </div>
   );
 }

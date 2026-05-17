@@ -1,31 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import DashboardSidebar from "../../components/dashboard/DashboardSidebar";
+import DashboardTopBar from "../../components/dashboard/DashboardTopBar";
 import { apiGet } from "../../api";
 import { useT } from "../../i18n/LanguageContext";
-import {
-  PageShell,
-  PageHeader,
-  PageBody,
-  DataPanel,
-  Button,
-  Alert,
-  StatusPill,
-} from "../../components/ui/Studio";
-
-const STATUS_TONE = {
-  DRAFT: "warn",
-  OPEN: "success",
-  CLOSED: "info",
-  DRAW_DONE: "accent",
-  FINISHED: "neutral",
-  CANCELLED: "danger",
-};
 
 function formatDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -49,171 +33,207 @@ export default function SessionDetails() {
         setSession(res.data.session);
         setSites(res.data.sites || []);
       })
-      .catch((err) =>
-        setError(err.message || t("admin.createSession.loadingSession"))
-      )
+      .catch((err) => setError(err.message || t("admin.createSession.loadingSession")))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  const statusLabel = (status) => {
-    const tr = t(`statuses.${status}`);
-    return tr === `statuses.${status}` ? status : tr;
-  };
-
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow={t("sg.administration")}
-        title={t("admin.sessionDetails.title")}
-        subtitle={t("admin.sessionDetails.subtitle")}
-        breadcrumbs={[
-          { label: t("sg.dashboard"), to: "/dashboard" },
-          { label: t("admin.activities.title"), to: "/dashboard/admin/activities" },
-          {
-            label: "Sessions",
-            to: `/dashboard/admin/activities/${id}/sessions`,
-          },
-          { label: t("admin.sessions.sessionRef", { id: sessionId }) },
-        ]}
-        actions={
-          <>
-            <Button
-              to={`/dashboard/admin/activities/${id}/sessions/${sessionId}/edit`}
-              variant="outline"
-              size="md"
-            >
-              {t("admin.sessionDetails.editSession")}
-            </Button>
-            <Button
-              to={`/dashboard/admin/activities/${id}/sessions/${sessionId}/sites-quotas`}
-              variant="primary"
-              size="md"
-            >
-              {t("admin.sessionDetails.manageSitesQuotas")}
-            </Button>
-          </>
-        }
-      />
+    <div className="flex h-screen bg-[#F7F7F5]">
+      <DashboardSidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardTopBar />
 
-      <PageBody>
-        {error && (
-          <Alert tone="danger" title={t("sg.error")}>
-            {error}
-          </Alert>
-        )}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            <div className="text-sm text-[#7A8088]">
+              <Link
+                to="/dashboard/admin/activities"
+                className="text-[#ED8D31] font-medium"
+              >
+                {t("admin.activities.title")}
+              </Link>
+              <span className="mx-2">›</span>
+              <Link
+                to={`/dashboard/admin/activities/${id}/sessions`}
+                className="text-[#ED8D31] font-medium"
+              >
+                {t("admin.createSession.backToSessions")}
+              </Link>
+              <span className="mx-2">›</span>
+              <span className="text-[#2F343B] font-medium">
+                {t("admin.sessions.sessionRef", { id: sessionId })}
+              </span>
+            </div>
 
-        {loading ? (
-          <div className="border border-[#E5E5E5] bg-white py-10 text-center text-[13px] text-[#737373]">
-            {t("admin.createSession.loadingSession")}
-          </div>
-        ) : session ? (
-          <>
-            <DataPanel
-              title={t("sg.information")}
-              subtitle={t("sg.sessions")}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 divide-x divide-y divide-[#E5E5E5]">
-                <InfoCell label={t("admin.sessionDetails.info.activity")} value={session.activity_title || `Activité #${id}`} />
-                <InfoCell label={t("admin.sessionDetails.info.status")}>
-                  <StatusPill tone={STATUS_TONE[session.status] || "neutral"} label={statusLabel(session.status)} />
-                </InfoCell>
-                <InfoCell label={t("admin.sessionDetails.info.startDate")} value={formatDate(session.start_date)} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.endDate")} value={formatDate(session.end_date)} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.registrationDeadline")} value={formatDate(session.registration_deadline)} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.docsDeadline")} value={formatDate(session.document_upload_deadline)} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.drawDate")} value={formatDate(session.draw_date)} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.drawLocation")} value={session.draw_location || "—"} />
-                <InfoCell label={t("admin.sessionDetails.info.confirmationDelay")} value={t("admin.sessionDetails.info.hours", { count: session.confirmation_delay_hours })} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.substitutes")} value={String(session.substitutes_count)} tabular />
-                <InfoCell
-                  label={t("admin.sessionDetails.info.transport")}
-                  value={
-                    session.transport_included
-                      ? t("admin.sessionForm.transportCoveredYes")
-                      : t("admin.sessionForm.transportCoveredNo")
-                  }
-                />
-                <InfoCell label={t("admin.sessionDetails.info.telefax")} value={session.telefax_url || "—"} />
-                <InfoCell label={t("admin.sessionDetails.info.totalSites")} value={t("admin.sessions.sitesCount", { count: session.sites_count })} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.totalQuota")} value={`${session.total_quota} ${t("activityDetail.places")}`} tabular />
-                <InfoCell label={t("admin.sessionDetails.info.registrations")} value={String(session.registrations_count)} tabular />
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+              <div>
+                <h1 className="text-[36px] font-extrabold text-[#2F343B]">
+                  {t("admin.sessionDetails.title")}
+                </h1>
+                <p className="text-[#7A8088] text-sm mt-2">
+                  {t("admin.sessionDetails.subtitle")}
+                </p>
               </div>
-            </DataPanel>
 
-            <DataPanel
-              title={t("admin.sessionDetails.sitesAndQuotas")}
-              subtitle={t("admin.sessionDetails.sitesQuotasHint")}
-              badge={`${sites.length}`}
-            >
-              {sites.length === 0 ? (
-                <div className="px-6 py-14 text-center text-[13px] text-[#737373]">
-                  {t("admin.sessionDetails.noSitesAssigned")}
+              <div className="flex gap-3">
+                <Link
+                  to={`/dashboard/admin/activities/${id}/sessions/${sessionId}/edit`}
+                  className="px-5 py-3 rounded-[14px] border border-[#E5E2DC] bg-white text-[#2F343B] text-sm font-semibold"
+                >
+                  {t("admin.sessionDetails.editSession")}
+                </Link>
+                <Link
+                  to={`/dashboard/admin/activities/${id}/sessions/${sessionId}/sites-quotas`}
+                  className="px-5 py-3 rounded-[14px] bg-[#ED8D31] text-white text-sm font-semibold"
+                >
+                  {t("admin.sessionDetails.manageSitesQuotas")}
+                </Link>
+              </div>
+            </div>
+
+            {error && (
+              <div className="rounded-[14px] border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="rounded-[14px] border border-[#E5E2DC] bg-white px-4 py-6 text-sm text-[#7A8088]">
+                {t("admin.createSession.loadingSession")}
+              </div>
+            ) : session ? (
+              <>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.activity")}
+                    value={session.activity_title || `Activity ${id}`}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.status")}
+                    value={t(`statuses.${session.status}`) === `statuses.${session.status}` ? session.status : t(`statuses.${session.status}`)}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.startDate")}
+                    value={formatDate(session.start_date)}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.endDate")}
+                    value={formatDate(session.end_date)}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.registrationDeadline")}
+                    value={formatDate(session.registration_deadline)}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.docsDeadline")}
+                    value={formatDate(session.document_upload_deadline)}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.drawDate")}
+                    value={formatDate(session.draw_date)}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.drawLocation")}
+                    value={session.draw_location || "—"}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.confirmationDelay")}
+                    value={t("admin.sessionDetails.info.hours", { count: session.confirmation_delay_hours })}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.substitutes")}
+                    value={String(session.substitutes_count)}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.transport")}
+                    value={session.transport_included ? t("admin.sessionForm.transportCoveredYes") : t("admin.sessionForm.transportCoveredNo")}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.telefax")}
+                    value={session.telefax_url || "—"}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.totalSites")}
+                    value={t("admin.sessions.sitesCount", { count: session.sites_count })}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.totalQuota")}
+                    value={`${session.total_quota} ${t("activityDetail.places")}`}
+                  />
+                  <InfoCard
+                    label={t("admin.sessionDetails.info.registrations")}
+                    value={String(session.registrations_count)}
+                  />
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[600px]">
-                    <thead className="bg-[#0A0A0A]">
-                      <tr>
-                        {[
-                          t("admin.site.col.site"),
-                          t("admin.site.col.address"),
-                          t("admin.sitesQuotas.col.quota"),
-                        ].map((h, i) => (
-                          <th
-                            key={i}
-                            className="px-6 py-4 text-left text-[10px] font-bold text-white uppercase tracking-[0.18em]"
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sites.map((site) => (
-                        <tr
-                          key={site.session_site_id}
-                          className="border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#FAFAFA] transition-colors"
-                        >
-                          <td className="px-6 py-4 text-[14px] font-bold text-[#0A0A0A]">
-                            {site.name}
-                          </td>
-                          <td className="px-6 py-4 text-[12px] text-[#525252]">
-                            {site.address || "—"}
-                          </td>
-                          <td className="px-6 py-4 text-[14px] font-bold tabular-nums text-[#0A0A0A]">
-                            {site.quota}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </DataPanel>
-          </>
-        ) : null}
-      </PageBody>
-    </PageShell>
+
+                <section className="rounded-[24px] bg-white border border-[#E5E2DC] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#E5E2DC]">
+                    <h2 className="text-[22px] font-bold text-[#2F343B]">
+                      {t("admin.sessionDetails.sitesAndQuotas")}
+                    </h2>
+                    <p className="text-sm text-[#7A8088] mt-1">
+                      {t("admin.sessionDetails.sitesQuotasHint")}
+                    </p>
+                  </div>
+
+                  {sites.length === 0 ? (
+                    <p className="px-5 py-8 text-center text-sm text-[#7A8088]">
+                      {t("admin.sessionDetails.noSitesAssigned")}
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[600px]">
+                        <thead className="bg-[#FBFAF8]">
+                          <tr>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                              {t("admin.site.col.site")}
+                            </th>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                              {t("admin.site.col.address")}
+                            </th>
+                            <th className="px-5 py-3 text-left text-xs font-semibold text-[#7A8088] uppercase">
+                              {t("admin.sitesQuotas.col.quota")}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sites.map((site) => (
+                            <tr
+                              key={site.session_site_id}
+                              className="border-t border-[#E5E2DC]"
+                            >
+                              <td className="px-5 py-3 text-sm font-semibold text-[#2F343B]">
+                                {site.name}
+                              </td>
+                              <td className="px-5 py-3 text-sm text-[#7A8088]">
+                                {site.address || "—"}
+                              </td>
+                              <td className="px-5 py-3 text-sm font-medium text-[#2F343B]">
+                                {site.quota}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              </>
+            ) : null}
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
 
-function InfoCell({ label, value, children, tabular }) {
+function InfoCard({ label, value }) {
   return (
-    <div className="p-5">
-      <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#737373] mb-2">
-        {label}
+    <div className="rounded-[20px] bg-white border border-[#E5E2DC] p-5">
+      <p className="text-sm font-semibold text-[#7A8088]">{label}</p>
+      <p className="text-lg font-bold text-[#2F343B] mt-2 break-words">
+        {value}
       </p>
-      {children ? (
-        children
-      ) : (
-        <p
-          className={`text-[15px] font-bold text-[#0A0A0A] break-words ${
-            tabular ? "tabular-nums" : ""
-          }`}
-        >
-          {value}
-        </p>
-      )}
     </div>
   );
 }
